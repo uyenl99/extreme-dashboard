@@ -11,7 +11,7 @@ url = "https://api4-general.collective2.com/Strategies/GetStrategyHistoricalEqui
 
 params = {
     "StrategyId": 13202557,
-    "CommissionPlan": "default"
+    "CommissionPlan": 0
 }
 
 r = requests.get(
