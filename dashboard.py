@@ -7,17 +7,25 @@ headers = {
     "Authorization": f"Bearer {API_KEY}"
 }
 
-url = "https://api4-general.collective2.com/General/GetAccessKey"
+url = "https://api4-general.collective2.com/Strategies/GetStrategyHistoricalEquity"
 
-r = requests.get(url, headers=headers)
+params = {
+    "StrategyId": 13202557,
+    "CommissionPlan": "default"
+}
+
+r = requests.get(
+    url,
+    headers=headers,
+    params=params
+)
 
 print("STATUS:", r.status_code)
-print("TEXT:")
-print(r.text[:2000])
+print(r.text[:3000])
 
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(f"""
-    <h1>API Test</h1>
+    <h1>Historical Equity Test</h1>
     <p>Status: {r.status_code}</p>
-    <pre>{r.text[:500]}</pre>
+    <pre>{r.text[:2000]}</pre>
     """)
