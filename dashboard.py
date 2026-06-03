@@ -25,7 +25,25 @@ print(r.text[:3000])
 
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(f"""
-    <h1>Historical Equity Test</h1>
-    <p>Status: {r.status_code}</p>
-    <pre>{r.text[:2000]}</pre>
+    <html>
+    <head>
+        <title>Extreme Trading Dashboard</title>
+    </head>
+    <body>
+        <h1>Extreme Trading Dashboard</h1>
+
+        <h2>Strategy ID: 13202557</h2>
+
+        <p>
+        Collective2 API Connected Successfully
+        </p>
+
+        <p>
+        Retrieved Monthly Return History
+        </p>
+
+        <pre>{r.text[:3000]}</pre>
+
+    </body>
+    </html>
     """)
