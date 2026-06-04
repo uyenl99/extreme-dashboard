@@ -118,6 +118,23 @@ total_return = (
 start_date = df["Date"].min().strftime("%Y-%m-%d")
 last_date = df["Date"].max().strftime("%Y-%m-%d")
 
+table_html = (
+    pivot.style
+    .format("{:.2f}")
+    .applymap(lambda v:
+        "color: green; font-weight: bold"
+        if pd.notna(v) and v > 0
+        else (
+            "color: red; font-weight: bold"
+            if pd.notna(v) and v < 0
+            else ""
+        )
+    )
+    .set_table_attributes('class="returns-table"')
+    .to_html()
+)
+
+
 html = f"""
 <html>
 
@@ -260,21 +277,6 @@ ${current_equity:,.0f}
 
 {table_html}
 
-table_html = (
-    pivot.style
-    .format("{:.2f}")
-    .applymap(lambda v:
-        "color: green; font-weight: bold"
-        if pd.notna(v) and v > 0
-        else (
-            "color: red; font-weight: bold"
-            if pd.notna(v) and v < 0
-            else ""
-        )
-    )
-    .set_table_attributes('class="returns-table"')
-    .to_html()
-)
 
 </body>
 </html>
