@@ -7,7 +7,7 @@ headers = {
     "Authorization": f"Bearer {API_KEY}"
 }
 
-url = "https://api4-general.collective2.com/Strategies/GetStrategyHistoricalEquity"
+url = "https://api4-general.collective2.com/Strategies/GetStrategyHistoricalDailyEquity"
 
 params = {
     "StrategyId": 13202557,
@@ -21,29 +21,11 @@ r = requests.get(
 )
 
 print("STATUS:", r.status_code)
-print(r.text[:3000])
+print(r.text[:10000])
 
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(f"""
-    <html>
-    <head>
-        <title>Extreme Trading Dashboard</title>
-    </head>
-    <body>
-        <h1>Extreme Trading Dashboard</h1>
-
-        <h2>Strategy ID: 13202557</h2>
-
-        <p>
-        Collective2 API Connected Successfully
-        </p>
-
-        <p>
-        Retrieved Monthly Return History
-        </p>
-
-        <pre>{r.text[:3000]}</pre>
-
-    </body>
-    </html>
+    <h1>Daily Equity Test</h1>
+    <p>Status: {r.status_code}</p>
+    <pre>{r.text[:5000]}</pre>
     """)
