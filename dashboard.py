@@ -67,6 +67,9 @@ chart_html = fig.to_html(
 )
 
 monthly_results = monthly_data["Results"][0]["MonthlyResults"]
+print("MONTHLY COUNT:", len(monthly_results))
+print("FIRST RECORD:", monthly_results[0])
+print("SECOND RECORD:", monthly_results[1])
 
 rows = []
 
