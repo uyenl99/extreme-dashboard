@@ -85,13 +85,17 @@ for item in monthly_results:
 
 mdf = pd.DataFrame(rows)
 
-pivot = mdf.pivot(
+pivot = pd.pivot_table(
+    mdf,
     index="Year",
     columns="Month",
-    values="Return"
+    values="Return",
+    aggfunc="first"
 )
-
 pivot = pivot.sort_index(ascending=False)
+print("MDF SHAPE:", mdf.shape)
+print("PIVOT SHAPE:", pivot.shape)
+
 
 start_equity = float(df["EquityWithCosts"].iloc[0])
 current_equity = float(df["EquityWithCosts"].iloc[-1])
@@ -216,3 +220,7 @@ ${current_equity:,.0f}
 </body>
 </html>
 """
+
+with open("index.html", "w", encoding="utf-8") as f:
+    f.write(html)
+    
