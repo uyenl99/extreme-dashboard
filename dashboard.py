@@ -123,6 +123,37 @@ html = f"""
 <title>Extreme OS Dashboard</title>
 
 <style>
+.returns-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.returns-table th {
+    background: #222;
+    color: white;
+    padding: 10px;
+}
+
+.returns-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+
+.positive {
+    color: green;
+    font-weight: bold;
+}
+
+.negative {
+    color: red;
+    font-weight: bold;
+}
+
+.annual-col {
+    font-weight: bold;
+    background: #f2f2f2;
+}
 
 body {{
     font-family: Arial, sans-serif;
@@ -177,37 +208,6 @@ th:first-child {{
     text-align:center;
 }}
 
-.returns-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-}
-
-.returns-table th {
-    background: #222;
-    color: white;
-    padding: 10px;
-}
-
-.returns-table td {
-    padding: 8px;
-    border: 1px solid #ddd;
-}
-
-.positive {
-    color: green;
-    font-weight: bold;
-}
-
-.negative {
-    color: red;
-    font-weight: bold;
-}
-
-.annual-col {
-    font-weight: bold;
-    background: #f2f2f2;
-}
 </style>
 
 </head>
