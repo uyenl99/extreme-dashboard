@@ -96,6 +96,14 @@ pivot = pivot.sort_index(ascending=False)
 print("MDF SHAPE:", mdf.shape)
 print("PIVOT SHAPE:", pivot.shape)
 
+annual_returns = (
+    mdf.groupby("Year")["Return"]
+       .apply(lambda x: ((1 + x/100).prod() - 1) * 100)
+)
+
+pivot["Annual"] = annual_returns
+
+
 
 start_equity = float(df["EquityWithCosts"].iloc[0])
 current_equity = float(df["EquityWithCosts"].iloc[-1])
@@ -169,6 +177,37 @@ th:first-child {{
     text-align:center;
 }}
 
+.returns-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.returns-table th {
+    background: #222;
+    color: white;
+    padding: 10px;
+}
+
+.returns-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+
+.positive {
+    color: green;
+    font-weight: bold;
+}
+
+.negative {
+    color: red;
+    font-weight: bold;
+}
+
+.annual-col {
+    font-weight: bold;
+    background: #f2f2f2;
+}
 </style>
 
 </head>
@@ -215,11 +254,36 @@ ${current_equity:,.0f}
 
 <h2>Monthly Returns (%)</h2>
 
-{pivot.to_html(float_format=lambda x: f"{x:.2f}")}
+{pivot.to_html(
+    classes="returns-table",
+    float_format=lambda x: f"{x:.2f}"
+)}
 
 </body>
 </html>
 """
+
+
+html = html.replace(">nan<", "></td><td>")
+import re
+
+def color_cell(match):
+    value = float(match.group(1))
+
+    if value > 0:
+        cls = "positive"
+    elif value < 0:
+        cls = "negative"
+    else:
+        cls = ""
+
+    return f'><span class="{cls}">{value:.2f}</span><'
+
+html = re.sub(
+    r'>(-?\d+\.\d+)<',
+    color_cell,
+    html
+)
 
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(html)
