@@ -55,6 +55,12 @@ monthly_r = requests.get(
 )
 
 monthly_data = monthly_r.json()
+print("MONTHLY STATUS:", monthly_r.status_code)
+
+print(
+    monthly_data["Results"][0].keys()
+)
+
 chart_html = fig.to_html(
     full_html=False,
     include_plotlyjs="cdn"
