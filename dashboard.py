@@ -285,7 +285,7 @@ ${current_equity:,.0f}
 
 
 
-with open("index.html", "w", encoding="utf-8") as f:
+with open("performance.html", "w", encoding="utf-8") as f:
     f.write(html)
     
 
