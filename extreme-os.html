@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html>
 <head>
 <meta charset="utf-8">
@@ -16,6 +17,7 @@ body{
 nav{
     display:flex;
     justify-content:space-between;
+    align-items:center;
     padding:20px 60px;
     background:#111827;
 }
@@ -58,6 +60,33 @@ nav a{
     color:white;
     text-decoration:none;
     border-radius:6px;
+    font-weight:bold;
+}
+
+.btn:hover{
+    opacity:.9;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:15px;
+}
+
+th{
+    background:#111827;
+    color:white;
+    text-align:left;
+}
+
+th, td{
+    padding:12px;
+    border:1px solid #ddd;
+}
+
+.positive{
+    color:green;
+    font-weight:bold;
 }
 
 footer{
@@ -66,84 +95,206 @@ footer{
     color:#666;
 }
 
+footer a{
+    color:#2563eb;
+    text-decoration:none;
+}
+
 </style>
+
 </head>
 
 <body>
 
 <nav>
-    <div><strong>Extreme Trading Inc.</strong></div>
 
-    <div>
-        <a href="index.html">Home</a>
-        <a href="strategies.html">Strategies</a>
-        <a href="performance.html">Performance</a>
-        <a href="contact.html">Contact</a>
-    </div>
+```
+<div>
+    <strong>Extreme Trading Inc.</strong>
+</div>
+
+<div>
+    <a href="index.html">Home</a>
+    <a href="performance.html">Performance</a>
+    <a href="strategies.html">Strategies</a>
+    <a href="subscribe.html">Subscribe</a>
+    <a href="members.html">Members</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+</div>
+```
+
 </nav>
 
 <div class="hero">
-    <h1>Extreme OS</h1>
-    <p>Systematic trading driven by rules, statistics and disciplined execution.</p>
+
+```
+<h1>Extreme OS</h1>
+
+<p>
+Data-driven stock selection using systematic analysis,
+risk management, and disciplined execution.
+</p>
+```
+
 </div>
 
 <div class="section">
 
-    <div class="card">
-        <h2>Overview</h2>
+```
+<div class="card">
 
-        <p>
-        Extreme OS is the flagship strategy of Extreme Trading Inc.
-        The objective is to identify high-probability opportunities
-        through quantitative analysis and systematic execution.
-        </p>
-    </div>
+    <h2>Overview</h2>
 
-    <div class="card">
-        <h2>Markets</h2>
+    <p>
+    Extreme OS is the flagship strategy of Extreme Trading Inc.
+    The objective is to identify high-probability opportunities
+    through quantitative analysis and systematic execution.
+    </p>
 
-        <ul>
-            <li>Stocks</li>
-            <li>ETFs</li>
-        </ul>
-    </div>
+</div>
 
-    <div class="card">
-        <h2>Holding Period</h2>
+<div class="card">
 
-        <p>
-        Positions may range from intraday to multi-day holding periods,
-        depending on market conditions and signal strength.
-        </p>
-    </div>
+    <h2>Markets</h2>
 
-    <div class="card">
-        <h2>Risk Management</h2>
+    <ul>
+        <li>Stocks</li>
+        <li>ETFs</li>
+    </ul>
 
-        <ul>
-            <li>Position sizing controls</li>
-            <li>Portfolio exposure limits</li>
-            <li>Systematic exits</li>
-            <li>Capital preservation focus</li>
-        </ul>
-    </div>
+</div>
 
-    <div class="card">
-        <h2>Performance</h2>
+<div class="card">
 
-        <p>
-        View the live performance dashboard and historical returns.
-        </p>
+    <h2>Holding Period</h2>
 
-        <a class="btn" href="performance.html">
-            View Performance
-        </a>
-    </div>
+    <p>
+    Positions may range from intraday to multi-day holding periods,
+    depending on market conditions and signal strength.
+    </p>
+
+</div>
+
+<div class="card">
+
+    <h2>Risk Management</h2>
+
+    <ul>
+        <li>Position sizing controls</li>
+        <li>Portfolio exposure limits</li>
+        <li>Systematic exits</li>
+        <li>Capital preservation focus</li>
+    </ul>
+
+</div>
+
+<div class="card">
+
+    <h2>Performance</h2>
+
+    <p>
+    View the live performance dashboard and historical returns.
+    </p>
+
+    <a class="btn" href="performance.html">
+        View Performance
+    </a>
+
+</div>
+
+<div class="card">
+
+    <h2>Historical Trades</h2>
+
+    <p>
+    The trades below are examples of completed historical positions.
+    Current picks and open positions are available to members.
+    </p>
+
+    <table>
+
+        <tr>
+            <th>Date</th>
+            <th>Symbol</th>
+            <th>Return</th>
+        </tr>
+
+        <tr>
+            <td>2026-06-01</td>
+            <td>NVDA</td>
+            <td class="positive">+6.1%</td>
+        </tr>
+
+        <tr>
+            <td>2026-05-20</td>
+            <td>META</td>
+            <td class="positive">+5.8%</td>
+        </tr>
+
+        <tr>
+            <td>2026-05-05</td>
+            <td>AMD</td>
+            <td class="positive">+5.5%</td>
+        </tr>
+
+    </table>
+
+</div>
+
+<div class="card">
+
+    <h2>Member Access</h2>
+
+    <p>
+    Subscribers receive access to:
+    </p>
+
+    <ul>
+        <li>Current Picks</li>
+        <li>Open Positions</li>
+        <li>Entry Targets</li>
+        <li>Stop Updates</li>
+        <li>Trade Commentary</li>
+        <li>Email Alerts</li>
+        <li>SMS Alerts</li>
+    </ul>
+
+</div>
+
+<div class="card" style="text-align:center;">
+
+    <h2>Want Access to Current Picks?</h2>
+
+    <p>
+    Members receive access to current opportunities,
+    open positions, and trade alerts as they occur.
+    </p>
+
+    <a class="btn" href="subscribe.html">
+        Become a Member
+    </a>
+
+</div>
+```
 
 </div>
 
 <footer>
+
+```
+<p>
 © 2026 Extreme Trading Inc.
+</p>
+
+<p>
+    <a href="performance.html">Performance</a> |
+    <a href="strategies.html">Strategies</a> |
+    <a href="subscribe.html">Subscribe</a> |
+    <a href="contact.html">Contact</a>
+</p>
+```
+
 </footer>
 
 </body>
