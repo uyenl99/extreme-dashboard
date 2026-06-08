@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html>
 <head>
 <meta charset="utf-8">
@@ -16,6 +17,7 @@ body{
 nav{
     display:flex;
     justify-content:space-between;
+    align-items:center;
     padding:20px 60px;
     background:#111827;
 }
@@ -27,40 +29,64 @@ nav a{
 }
 
 .hero{
+    padding:80px 10%;
+    background:#0f172a;
+    color:white;
     text-align:center;
-    padding:80px 20px;
 }
 
 .hero h1{
-    font-size:48px;
+    font-size:54px;
+    margin-bottom:10px;
+}
+
+.section{
+    max-width:1200px;
+    margin:auto;
+    padding:50px 30px;
 }
 
 .cards{
-    max-width:1200px;
-    margin:auto;
     display:flex;
-    gap:30px;
     flex-wrap:wrap;
-    padding:40px;
+    gap:25px;
 }
 
 .card{
     flex:1;
     min-width:280px;
     background:white;
+    padding:30px;
     border-radius:12px;
     box-shadow:0 2px 10px rgba(0,0,0,.1);
-    padding:30px;
+}
+
+.card h2{
+    margin-top:0;
 }
 
 .btn{
     display:inline-block;
-    margin-top:15px;
     padding:12px 20px;
     background:#2563eb;
     color:white;
     text-decoration:none;
     border-radius:6px;
+    font-weight:bold;
+}
+
+.coming-soon{
+    color:#666;
+    font-style:italic;
+}
+
+.cta{
+    text-align:center;
+    margin-top:60px;
+    padding:40px;
+    background:white;
+    border-radius:12px;
+    box-shadow:0 2px 10px rgba(0,0,0,.1);
 }
 
 footer{
@@ -69,75 +95,170 @@ footer{
     color:#666;
 }
 
+footer a{
+    color:#2563eb;
+    text-decoration:none;
+}
+
 </style>
+
 </head>
 
 <body>
 
 <nav>
-    <div><strong>Extreme Trading Inc.</strong></div>
 
-    <div>
-        <a href="index.html">Home</a>
-        <a href="performance.html">Performance</a>
-        <a href="strategies.html">Strategies</a>
-        <a href="subscribe.html">Subscribe</a>
-        <a href="members.html">Members</a>
-        <a href="about.html">About</a>
-        <a href="contact.html">Contact</a>
-    </div>
+<div>
+<strong>Extreme Trading Inc.</strong>
+</div>
+
+<div>
+<a href="index.html">Home</a>
+<a href="performance.html">Performance</a>
+<a href="strategies.html">Strategies</a>
+<a href="subscribe.html">Subscribe</a>
+<a href="members.html">Members</a>
+<a href="about.html">About</a>
+<a href="contact.html">Contact</a>
+</div>
+
 </nav>
 
 <div class="hero">
-    <h1>Strategies</h1>
-    <p>
-        Systematic approaches designed for different market environments.
-    </p>
+
+<h1>Trading Strategies</h1>
+
+<p>
+Explore our systematic stock selection strategies and
+track record of historical performance.
+</p>
+
 </div>
+
+<div class="section">
 
 <div class="cards">
 
 <div class="card">
-    <h2>Extreme OS</h2>
 
-    <p>
-        Flagship strategy focused on identifying high-probability opportunities
-        using quantitative rules and disciplined execution.
-    </p>
+<h2>Extreme OS</h2>
 
-    <a class="btn" href="extreme-os.html">
-        Learn More
-    </a>
+<p>
+Our flagship strategy focused on identifying
+high-probability stock opportunities using
+systematic analysis and disciplined risk management.
+</p>
+
+<p>
+✓ Active Strategy<br>
+✓ Historical Track Record<br>
+✓ Member Trade Alerts
+</p>
+
+<a class="btn" href="extreme-os.html">
+Learn More
+</a>
+
 </div>
 
 <div class="card">
-    <h2>Momentum Strategy</h2>
 
-    <p>
-        Designed to capture persistent strength in leading securities.
-    </p>
+<h2>Momentum</h2>
 
-    <a class="btn">
-        Coming Soon
-    </a>
+<p>
+Trend-following strategy targeting stocks with
+strong relative strength, volume confirmation,
+and sustained price momentum.
+</p>
+
+<p>
+✓ Active Strategy<br>
+✓ Historical Track Record<br>
+✓ Member Trade Alerts
+</p>
+
+<a class="btn" href="momentum.html">
+Learn More
+</a>
+
 </div>
 
 <div class="card">
-    <h2>Mean Reversion Strategy</h2>
 
-    <p>
-        Seeks opportunities created by short-term market overreactions.
-    </p>
+<h2>Mean Reversion</h2>
 
-    <a class="btn">
-        Coming Soon
-    </a>
+<p>
+A future strategy focused on identifying
+short-term price dislocations and potential
+reversion opportunities.
+</p>
+
+<p class="coming-soon">
+Coming Soon
+</p>
+
+<a class="btn" href="#">
+Coming Soon
+</a>
+
+</div>
+
+<div class="card">
+
+<h2>Members Dashboard Preview</h2>
+
+<p>
+See examples of current picks, open positions,
+trade alerts, and the information available
+to subscribers.
+</p>
+
+<p>
+✓ Current Picks<br>
+✓ Open Positions<br>
+✓ Trade Alerts
+</p>
+
+<a class="btn" href="members.html">
+View Preview
+</a>
+
+</div>
+
+</div>
+
+<div class="cta">
+
+<h2>Want Access to Current Picks?</h2>
+
+<p>
+Subscribers receive current opportunities,
+open positions, strategy updates,
+email alerts, and future SMS notifications.
+</p>
+
+<a class="btn" href="subscribe.html">
+Become a Member
+</a>
+
 </div>
 
 </div>
 
 <footer>
+
+<p>
 © 2026 Extreme Trading Inc.
+</p>
+
+<p>
+<a href="performance.html">Performance</a> |
+<a href="strategies.html">Strategies</a> |
+<a href="members.html">Members</a> |
+<a href="subscribe.html">Subscribe</a> |
+<a href="contact.html">Contact</a>
+</p>
+
 </footer>
 
 </body>
