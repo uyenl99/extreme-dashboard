@@ -1,8 +1,9 @@
 <!DOCTYPE html>
+
 <html>
 <head>
 <meta charset="utf-8">
-<title>Momentum</title>
+<title>Momentum - Extreme Trading Inc.</title>
 
 <style>
 
@@ -16,6 +17,7 @@ body{
 nav{
     display:flex;
     justify-content:space-between;
+    align-items:center;
     padding:20px 60px;
     background:#111827;
 }
@@ -58,6 +60,29 @@ nav a{
     color:white;
     text-decoration:none;
     border-radius:6px;
+    font-weight:bold;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:15px;
+}
+
+th{
+    background:#111827;
+    color:white;
+    text-align:left;
+}
+
+th, td{
+    padding:12px;
+    border:1px solid #ddd;
+}
+
+.positive{
+    color:green;
+    font-weight:bold;
 }
 
 footer{
@@ -67,78 +92,140 @@ footer{
 }
 
 </style>
+
 </head>
 
 <body>
 
 <nav>
-    <div><strong>Extreme Trading Inc.</strong></div>
 
-    <div>
-        <a href="index.html">Home</a>
-        <a href="strategies.html">Strategies</a>
-        <a href="performance.html">Performance</a>
-        <a href="contact.html">Contact</a>
-    </div>
+<div><strong>Extreme Trading Inc.</strong></div>
+
+<div>
+<a href="index.html">Home</a>
+<a href="performance.html">Performance</a>
+<a href="strategies.html">Strategies</a>
+<a href="subscribe.html">Subscribe</a>
+<a href="members.html">Members</a>
+<a href="about.html">About</a>
+<a href="contact.html">Contact</a>
+</div>
+
 </nav>
 
 <div class="hero">
-    <h1>Extreme OS</h1>
-    <p>Systematic trading driven by rules, statistics and disciplined execution.</p>
+
+<h1>Momentum</h1>
+
+<p>
+Trend-following strategy focused on identifying stocks
+with strong relative strength and sustained momentum.
+</p>
+
 </div>
 
 <div class="section">
 
-    <div class="card">
-        <h2>Overview</h2>
+<div class="card">
 
-        <p>
-        Extreme OS is the flagship strategy of Extreme Trading Inc.
-        The objective is to identify high-probability opportunities
-        through quantitative analysis and systematic execution.
-        </p>
-    </div>
+<h2>Overview</h2>
 
-    <div class="card">
-        <h2>Markets</h2>
+<p>
+Momentum seeks stocks exhibiting strong price performance,
+institutional accumulation, and favorable technical trends.
+</p>
 
-        <ul>
-            <li>Stocks</li>
-            <li>ETFs</li>
-        </ul>
-    </div>
+</div>
 
-    <div class="card">
-        <h2>Holding Period</h2>
+<div class="card">
 
-        <p>
-        Positions may range from intraday to multi-day holding periods,
-        depending on market conditions and signal strength.
-        </p>
-    </div>
+<h2>Strategy Characteristics</h2>
 
-    <div class="card">
-        <h2>Risk Management</h2>
+<ul>
+<li>Relative Strength Focus</li>
+<li>Breakout Candidates</li>
+<li>Strong Volume Confirmation</li>
+<li>Trend Following</li>
+</ul>
 
-        <ul>
-            <li>Position sizing controls</li>
-            <li>Portfolio exposure limits</li>
-            <li>Systematic exits</li>
-            <li>Capital preservation focus</li>
-        </ul>
-    </div>
+</div>
 
-    <div class="card">
-        <h2>Performance</h2>
+<div class="card">
 
-        <p>
-        View the live performance dashboard and historical returns.
-        </p>
+<h2>Performance</h2>
 
-        <a class="btn" href="performance.html">
-            View Performance
-        </a>
-    </div>
+<p>
+View live performance and track record.
+</p>
+
+<a class="btn" href="performance.html">
+View Performance
+</a>
+
+</div>
+
+<div class="card">
+
+<h2>Historical Trades</h2>
+
+<table>
+
+<tr>
+<th>Date</th>
+<th>Symbol</th>
+<th>Return</th>
+</tr>
+
+<tr>
+<td>2026-06-02</td>
+<td>PLTR</td>
+<td class="positive">+8.2%</td>
+</tr>
+
+<tr>
+<td>2026-05-18</td>
+<td>TSLA</td>
+<td class="positive">+7.1%</td>
+</tr>
+
+<tr>
+<td>2026-05-03</td>
+<td>CRWD</td>
+<td class="positive">+5.9%</td>
+</tr>
+
+</table>
+
+</div>
+
+<div class="card">
+
+<h2>Member Access</h2>
+
+<ul>
+<li>Current Momentum Picks</li>
+<li>Open Positions</li>
+<li>Trade Alerts</li>
+<li>Email Notifications</li>
+<li>SMS Notifications</li>
+</ul>
+
+</div>
+
+<div class="card" style="text-align:center;">
+
+<h2>Want Access to Current Momentum Picks?</h2>
+
+<p>
+Members receive immediate access to active positions
+and new trade alerts.
+</p>
+
+<a class="btn" href="subscribe.html">
+Become a Member
+</a>
+
+</div>
 
 </div>
 
