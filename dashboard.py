@@ -23,15 +23,13 @@ r = requests.get(
 )
 
 data = r.json()
-
 daily = data["Results"][0]["DailyEquity"]
-
 df = pd.DataFrame(daily)
-
 df["Date"] = pd.to_datetime(df["Date"])
 
 fig = go.Figure()
 fig.update_layout(
+    template="plotly_dark",
     height=550,
     margin=dict(
         l=40,
@@ -48,39 +46,36 @@ fig.add_trace(
         name="Equity With Costs"
     )
 )
+fig.update_xaxes(
+    dtick="M12",
+    tickformat="%Y"
+)
 
 monthly_url = "https://api4-general.collective2.com/Strategies/GetStrategyHistoricalEquity"
-
 monthly_params = {
     "StrategyId": 13202557,
     "CommissionPlan": 0
 }
-
 monthly_r = requests.get(
     monthly_url,
     headers=headers,
     params=monthly_params
 )
-
 monthly_data = monthly_r.json()
 print("MONTHLY STATUS:", monthly_r.status_code)
-
 print(
     monthly_data["Results"][0].keys()
 )
-
 chart_html = fig.to_html(
     full_html=False,
     include_plotlyjs="cdn"
 )
-
 monthly_results = monthly_data["Results"][0]["MonthlyResults"]
 print("MONTHLY COUNT:", len(monthly_results))
 print("FIRST RECORD:", monthly_results[0])
 print("SECOND RECORD:", monthly_results[1])
 
 rows = []
-
 for item in monthly_results:
     if item.get("IsAnnual"):
         continue
@@ -160,26 +155,20 @@ html = f"""
     background: white;
 }}
 
-.returns-table th {{
-    background: #222;
-    font-size:12px;
-    color: white;
-    padding: 10px;
-}}
-
 .returns-table td {{
-    padding: 6px;
+    padding: 2px 6px;
     font-size:12px;
-    border: 1px solid #ddd;
 }}
-
+.returns-table th {{
+    padding: 4px 6px;
+    font-size:12px;
+}}
 .positive {{
-    color: green;
+    color: #22c55e;
     font-weight: bold;
 }}
-
 .negative {{
-    color: red;
+    color: #ef4444;
     font-weight: bold;
 }}
 
@@ -194,7 +183,8 @@ body {{
     max-width: 1400px;
     margin: auto;
     padding: 20px;
-    background: #f5f7fa;
+    background:#0f172a;
+    color:#e5e7eb;    
 }}
 
 h1 {{
@@ -209,10 +199,12 @@ h1 {{
 
 .card {{
     flex:1;
-    background:white;
     padding:20px;
     border-radius:10px;
     box-shadow:0 2px 8px rgba(0,0,0,.1);
+    background:#111827;
+    color:#e5e7eb;
+    border:1px solid #374151;
 }}
 
 .card-value {{
@@ -224,6 +216,22 @@ table {{
     width:100%;
     border-collapse:collapse;
     background:white;
+}}
+
+.returns-table {{
+    border-collapse: collapse;
+}}
+
+.returns-table td {{
+    background:#111827;
+    color:#e5e7eb;
+    border:1px solid #374151;
+}}
+
+.returns-table th {{
+    background:#1f2937;
+    color:white;
+    border:1px solid #374151;
 }}
 
 th {{
