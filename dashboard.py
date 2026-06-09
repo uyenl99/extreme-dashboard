@@ -31,7 +31,15 @@ df = pd.DataFrame(daily)
 df["Date"] = pd.to_datetime(df["Date"])
 
 fig = go.Figure()
-
+fig.update_layout(
+    height=550,
+    margin=dict(
+        l=40,
+        r=20,
+        t=30,
+        b=40
+    )
+)
 fig.add_trace(
     go.Scatter(
         x=df["Date"],
@@ -134,7 +142,10 @@ table_html = (
     .set_table_attributes('class="returns-table"')
     .to_html()
 )
-
+table_html = table_html.replace(
+    ">Annual<",
+    ' style="background:#e8eefc;font-weight:bold;">Annual<'
+)
 html = f"""
 <html>
 
@@ -151,12 +162,14 @@ html = f"""
 
 .returns-table th {{
     background: #222;
+    font-size:12px;
     color: white;
     padding: 10px;
 }}
 
 .returns-table td {{
-    padding: 8px;
+    padding: 6px;
+    font-size:12px;
     border: 1px solid #ddd;
 }}
 
@@ -176,7 +189,8 @@ html = f"""
 }}
 
 body {{
-    font-family: Arial, sans-serif;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size:14px;
     max-width: 1400px;
     margin: auto;
     padding: 20px;
@@ -202,8 +216,8 @@ h1 {{
 }}
 
 .card-value {{
-    font-size:30px;
-    font-weight:bold;
+    font-size:22px;
+    font-weight:600;
 }}
 
 table {{
@@ -228,14 +242,44 @@ th:first-child {{
     text-align:center;
 }}
 
+nav {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:18px 25px;
+    background:#111827;
+    margin:-20px -20px 25px -20px;
+}
+
+nav a {
+    color:white;
+    text-decoration:none;
+    margin-left:20px;
+    font-size:14px;
+}
 </style>
 
 </head>
 
 <body>
+<nav>
+<div><strong>Extreme Trading Inc.</strong></div>
 
-<h1>Extreme OS</h1>
+<div>
+<a href="index.html">Home</a>
+<a href="performance.html">Performance</a>
+<a href="strategies.html">Strategies</a>
+<a href="subscribe.html">Subscribe</a>
+<a href="members.html">Members</a>
+<a href="about.html">About</a>
+<a href="contact.html">Contact</a>
+</div>
+</nav>
+<h1>Performance Report</h1>
 
+<p style="text-align:center;color:#666;margin-top:-10px;">
+Verified Collective2 Performance
+</p>
 <div class="cards">
 
 <div class="card">
@@ -267,15 +311,12 @@ ${current_equity:,.0f}
 </div>
 
 </div>
+<h2>Monthly Returns (%)</h2>
+{table_html}
 
 <h2>Equity Curve</h2>
-
 {chart_html}
 
-<h2>Monthly Returns (%)</h2>
-<h2>Monthly Returns (%)</h2>
-
-{table_html}
 
 
 </body>
