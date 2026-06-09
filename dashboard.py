@@ -242,21 +242,21 @@ th:first-child {{
     text-align:center;
 }}
 
-nav {
+nav {{
     display:flex;
     justify-content:space-between;
     align-items:center;
     padding:18px 25px;
     background:#111827;
     margin:-20px -20px 25px -20px;
-}
+}}
 
-nav a {
+nav a {{
     color:white;
     text-decoration:none;
     margin-left:20px;
     font-size:14px;
-}
+}}
 </style>
 
 </head>
