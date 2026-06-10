@@ -4,51 +4,51 @@ from pathlib import Path
 PUBLIC_DELAY_HOURS = 96
 PUBLIC_TRADE_LIMIT = 100
 
-def load_trades(csv_file):
-df = pd.read_csv(csv_file)
+CSV_FILE = "data/extreme_os.csv"
+OUTPUT_FILE = "extreme-os.html"
 
-```
+
+# Load CSV
+df = pd.read_csv(CSV_FILE)
+
+# Convert close time
 df["Closed Time ET"] = pd.to_datetime(
     df["Closed Time ET"],
     errors="coerce"
 )
 
-return df
-```
-
-def build_public_table(df):
-
-```
+# Apply 96-hour delay
 cutoff = (
     pd.Timestamp.now()
     - pd.Timedelta(hours=PUBLIC_DELAY_HOURS)
 )
 
 df = df[
-    df["Closed Time ET"].notna()
-]
-
-df = df[
     df["Closed Time ET"] < cutoff
 ]
 
+# Most recent trades first
 df = df.sort_values(
     "Closed Time ET",
     ascending=False
-).head(PUBLIC_TRADE_LIMIT)
+)
 
-cols = [
-    "Open Time ET",
-    "Symbol",
-    "Descrip",
-    "Side",
-    "Qty Open",
-    "Avg Price Open",
-    "Closed Time ET",
-    "Trade P/L"
-]
+# Limit to latest 100
+df = df.head(PUBLIC_TRADE_LIMIT)
 
-display_df = df[cols].copy()
+# Select display columns
+display_df = df[
+    [
+        "Open Time ET",
+        "Symbol",
+        "Descrip",
+        "Side",
+        "Qty Open",
+        "Avg Price Open",
+        "Closed Time ET",
+        "Trade P/L"
+    ]
+].copy()
 
 display_df.columns = [
     "Open Time",
@@ -61,82 +61,37 @@ display_df.columns = [
     "P/L"
 ]
 
-return (
-    display_df.style
-    .format({
-        "Entry": "{:.2f}",
-        "P/L": "{:.2f}"
-    })
-    .map(
-        lambda v:
-        "color:#22c55e;font-weight:bold"
-        if isinstance(v, (int, float)) and v > 0
-        else (
-            "color:#ef4444;font-weight:bold"
-            if isinstance(v, (int, float)) and v < 0
-            else ""
-        ),
-        subset=["P/L"]
-    )
-    .hide(axis="index")
-    .to_html()
+# Summary statistics
+total_trades = len(df)
+
+winning_trades = len(
+    df[df["Trade P/L"] > 0]
 )
-```
 
-def build_member_table(df):
-
-```
-cols = [
-    "Open Time ET",
-    "Symbol",
-    "Descrip",
-    "Side",
-    "Qty Open",
-    "Avg Price Open",
-    "Closed Time ET",
-    "Trade P/L"
-]
-
-display_df = df[cols].copy()
-
-display_df.columns = [
-    "Open Time",
-    "Symbol",
-    "Description",
-    "Side",
-    "Qty",
-    "Entry",
-    "Close Time",
-    "P/L"
-]
-
-return (
-    display_df.tail(250)
-    .style
-    .format({
-        "Entry": "{:.2f}",
-        "P/L": "{:.2f}"
-    })
-    .hide(axis="index")
-    .to_html()
+win_rate = (
+    winning_trades / total_trades * 100
+    if total_trades > 0
+    else 0
 )
-```
 
-def page_template(title, table_html):
+total_pl = df["Trade P/L"].sum()
 
-```
-return f"""
-```
+avg_trade = df["Trade P/L"].mean()
 
+table_html = display_df.to_html(
+    index=False,
+    classes="trade-table"
+)
+
+html = f"""
 <!DOCTYPE html>
-
 <html>
 
 <head>
 
 <meta charset="utf-8">
 
-<title>{title}</title>
+<title>Extreme OS Historical Trades</title>
 
 <style>
 
@@ -173,25 +128,36 @@ nav a {{
     border:1px solid #374151;
     border-radius:10px;
     padding:20px;
+    margin-bottom:20px;
 }}
 
-table {{
+.stats {{
+    display:flex;
+    gap:20px;
+    flex-wrap:wrap;
+}}
+
+.stat {{
+    background:#1f2937;
+    padding:15px;
+    border-radius:8px;
+    min-width:180px;
+}}
+
+.trade-table {{
     width:100%;
     border-collapse:collapse;
 }}
 
-th {{
+.trade-table th {{
     background:#1f2937;
 }}
 
-th, td {{
-    padding:4px 6px;
+.trade-table th,
+.trade-table td {{
     border:1px solid #374151;
+    padding:4px 6px;
     font-size:12px;
-}}
-
-h1 {{
-    margin-top:0;
 }}
 
 </style>
@@ -211,8 +177,6 @@ h1 {{
 <a href="performance.html">Performance</a>
 <a href="strategies.html">Strategies</a>
 <a href="members.html">Members</a>
-<a href="subscribe.html">Subscribe</a>
-<a href="contact.html">Contact</a>
 </div>
 
 </nav>
@@ -221,7 +185,43 @@ h1 {{
 
 <div class="card">
 
-<h1>{title}</h1>
+<h1>Extreme OS Historical Trades</h1>
+
+<p>
+Public trade history delayed 96 hours.
+</p>
+
+</div>
+
+<div class="card">
+
+<div class="stats">
+
+<div class="stat">
+<b>Total Trades</b><br>
+{total_trades}
+</div>
+
+<div class="stat">
+<b>Win Rate</b><br>
+{win_rate:.1f}%
+</div>
+
+<div class="stat">
+<b>Total P/L</b><br>
+{total_pl:,.2f}
+</div>
+
+<div class="stat">
+<b>Average Trade</b><br>
+{avg_trade:,.2f}
+</div>
+
+</div>
+
+</div>
+
+<div class="card">
 
 {table_html}
 
@@ -234,81 +234,9 @@ h1 {{
 </html>
 """
 
-def generate_strategy_page(
-csv_file,
-output_file,
-title
-):
-
-```
-df = load_trades(csv_file)
-
-table_html = build_public_table(df)
-
-html = page_template(
-    title,
-    table_html
-)
-
-Path(output_file).write_text(
+Path(OUTPUT_FILE).write_text(
     html,
     encoding="utf-8"
 )
 
-print(
-    f"Generated {output_file}"
-)
-```
-
-def generate_members_page():
-
-```
-os_df = load_trades(
-    "data/extreme_os.csv"
-)
-
-mom_df = load_trades(
-    "data/momentum.csv"
-)
-
-html = page_template(
-    "Members Dashboard",
-    f"""
-```
-
-<h2>Extreme OS</h2>
-
-{build_member_table(os_df)}
-
-<hr>
-
-<h2>Momentum</h2>
-
-{build_member_table(mom_df)}
-"""
-)
-
-```
-Path("members.html").write_text(
-    html,
-    encoding="utf-8"
-)
-
-print(
-    "Generated members.html"
-)
-```
-
-generate_strategy_page(
-"data/extreme_os.csv",
-"extreme-os.html",
-"Extreme OS Historical Trades"
-)
-
-generate_strategy_page(
-"data/momentum.csv",
-"momentum.html",
-"Momentum Historical Trades"
-)
-
-generate_members_page()
+print("Generated extreme-os.html")
