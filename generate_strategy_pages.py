@@ -4,8 +4,72 @@ from pathlib import Path
 PUBLIC_DELAY_HOURS = 96
 PUBLIC_TRADE_LIMIT = 100
 
-CSV_FILE = "data/extreme_os.csv"
-OUTPUT_FILE = "extreme-os.html"
+
+# ============================================================
+# LOAD DATA
+# ============================================================
+
+def load_csv(path):
+
+    df = pd.read_csv(path)
+
+    if "Closed Time ET" in df.columns:
+        df["Closed Time ET"] = pd.to_datetime(
+            df["Closed Time ET"],
+            errors="coerce"
+        )
+
+    return df
+
+
+# ============================================================
+# STATS
+# ============================================================
+
+def strategy_stats(df):
+
+    closed = df[
+        df["Trade P/L"].notna()
+    ].copy()
+
+    total_trades = len(df)
+
+    open_positions = (
+        df["Closed Time ET"]
+        .isna()
+        .sum()
+    )
+
+    win_rate = (
+        (closed["Trade P/L"] > 0).mean() * 100
+        if len(closed)
+        else 0
+    )
+
+    avg_trade = (
+        closed["Trade P/L"].mean()
+        if len(closed)
+        else 0
+    )
+
+    total_pl = (
+        closed["Trade P/L"].sum()
+        if len(closed)
+        else 0
+    )
+
+    return {
+        "open_positions": open_positions,
+        "total_trades": total_trades,
+        "win_rate": win_rate,
+        "avg_trade": avg_trade,
+        "total_pl": total_pl
+    }
+
+
+# ============================================================
+# TABLES
+# ============================================================
 
 def build_open_positions_table(df):
 
@@ -75,82 +139,100 @@ def build_recent_closed_table(df, limit=50):
         classes="trade-table"
     )
 
-# Load CSV
-df = pd.read_csv(CSV_FILE)
 
-# Convert close time
-df["Closed Time ET"] = pd.to_datetime(
-    df["Closed Time ET"],
-    errors="coerce"
-)
+# ============================================================
+# HTML TEMPLATE
+# ============================================================
 
-# Apply 96-hour delay
-cutoff = (
-    pd.Timestamp.now()
-    - pd.Timedelta(hours=PUBLIC_DELAY_HOURS)
-)
+CSS = """
+body {
+    background:#0f172a;
+    color:#e5e7eb;
+    font-family:Arial,Helvetica,sans-serif;
+    margin:0;
+}
 
-df = df[
-    df["Closed Time ET"] < cutoff
-]
+nav {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:18px 30px;
+    background:#111827;
+}
 
-# Most recent trades first
-df = df.sort_values(
-    "Closed Time ET",
-    ascending=False
-)
+nav a {
+    color:white;
+    text-decoration:none;
+    margin-left:20px;
+}
 
-# Limit to latest 100
-df = df.head(PUBLIC_TRADE_LIMIT)
+.container {
+    width:95%;
+    max-width:1400px;
+    margin:auto;
+    padding:20px;
+}
 
-# Select display columns
-display_df = df[
-    [
-        "Open Time ET",
-        "Symbol",
-        "Descrip",
-        "Side",
-        "Qty Open",
-        "Avg Price Open",
-        "Closed Time ET",
-        "Trade P/L"
-    ]
-].copy()
+.card {
+    background:#111827;
+    border:1px solid #374151;
+    border-radius:10px;
+    padding:20px;
+    margin-bottom:20px;
+}
 
-display_df.columns = [
-    "Open Time",
-    "Symbol",
-    "Description",
-    "Side",
-    "Qty",
-    "Entry",
-    "Close Time",
-    "P/L"
-]
+.trade-table {
+    width:100%;
+    border-collapse:collapse;
+}
 
-# Summary statistics
-total_trades = len(df)
+.trade-table th {
+    background:#1f2937;
+}
 
-winning_trades = len(
-    df[df["Trade P/L"] > 0]
-)
+.trade-table th,
+.trade-table td {
+    border:1px solid #374151;
+    padding:4px 6px;
+    font-size:12px;
+}
 
-win_rate = (
-    winning_trades / total_trades * 100
-    if total_trades > 0
-    else 0
-)
+.strategy-grid {
+    display:flex;
+    gap:25px;
+    flex-wrap:wrap;
+}
 
-total_pl = df["Trade P/L"].sum()
+.strategy-card {
+    flex:1;
+    min-width:320px;
+    background:#111827;
+    border:1px solid #374151;
+    border-radius:12px;
+    padding:24px;
+    text-decoration:none;
+    color:#e5e7eb;
+}
 
-avg_trade = df["Trade P/L"].mean()
+.strategy-card:hover {
+    border-color:#60a5fa;
+}
 
-table_html = display_df.to_html(
-    index=False,
-    classes="trade-table"
-)
+.stat {
+    margin-bottom:8px;
+}
 
-html = f"""
+.view-link {
+    margin-top:15px;
+    color:#60a5fa;
+    font-weight:bold;
+}
+"""
+
+
+def page_template(title, body):
+
+    return f"""
 <!DOCTYPE html>
 <html>
 
@@ -158,75 +240,10 @@ html = f"""
 
 <meta charset="utf-8">
 
-<title>Extreme OS Historical Trades</title>
+<title>{title}</title>
 
 <style>
-
-body {{
-    background:#0f172a;
-    color:#e5e7eb;
-    font-family:Arial,Helvetica,sans-serif;
-    margin:0;
-}}
-
-nav {{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:18px 30px;
-    background:#111827;
-}}
-
-nav a {{
-    color:white;
-    text-decoration:none;
-    margin-left:20px;
-}}
-
-.container {{
-    width:95%;
-    max-width:1400px;
-    margin:auto;
-    padding:20px;
-}}
-
-.card {{
-    background:#111827;
-    border:1px solid #374151;
-    border-radius:10px;
-    padding:20px;
-    margin-bottom:20px;
-}}
-
-.stats {{
-    display:flex;
-    gap:20px;
-    flex-wrap:wrap;
-}}
-
-.stat {{
-    background:#1f2937;
-    padding:15px;
-    border-radius:8px;
-    min-width:180px;
-}}
-
-.trade-table {{
-    width:100%;
-    border-collapse:collapse;
-}}
-
-.trade-table th {{
-    background:#1f2937;
-}}
-
-.trade-table th,
-.trade-table td {{
-    border:1px solid #374151;
-    padding:4px 6px;
-    font-size:12px;
-}}
-
+{CSS}
 </style>
 
 </head>
@@ -250,40 +267,75 @@ nav a {{
 
 <div class="container">
 
+{body}
+
+</div>
+
+</body>
+
+</html>
+"""
+
+
+# ============================================================
+# PUBLIC STRATEGY PAGE
+# ============================================================
+
+def generate_public_page(
+        csv_file,
+        output_file,
+        title):
+
+    df = load_csv(csv_file)
+
+    cutoff = (
+        pd.Timestamp.now()
+        - pd.Timedelta(hours=PUBLIC_DELAY_HOURS)
+    )
+
+    df = df[
+        df["Closed Time ET"] < cutoff
+    ]
+
+    df = df.sort_values(
+        "Closed Time ET",
+        ascending=False
+    ).head(PUBLIC_TRADE_LIMIT)
+
+    stats = strategy_stats(df)
+
+    table_html = build_recent_closed_table(
+        df,
+        PUBLIC_TRADE_LIMIT
+    )
+
+    body = f"""
 <div class="card">
 
-<h1>Extreme OS Historical Trades</h1>
+<h1>{title}</h1>
 
 <p>
-Public trade history delayed 96 hours.
+Historical trades delayed 96 hours.
 </p>
 
 </div>
 
 <div class="card">
 
-<div class="stats">
-
 <div class="stat">
-<b>Total Trades</b><br>
-{total_trades}
+Total Trades: {stats['total_trades']}
 </div>
 
 <div class="stat">
-<b>Win Rate</b><br>
-{win_rate:.1f}%
+Win Rate: {stats['win_rate']:.1f}%
 </div>
 
 <div class="stat">
-<b>Total P/L</b><br>
-{total_pl:,.2f}
+Average Trade: ${stats['avg_trade']:,.2f}
 </div>
 
 <div class="stat">
-<b>Average Trade</b><br>
-{avg_trade:,.2f}
-</div>
-
+Total P/L: ${stats['total_pl']:,.0f}
 </div>
 
 </div>
@@ -293,211 +345,220 @@ Public trade history delayed 96 hours.
 {table_html}
 
 </div>
-
-</div>
-
-</body>
-
-</html>
 """
 
-Path(OUTPUT_FILE).write_text(
-    html,
-    encoding="utf-8"
-)
-
-print("Generated extreme-os.html")
-
-
-def generate_members_page():
-
-    os_df = pd.read_csv(
-        "data/extreme_os.csv"
+    Path(output_file).write_text(
+        page_template(title, body),
+        encoding="utf-8"
     )
 
-    mom_df = pd.read_csv(
-        "data/extreme_os.csv"  #momentum.csv
-    )
+    print(f"Generated {output_file}")
 
-    os_df["Closed Time ET"] = pd.to_datetime(
-        os_df["Closed Time ET"],
-        errors="coerce"
-    )
 
-    mom_df["Closed Time ET"] = pd.to_datetime(
-        mom_df["Closed Time ET"],
-        errors="coerce"
-    )
+# ============================================================
+# MEMBER DETAIL PAGE
+# ============================================================
 
-    html = f"""
-<!DOCTYPE html>
-<html>
+def generate_strategy_member_page(
+        df,
+        title,
+        output_file,
+        csv_link):
 
-<head>
+    body = f"""
+<div class="card">
 
-<meta charset="utf-8">
+<h1>{title}</h1>
 
-<title>Members Dashboard</title>
-
-<style>
-
-body {{
-    background:#0f172a;
-    color:#e5e7eb;
-    font-family:Arial,Helvetica,sans-serif;
-    margin:0;
-}}
-
-nav {{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:18px 30px;
-    background:#111827;
-}}
-
-nav a {{
-    color:white;
-    text-decoration:none;
-    margin-left:20px;
-}}
-
-.container {{
-    width:95%;
-    max-width:1400px;
-    margin:auto;
-    padding:20px;
-}}
-
-.card {{
-    background:#111827;
-    border:1px solid #374151;
-    border-radius:10px;
-    padding:20px;
-    margin-bottom:20px;
-}}
-
-.trade-table {{
-    width:100%;
-    border-collapse:collapse;
-}}
-
-.trade-table th {{
-    background:#1f2937;
-}}
-
-.trade-table th,
-.trade-table td {{
-    border:1px solid #374151;
-    padding:4px 6px;
-    font-size:12px;
-}}
-
-a {{
-    color:#60a5fa;
-}}
-
-</style>
-
-</head>
-
-<body>
-
-<nav>
-
-<div>
-<strong>Extreme Trading Inc.</strong>
 </div>
 
-<div>
-<a href="index.html">Home</a>
-<a href="performance.html">Performance</a>
-<a href="strategies.html">Strategies</a>
-<a href="members.html">Members</a>
+<div class="card">
+
+<h2>Current Open Positions</h2>
+
+{build_open_positions_table(df)}
+
 </div>
 
-</nav>
+<div class="card">
 
-<div class="container">
+<h2>Recent Closed Trades</h2>
 
+{build_recent_closed_table(df)}
+
+</div>
+
+<div class="card">
+
+<a href="{csv_link}">
+Download CSV History
+</a>
+
+</div>
+"""
+
+    Path(output_file).write_text(
+        page_template(title, body),
+        encoding="utf-8"
+    )
+
+    print(f"Generated {output_file}")
+
+
+# ============================================================
+# MEMBERS DASHBOARD
+# ============================================================
+
+def generate_members_dashboard(
+        os_df,
+        mom_df):
+
+    os_stats = strategy_stats(os_df)
+    mom_stats = strategy_stats(mom_df)
+
+    body = f"""
 <div class="card">
 
 <h1>Members Dashboard</h1>
 
 <p>
-Current positions, recent trades, and downloadable history.
+Select a strategy.
 </p>
 
 </div>
 
-<div class="card">
+<div class="strategy-grid">
 
-<h2>
-Current Extreme OS Positions
-({len(os_df[os_df['Closed Time ET'].isna()])})
-</h2>
+<a
+class="strategy-card"
+href="extreme-os-members.html">
 
-{build_open_positions_table(os_df)}
+<h2>Extreme OS</h2>
 
+<div class="stat">
+Open Positions:
+{os_stats['open_positions']}
 </div>
 
-<div class="card">
-
-<h2>
-Current Momentum Positions
-({len(mom_df[mom_df['Closed Time ET'].isna()])})
-</h2>
-
-{build_open_positions_table(mom_df)}
-
+<div class="stat">
+Total Trades:
+{os_stats['total_trades']}
 </div>
 
-<div class="card">
-
-<h2>Recent Extreme OS Closed Trades</h2>
-
-{build_recent_closed_table(os_df)}
-
+<div class="stat">
+Win Rate:
+{os_stats['win_rate']:.1f}%
 </div>
 
-<div class="card">
-
-<h2>Recent Momentum Closed Trades</h2>
-
-{build_recent_closed_table(mom_df)}
-
+<div class="stat">
+Total P/L:
+${os_stats['total_pl']:,.0f}
 </div>
 
-<div class="card">
+<div class="view-link">
+View Strategy →
+</div>
 
-<h2>Downloads</h2>
-
-<p>
-<a href="data/extreme_os.csv">
-Download Extreme OS History
 </a>
-</p>
 
-<p>
-<a href="data/momentum.csv">
-Download Momentum History
+<a
+class="strategy-card"
+href="momentum-members.html">
+
+<h2>Momentum</h2>
+
+<div class="stat">
+Open Positions:
+{mom_stats['open_positions']}
+</div>
+
+<div class="stat">
+Total Trades:
+{mom_stats['total_trades']}
+</div>
+
+<div class="stat">
+Win Rate:
+{mom_stats['win_rate']:.1f}%
+</div>
+
+<div class="stat">
+Total P/L:
+${mom_stats['total_pl']:,.0f}
+</div>
+
+<div class="view-link">
+View Strategy →
+</div>
+
 </a>
-</p>
 
 </div>
-
-</div>
-
-</body>
-
-</html>
 """
 
     Path("members.html").write_text(
-        html,
+        page_template(
+            "Members Dashboard",
+            body
+        ),
         encoding="utf-8"
     )
 
     print("Generated members.html")
 
-generate_members_page()
+
+# ============================================================
+# MAIN
+# ============================================================
+
+os_df = load_csv(
+    "data/extreme_os.csv"
+)
+
+try:
+    mom_df = load_csv(
+        "data/momentum.csv"
+    )
+except:
+    print(
+        "momentum.csv not found. "
+        "Using extreme_os.csv as placeholder."
+    )
+
+    mom_df = load_csv(
+        "data/extreme_os.csv"
+    )
+
+
+generate_public_page(
+    "data/extreme_os.csv",
+    "extreme-os.html",
+    "Extreme OS Historical Trades"
+)
+
+generate_public_page(
+    "data/extreme_os.csv",
+    "momentum.html",
+    "Momentum Historical Trades"
+)
+
+generate_strategy_member_page(
+    os_df,
+    "Extreme OS Members",
+    "extreme-os-members.html",
+    "data/extreme_os.csv"
+)
+
+generate_strategy_member_page(
+    mom_df,
+    "Momentum Members",
+    "momentum-members.html",
+    "data/momentum.csv"
+)
+
+generate_members_dashboard(
+    os_df,
+    mom_df
+)
+
+print("Done.")
