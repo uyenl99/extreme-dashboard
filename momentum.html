@@ -1,94 +1,96 @@
-<!DOCTYPE html>
 
+<!DOCTYPE html>
 <html>
+
 <head>
+
 <meta charset="utf-8">
-<title>Momentum - Extreme Trading Inc.</title>
+
+<title>Momentum Historical Trades</title>
 
 <style>
 
-body{
+body {
+    background:#0f172a;
+    color:#e5e7eb;
+    font-family:Arial,Helvetica,sans-serif;
     margin:0;
-    font-family:Arial,sans-serif;
-    background:#f8fafc;
-    color:#222;
 }
 
-nav{
+nav {
     display:flex;
     justify-content:space-between;
     align-items:center;
-    padding:20px 60px;
+    padding:18px 30px;
     background:#111827;
 }
 
-nav a{
+nav a {
     color:white;
     text-decoration:none;
-    margin-left:25px;
+    margin-left:20px;
 }
 
-.hero{
-    padding:80px 10%;
-    background:#0f172a;
-    color:white;
-}
-
-.hero h1{
-    font-size:54px;
-    margin-bottom:10px;
-}
-
-.section{
-    max-width:1100px;
+.container {
+    width:95%;
+    max-width:1400px;
     margin:auto;
-    padding:50px 30px;
+    padding:20px;
 }
 
-.card{
-    background:white;
-    padding:30px;
-    border-radius:12px;
-    box-shadow:0 2px 10px rgba(0,0,0,.1);
-    margin-bottom:25px;
+.card {
+    background:#111827;
+    border:1px solid #374151;
+    border-radius:10px;
+    padding:20px;
+    margin-bottom:20px;
 }
 
-.btn{
-    display:inline-block;
-    padding:14px 24px;
-    background:#2563eb;
-    color:white;
-    text-decoration:none;
-    border-radius:6px;
-    font-weight:bold;
-}
-
-table{
+.trade-table {
     width:100%;
     border-collapse:collapse;
-    margin-top:15px;
 }
 
-th{
+.trade-table th {
+    background:#1f2937;
+}
+
+.trade-table th,
+.trade-table td {
+    border:1px solid #374151;
+    padding:4px 6px;
+    font-size:12px;
+}
+
+.strategy-grid {
+    display:flex;
+    gap:25px;
+    flex-wrap:wrap;
+}
+
+.strategy-card {
+    flex:1;
+    min-width:320px;
     background:#111827;
-    color:white;
-    text-align:left;
+    border:1px solid #374151;
+    border-radius:12px;
+    padding:24px;
+    text-decoration:none;
+    color:#e5e7eb;
 }
 
-th, td{
-    padding:12px;
-    border:1px solid #ddd;
+.strategy-card:hover {
+    border-color:#60a5fa;
 }
 
-.positive{
-    color:green;
+.stat {
+    margin-bottom:8px;
+}
+
+.view-link {
+    margin-top:15px;
+    color:#60a5fa;
     font-weight:bold;
-}
-
-footer{
-    text-align:center;
-    padding:40px;
-    color:#666;
 }
 
 </style>
@@ -99,139 +101,1076 @@ footer{
 
 <nav>
 
-<div><strong>Extreme Trading Inc.</strong></div>
+<div>
+<strong>Extreme Trading Inc.</strong>
+</div>
 
 <div>
 <a href="index.html">Home</a>
 <a href="performance.html">Performance</a>
 <a href="strategies.html">Strategies</a>
-<a href="subscribe.html">Subscribe</a>
 <a href="members.html">Members</a>
-<a href="about.html">About</a>
-<a href="contact.html">Contact</a>
 </div>
 
 </nav>
 
-<div class="hero">
+<div class="container">
 
-<h1>Momentum</h1>
-
-<p>
-Trend-following strategy focused on identifying stocks
-with strong relative strength and sustained momentum.
-</p>
-
-</div>
-
-<div class="section">
 
 <div class="card">
 
-<h2>Overview</h2>
+<h1>Momentum Historical Trades</h1>
 
 <p>
-Momentum seeks stocks exhibiting strong price performance,
-institutional accumulation, and favorable technical trends.
+Historical trades delayed 96 hours.
 </p>
 
 </div>
 
 <div class="card">
 
-<h2>Strategy Characteristics</h2>
+<div class="stat">
+Total Trades: 100
+</div>
 
-<ul>
-<li>Relative Strength Focus</li>
-<li>Breakout Candidates</li>
-<li>Strong Volume Confirmation</li>
-<li>Trend Following</li>
-</ul>
+<div class="stat">
+Win Rate: 73.0%
+</div>
+
+<div class="stat">
+Average Trade: $9.89
+</div>
+
+<div class="stat">
+Total P/L: $989
+</div>
 
 </div>
 
 <div class="card">
 
-<h2>Performance</h2>
-
-<p>
-View live performance and track record.
-</p>
-
-<a class="btn" href="performance.html">
-View Performance
-</a>
-
-</div>
-
-<div class="card">
-
-<h2>Historical Trades</h2>
-
-<table>
-
-<tr>
-<th>Date</th>
-<th>Symbol</th>
-<th>Return</th>
-</tr>
-
-<tr>
-<td>2026-06-02</td>
-<td>PLTR</td>
-<td class="positive">+8.2%</td>
-</tr>
-
-<tr>
-<td>2026-05-18</td>
-<td>TSLA</td>
-<td class="positive">+7.1%</td>
-</tr>
-
-<tr>
-<td>2026-05-03</td>
-<td>CRWD</td>
-<td class="positive">+5.9%</td>
-</tr>
-
+<table border="1" class="dataframe trade-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Open Time</th>
+      <th>Symbol</th>
+      <th>Description</th>
+      <th>Side</th>
+      <th>Qty</th>
+      <th>Entry</th>
+      <th>Close Time</th>
+      <th>P/L</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2026-05-29 10:25:30</td>
+      <td>ROL</td>
+      <td>ROLLINS</td>
+      <td>LONG</td>
+      <td>80.0</td>
+      <td>47.8852</td>
+      <td>2026-06-05 13:37:11</td>
+      <td>-31.60</td>
+    </tr>
+    <tr>
+      <td>2026-06-01 15:42:32</td>
+      <td>CME</td>
+      <td>CME GROUP</td>
+      <td>LONG</td>
+      <td>13.0</td>
+      <td>259.6644</td>
+      <td>2026-06-05 12:50:18</td>
+      <td>-22.26</td>
+    </tr>
+    <tr>
+      <td>2026-05-08 13:25:25</td>
+      <td>ZTS</td>
+      <td>ZOETIS INC</td>
+      <td>LONG</td>
+      <td>40.0</td>
+      <td>81.4094</td>
+      <td>2026-06-04 11:57:40</td>
+      <td>-10.80</td>
+    </tr>
+    <tr>
+      <td>2026-05-29 11:00:47</td>
+      <td>PLAB</td>
+      <td>PHOTRONICS</td>
+      <td>LONG</td>
+      <td>120.0</td>
+      <td>32.2535</td>
+      <td>2026-06-02 12:52:39</td>
+      <td>132.60</td>
+    </tr>
+    <tr>
+      <td>2026-06-01 12:53:38</td>
+      <td>ASTS</td>
+      <td>AST SPACEMOBILE INC</td>
+      <td>LONG</td>
+      <td>35.0</td>
+      <td>102.8267</td>
+      <td>2026-06-01 13:51:08</td>
+      <td>137.30</td>
+    </tr>
+    <tr>
+      <td>2026-05-29 13:18:15</td>
+      <td>MDB</td>
+      <td>MONGODB INC. CLASS A COMMON STOCK</td>
+      <td>LONG</td>
+      <td>10.0</td>
+      <td>314.2483</td>
+      <td>2026-05-29 15:24:43</td>
+      <td>147.80</td>
+    </tr>
+    <tr>
+      <td>2026-05-28 12:54:50</td>
+      <td>ZS</td>
+      <td>ZSCALER INC. COMMON STOCK</td>
+      <td>LONG</td>
+      <td>30.0</td>
+      <td>130.2526</td>
+      <td>2026-05-28 13:17:29</td>
+      <td>41.40</td>
+    </tr>
+    <tr>
+      <td>2026-05-26 12:01:24</td>
+      <td>BJ</td>
+      <td>BJ'S WHOLESALE CLUB HOLDINGS INC</td>
+      <td>LONG</td>
+      <td>40.0</td>
+      <td>84.6800</td>
+      <td>2026-05-28 11:52:56</td>
+      <td>49.20</td>
+    </tr>
+    <tr>
+      <td>2026-05-07 15:52:07</td>
+      <td>LDOS</td>
+      <td>LEIDOS HOLDINGS INC</td>
+      <td>LONG</td>
+      <td>28.0</td>
+      <td>130.9761</td>
+      <td>2026-05-27 12:34:18</td>
+      <td>26.44</td>
+    </tr>
+    <tr>
+      <td>2026-05-20 12:31:51</td>
+      <td>ADI</td>
+      <td>ANALOG DEVICES</td>
+      <td>LONG</td>
+      <td>10.0</td>
+      <td>386.5371</td>
+      <td>2026-05-22 12:36:30</td>
+      <td>96.80</td>
+    </tr>
+    <tr>
+      <td>2026-05-07 15:49:50</td>
+      <td>WING</td>
+      <td>WINGSTOP INC. COMMON STOCK</td>
+      <td>LONG</td>
+      <td>28.0</td>
+      <td>134.5005</td>
+      <td>2026-05-22 12:36:20</td>
+      <td>73.44</td>
+    </tr>
+    <tr>
+      <td>2026-05-15 14:44:18</td>
+      <td>OKLO</td>
+      <td>OKLO INC</td>
+      <td>LONG</td>
+      <td>50.0</td>
+      <td>62.7925</td>
+      <td>2026-05-21 13:34:13</td>
+      <td>86.00</td>
+    </tr>
+    <tr>
+      <td>2026-05-18 13:33:08</td>
+      <td>CRWV</td>
+      <td>COREWEAVE INC. CLASS A</td>
+      <td>LONG</td>
+      <td>30.0</td>
+      <td>100.6871</td>
+      <td>2026-05-21 10:12:32</td>
+      <td>139.40</td>
+    </tr>
+    <tr>
+      <td>2026-05-18 13:35:28</td>
+      <td>CRDO</td>
+      <td>CREDO TECHNOLOGY GROUP HOLDING LTD</td>
+      <td>LONG</td>
+      <td>20.0</td>
+      <td>153.5910</td>
+      <td>2026-05-19 09:55:27</td>
+      <td>93.60</td>
+    </tr>
+    <tr>
+      <td>2026-05-14 15:11:02</td>
+      <td>TTEK</td>
+      <td>TETRA TECH</td>
+      <td>LONG</td>
+      <td>120.0</td>
+      <td>26.3410</td>
+      <td>2026-05-18 10:56:57</td>
+      <td>109.60</td>
+    </tr>
+    <tr>
+      <td>2026-05-12 15:54:20</td>
+      <td>SHOP</td>
+      <td>SHOPIFY INC. CLASS A</td>
+      <td>LONG</td>
+      <td>35.0</td>
+      <td>100.0140</td>
+      <td>2026-05-15 14:20:01</td>
+      <td>31.30</td>
+    </tr>
+    <tr>
+      <td>2026-05-12 14:27:09</td>
+      <td>CDW</td>
+      <td>CDW CORPORATION COMMON STOCK</td>
+      <td>LONG</td>
+      <td>35.0</td>
+      <td>98.8700</td>
+      <td>2026-05-15 09:52:03</td>
+      <td>99.30</td>
+    </tr>
+    <tr>
+      <td>2026-05-13 13:30:19</td>
+      <td>WK</td>
+      <td>WORKIVA INC</td>
+      <td>LONG</td>
+      <td>80.0</td>
+      <td>43.7164</td>
+      <td>2026-05-14 10:19:25</td>
+      <td>139.40</td>
+    </tr>
+    <tr>
+      <td>2026-05-13 10:06:58</td>
+      <td>KVYO</td>
+      <td>KLAYIVO INC</td>
+      <td>LONG</td>
+      <td>280.0</td>
+      <td>13.7460</td>
+      <td>2026-05-13 11:21:39</td>
+      <td>189.40</td>
+    </tr>
+    <tr>
+      <td>2026-05-07 15:53:07</td>
+      <td>ANET</td>
+      <td>ARISTA NETWORKS INC</td>
+      <td>LONG</td>
+      <td>25.0</td>
+      <td>140.9600</td>
+      <td>2026-05-12 11:08:52</td>
+      <td>-19.50</td>
+    </tr>
+    <tr>
+      <td>2026-05-06 15:56:45</td>
+      <td>PLTR</td>
+      <td>PALANTIR TECHNOLOGIES INC. CLASS A</td>
+      <td>LONG</td>
+      <td>25.0</td>
+      <td>133.6350</td>
+      <td>2026-05-07 09:53:52</td>
+      <td>100.50</td>
+    </tr>
+    <tr>
+      <td>2026-05-06 15:53:41</td>
+      <td>SHOP</td>
+      <td>SHOPIFY INC. CLASS A</td>
+      <td>LONG</td>
+      <td>30.0</td>
+      <td>105.3503</td>
+      <td>2026-05-07 09:32:06</td>
+      <td>86.40</td>
+    </tr>
+    <tr>
+      <td>2026-05-06 14:23:42</td>
+      <td>ANET</td>
+      <td>ARISTA NETWORKS INC</td>
+      <td>LONG</td>
+      <td>25.0</td>
+      <td>141.8134</td>
+      <td>2026-05-06 15:53:50</td>
+      <td>128.50</td>
+    </tr>
+    <tr>
+      <td>2026-04-30 15:14:34</td>
+      <td>BLDR</td>
+      <td>BUILDERS FIRSTSOURCE</td>
+      <td>LONG</td>
+      <td>45.0</td>
+      <td>79.3759</td>
+      <td>2026-05-06 10:53:04</td>
+      <td>-15.90</td>
+    </tr>
+    <tr>
+      <td>2026-04-28 15:45:08</td>
+      <td>NAMS</td>
+      <td>NEWAMSTERDAM PHARMA COMPANY N.V.</td>
+      <td>LONG</td>
+      <td>140.0</td>
+      <td>28.3300</td>
+      <td>2026-05-01 12:13:58</td>
+      <td>47.20</td>
+    </tr>
+    <tr>
+      <td>2026-04-20 13:00:33</td>
+      <td>NFLX</td>
+      <td>NETFLIX</td>
+      <td>LONG</td>
+      <td>40.0</td>
+      <td>94.0453</td>
+      <td>2026-04-30 15:14:42</td>
+      <td>2.20</td>
+    </tr>
+    <tr>
+      <td>2026-04-29 14:27:43</td>
+      <td>TXG</td>
+      <td>10X GENOMICS INC. CLASS A COMMON STOCK</td>
+      <td>LONG</td>
+      <td>180.0</td>
+      <td>19.7074</td>
+      <td>2026-04-29 15:25:49</td>
+      <td>81.40</td>
+    </tr>
+    <tr>
+      <td>2026-04-24 15:55:35</td>
+      <td>KRMN</td>
+      <td>KARMAN HOLDINGS INC</td>
+      <td>LONG</td>
+      <td>60.0</td>
+      <td>69.9343</td>
+      <td>2026-04-27 12:03:36</td>
+      <td>54.80</td>
+    </tr>
+    <tr>
+      <td>2026-04-22 12:08:55</td>
+      <td>GE</td>
+      <td>GE AEROSPACE</td>
+      <td>LONG</td>
+      <td>13.0</td>
+      <td>272.7500</td>
+      <td>2026-04-23 11:59:45</td>
+      <td>111.74</td>
+    </tr>
+    <tr>
+      <td>2026-04-14 11:09:47</td>
+      <td>OXY</td>
+      <td>OCCIDENTAL PETROLEUM</td>
+      <td>LONG</td>
+      <td>60.0</td>
+      <td>55.6700</td>
+      <td>2026-04-22 11:50:49</td>
+      <td>59.80</td>
+    </tr>
+    <tr>
+      <td>2026-04-21 15:49:27</td>
+      <td>BSX</td>
+      <td>BOSTON SCIENTIFIC</td>
+      <td>LONG</td>
+      <td>60.0</td>
+      <td>59.8062</td>
+      <td>2026-04-22 09:41:09</td>
+      <td>270.80</td>
+    </tr>
+    <tr>
+      <td>2023-04-17 15:40:38</td>
+      <td>LCID</td>
+      <td>LUCID GROUP INC</td>
+      <td>LONG</td>
+      <td>100.0</td>
+      <td>38.9704</td>
+      <td>2026-04-16 09:33:46</td>
+      <td>-1909.00</td>
+    </tr>
+    <tr>
+      <td>2026-02-06 15:19:09</td>
+      <td>TEAM</td>
+      <td>ATLASSIAN CORPORATION PLC CLASS A</td>
+      <td>LONG</td>
+      <td>35.0</td>
+      <td>93.1350</td>
+      <td>2026-04-16 09:33:37</td>
+      <td>-803.70</td>
+    </tr>
+    <tr>
+      <td>2026-04-14 12:45:26</td>
+      <td>AKAM</td>
+      <td>AKAMAI TECHNOLOGIES</td>
+      <td>LONG</td>
+      <td>40.0</td>
+      <td>89.6729</td>
+      <td>2026-04-15 09:48:50</td>
+      <td>104.20</td>
+    </tr>
+    <tr>
+      <td>2026-01-28 12:09:45</td>
+      <td>AFRM</td>
+      <td>AFFIRM HOLDINGS INC. CLASS A</td>
+      <td>LONG</td>
+      <td>60.0</td>
+      <td>65.9211</td>
+      <td>2026-04-14 14:08:29</td>
+      <td>-633.20</td>
+    </tr>
+    <tr>
+      <td>2026-03-17 15:01:30</td>
+      <td>HNI</td>
+      <td>HNI</td>
+      <td>LONG</td>
+      <td>100.0</td>
+      <td>37.4292</td>
+      <td>2026-04-14 12:45:00</td>
+      <td>-97.00</td>
+    </tr>
+    <tr>
+      <td>2026-04-09 13:12:09</td>
+      <td>SNOW</td>
+      <td>SNOWFLAKE INC</td>
+      <td>LONG</td>
+      <td>25.0</td>
+      <td>134.5117</td>
+      <td>2026-04-14 12:44:38</td>
+      <td>48.50</td>
+    </tr>
+    <tr>
+      <td>2026-04-08 15:32:32</td>
+      <td>PLTR</td>
+      <td>PALANTIR TECHNOLOGIES INC. CLASS A</td>
+      <td>LONG</td>
+      <td>25.0</td>
+      <td>139.3153</td>
+      <td>2026-04-14 09:49:45</td>
+      <td>-63.50</td>
+    </tr>
+    <tr>
+      <td>2026-02-19 15:43:43</td>
+      <td>BX</td>
+      <td>BLACKSTONE INC</td>
+      <td>LONG</td>
+      <td>30.0</td>
+      <td>125.3024</td>
+      <td>2026-04-14 09:36:36</td>
+      <td>-34.60</td>
+    </tr>
+    <tr>
+      <td>2026-04-06 12:00:32</td>
+      <td>TSLA</td>
+      <td>TESLA&nbsp;&nbsp;INC.</td>
+      <td>LONG</td>
+      <td>10.0</td>
+      <td>353.9067</td>
+      <td>2026-04-14 09:36:16</td>
+      <td>30.80</td>
+    </tr>
+    <tr>
+      <td>2026-04-10 15:47:32</td>
+      <td>OKTA</td>
+      <td>OKTA INC. CL A COMMON STOCK</td>
+      <td>LONG</td>
+      <td>50.0</td>
+      <td>63.0700</td>
+      <td>2026-04-13 12:29:05</td>
+      <td>86.00</td>
+    </tr>
+    <tr>
+      <td>2026-04-10 15:14:33</td>
+      <td>WIX</td>
+      <td>WIX.COM LTD. ORDINARY SHARES</td>
+      <td>LONG</td>
+      <td>50.0</td>
+      <td>63.2961</td>
+      <td>2026-04-10 15:46:48</td>
+      <td>44.00</td>
+    </tr>
+    <tr>
+      <td>2026-03-05 12:20:57</td>
+      <td>AMCR</td>
+      <td>AMCOR PLC ORDINDARY SHARES</td>
+      <td>LONG</td>
+      <td>90.0</td>
+      <td>44.4185</td>
+      <td>2026-04-08 11:48:58</td>
+      <td>-235.80</td>
+    </tr>
+    <tr>
+      <td>2026-03-24 13:37:44</td>
+      <td>CELH</td>
+      <td>CELSIUS HOLDINGS INC. COMMON STOCK</td>
+      <td>LONG</td>
+      <td>100.0</td>
+      <td>36.1786</td>
+      <td>2026-04-08 09:34:14</td>
+      <td>100.00</td>
+    </tr>
+    <tr>
+      <td>2026-04-07 12:01:36</td>
+      <td>ENPH</td>
+      <td>ENPHASE ENERGY</td>
+      <td>LONG</td>
+      <td>100.0</td>
+      <td>31.6650</td>
+      <td>2026-04-08 09:34:04</td>
+      <td>179.00</td>
+    </tr>
+    <tr>
+      <td>2026-04-01 14:30:40</td>
+      <td>ARE</td>
+      <td>ALEXANDRIA REAL ESTATE</td>
+      <td>LONG</td>
+      <td>80.0</td>
+      <td>43.8300</td>
+      <td>2026-04-07 15:05:52</td>
+      <td>-13.60</td>
+    </tr>
+    <tr>
+      <td>2026-04-02 14:01:27</td>
+      <td>EQT</td>
+      <td>EQT</td>
+      <td>LONG</td>
+      <td>55.0</td>
+      <td>60.1200</td>
+      <td>2026-04-07 14:22:10</td>
+      <td>20.90</td>
+    </tr>
+    <tr>
+      <td>2026-04-06 13:01:30</td>
+      <td>AXTI</td>
+      <td>AXT</td>
+      <td>LONG</td>
+      <td>80.0</td>
+      <td>39.9244</td>
+      <td>2026-04-06 13:52:59</td>
+      <td>78.40</td>
+    </tr>
+    <tr>
+      <td>2026-03-23 14:37:19</td>
+      <td>OLLI</td>
+      <td>OLLIES BARGAIN OUTLET HOLDINGS INC.</td>
+      <td>LONG</td>
+      <td>40.0</td>
+      <td>95.3505</td>
+      <td>2026-04-02 10:45:40</td>
+      <td>-20.80</td>
+    </tr>
+    <tr>
+      <td>2026-04-01 09:39:50</td>
+      <td>UL</td>
+      <td>UNILEVER</td>
+      <td>LONG</td>
+      <td>70.0</td>
+      <td>55.5400</td>
+      <td>2026-04-01 14:15:51</td>
+      <td>35.60</td>
+    </tr>
+    <tr>
+      <td>2026-03-26 10:16:40</td>
+      <td>MU</td>
+      <td>MICRON TECHNOLOGY</td>
+      <td>LONG</td>
+      <td>10.0</td>
+      <td>367.5274</td>
+      <td>2026-04-01 11:52:23</td>
+      <td>66.80</td>
+    </tr>
+    <tr>
+      <td>2026-03-31 15:30:26</td>
+      <td>SNOW</td>
+      <td>SNOWFLAKE INC</td>
+      <td>LONG</td>
+      <td>20.0</td>
+      <td>151.3161</td>
+      <td>2026-04-01 09:36:57</td>
+      <td>37.60</td>
+    </tr>
+    <tr>
+      <td>2026-03-30 13:42:09</td>
+      <td>OKLO</td>
+      <td>OKLO INC</td>
+      <td>LONG</td>
+      <td>70.0</td>
+      <td>46.3163</td>
+      <td>2026-03-31 10:09:30</td>
+      <td>63.60</td>
+    </tr>
+    <tr>
+      <td>2026-03-30 13:43:22</td>
+      <td>APLD</td>
+      <td>APPLIED DIGITAL INC</td>
+      <td>LONG</td>
+      <td>150.0</td>
+      <td>20.3597</td>
+      <td>2026-03-31 09:37:59</td>
+      <td>115.00</td>
+    </tr>
+    <tr>
+      <td>2026-03-27 12:46:53</td>
+      <td>META</td>
+      <td>META PLATFORMS INC. CLASS A</td>
+      <td>LONG</td>
+      <td>7.0</td>
+      <td>530.2800</td>
+      <td>2026-03-30 13:20:31</td>
+      <td>50.86</td>
+    </tr>
+    <tr>
+      <td>2026-03-23 14:46:03</td>
+      <td>CNC</td>
+      <td>CENTENE</td>
+      <td>LONG</td>
+      <td>100.0</td>
+      <td>33.1164</td>
+      <td>2026-03-26 14:30:00</td>
+      <td>7.00</td>
+    </tr>
+    <tr>
+      <td>2026-03-18 13:29:51</td>
+      <td>AGI</td>
+      <td>ALAMOS GOLD INC</td>
+      <td>LONG</td>
+      <td>90.0</td>
+      <td>42.2811</td>
+      <td>2026-03-25 09:37:59</td>
+      <td>3.20</td>
+    </tr>
+    <tr>
+      <td>2026-03-16 12:38:35</td>
+      <td>PSN</td>
+      <td>PARSONS CORP</td>
+      <td>LONG</td>
+      <td>70.0</td>
+      <td>52.7292</td>
+      <td>2026-03-23 10:55:59</td>
+      <td>-21.40</td>
+    </tr>
+    <tr>
+      <td>2026-03-20 13:57:09</td>
+      <td>SUNB</td>
+      <td>SUNBELT RENTALS HOLDINGS INC</td>
+      <td>LONG</td>
+      <td>50.0</td>
+      <td>63.0900</td>
+      <td>2026-03-23 09:31:42</td>
+      <td>134.00</td>
+    </tr>
+    <tr>
+      <td>2026-03-13 14:36:39</td>
+      <td>JBTM</td>
+      <td>JBT MAREL CORP</td>
+      <td>LONG</td>
+      <td>25.0</td>
+      <td>129.8177</td>
+      <td>2026-03-17 11:23:07</td>
+      <td>67.50</td>
+    </tr>
+    <tr>
+      <td>2026-03-16 14:27:59</td>
+      <td>ULTA</td>
+      <td>ULTA BEAUTY INC</td>
+      <td>LONG</td>
+      <td>7.0</td>
+      <td>525.0100</td>
+      <td>2026-03-17 11:22:59</td>
+      <td>44.86</td>
+    </tr>
+    <tr>
+      <td>2026-02-12 11:42:08</td>
+      <td>ALAB</td>
+      <td>ASTERA LABS INC.</td>
+      <td>LONG</td>
+      <td>25.0</td>
+      <td>134.5300</td>
+      <td>2026-03-17 09:41:25</td>
+      <td>-19.50</td>
+    </tr>
+    <tr>
+      <td>2026-03-11 12:18:31</td>
+      <td>KMB</td>
+      <td>KIMBERLY-CLARK CORPORATION</td>
+      <td>LONG</td>
+      <td>40.0</td>
+      <td>99.8304</td>
+      <td>2026-03-16 13:21:33</td>
+      <td>0.20</td>
+    </tr>
+    <tr>
+      <td>2026-03-13 11:56:20</td>
+      <td>TNK</td>
+      <td>TEEKAY TANKERS</td>
+      <td>LONG</td>
+      <td>50.0</td>
+      <td>63.5640</td>
+      <td>2026-03-13 13:02:55</td>
+      <td>25.00</td>
+    </tr>
+    <tr>
+      <td>2026-03-12 13:41:40</td>
+      <td>EL</td>
+      <td>ESTEE LAUDER COS</td>
+      <td>LONG</td>
+      <td>45.0</td>
+      <td>85.4176</td>
+      <td>2026-03-13 10:33:11</td>
+      <td>115.10</td>
+    </tr>
+    <tr>
+      <td>2026-03-09 15:56:50</td>
+      <td>SKY</td>
+      <td>CHAMPION HOMES INC</td>
+      <td>LONG</td>
+      <td>40.0</td>
+      <td>79.9770</td>
+      <td>2026-03-12 12:37:21</td>
+      <td>-22.80</td>
+    </tr>
+    <tr>
+      <td>2026-03-06 13:43:33</td>
+      <td>AEO</td>
+      <td>AMERICAN EAGLE</td>
+      <td>LONG</td>
+      <td>200.0</td>
+      <td>18.6294</td>
+      <td>2026-03-10 09:45:11</td>
+      <td>87.00</td>
+    </tr>
+    <tr>
+      <td>2026-03-09 12:28:54</td>
+      <td>LEN</td>
+      <td>LENNAR</td>
+      <td>LONG</td>
+      <td>40.0</td>
+      <td>96.9172</td>
+      <td>2026-03-09 15:35:22</td>
+      <td>137.20</td>
+    </tr>
+    <tr>
+      <td>2026-02-09 15:11:34</td>
+      <td>HIMS</td>
+      <td>HIMS AND HERS HEALTH INC</td>
+      <td>LONG</td>
+      <td>150.0</td>
+      <td>19.0086</td>
+      <td>2026-03-09 12:04:36</td>
+      <td>443.00</td>
+    </tr>
+    <tr>
+      <td>2026-01-09 13:41:30</td>
+      <td>NOW</td>
+      <td>SERVICENOW</td>
+      <td>LONG</td>
+      <td>25.0</td>
+      <td>142.1645</td>
+      <td>2026-03-05 10:10:19</td>
+      <td>-534.50</td>
+    </tr>
+    <tr>
+      <td>2026-03-02 15:44:06</td>
+      <td>ELV</td>
+      <td>ELEVANCE HEALTH INC</td>
+      <td>LONG</td>
+      <td>12.0</td>
+      <td>291.7629</td>
+      <td>2026-03-05 09:42:01</td>
+      <td>20.76</td>
+    </tr>
+    <tr>
+      <td>2026-01-27 14:51:52</td>
+      <td>TTD</td>
+      <td>THE TRADE DESK INC. CLASS A</td>
+      <td>LONG</td>
+      <td>120.0</td>
+      <td>32.2864</td>
+      <td>2026-03-05 09:34:50</td>
+      <td>-35.40</td>
+    </tr>
+    <tr>
+      <td>2026-03-04 12:52:48</td>
+      <td>CLX</td>
+      <td>CLOROX</td>
+      <td>LONG</td>
+      <td>35.0</td>
+      <td>116.8211</td>
+      <td>2026-03-04 14:47:13</td>
+      <td>45.30</td>
+    </tr>
+    <tr>
+      <td>2026-03-03 12:59:04</td>
+      <td>RUN</td>
+      <td>SUNRUN INC. COMMON STOCK</td>
+      <td>LONG</td>
+      <td>300.0</td>
+      <td>11.7650</td>
+      <td>2026-03-04 10:03:19</td>
+      <td>124.00</td>
+    </tr>
+    <tr>
+      <td>2026-03-03 10:35:34</td>
+      <td>CRDO</td>
+      <td>CREDO TECHNOLOGY GROUP HOLDING LTD</td>
+      <td>LONG</td>
+      <td>35.0</td>
+      <td>94.0518</td>
+      <td>2026-03-03 12:07:06</td>
+      <td>90.30</td>
+    </tr>
+    <tr>
+      <td>2026-02-18 15:40:44</td>
+      <td>GPC</td>
+      <td>GENUINE PARTS</td>
+      <td>LONG</td>
+      <td>30.0</td>
+      <td>121.5500</td>
+      <td>2026-02-27 12:44:53</td>
+      <td>-100.60</td>
+    </tr>
+    <tr>
+      <td>2026-01-30 14:06:58</td>
+      <td>IONQ</td>
+      <td>IONQ INC</td>
+      <td>LONG</td>
+      <td>70.0</td>
+      <td>40.2191</td>
+      <td>2026-02-26 09:37:45</td>
+      <td>-15.40</td>
+    </tr>
+    <tr>
+      <td>2026-02-25 13:31:35</td>
+      <td>BLDR</td>
+      <td>BUILDERS FIRSTSOURCE</td>
+      <td>LONG</td>
+      <td>35.0</td>
+      <td>102.9521</td>
+      <td>2026-02-26 09:37:39</td>
+      <td>28.30</td>
+    </tr>
+    <tr>
+      <td>2026-02-24 13:32:59</td>
+      <td>PANW</td>
+      <td>PALO ALTO NETWORKS</td>
+      <td>LONG</td>
+      <td>25.0</td>
+      <td>140.9001</td>
+      <td>2026-02-24 15:07:11</td>
+      <td>37.50</td>
+    </tr>
+    <tr>
+      <td>2026-02-20 13:54:19</td>
+      <td>OLED</td>
+      <td>UNIVERSAL DISPLAY CORPORATION</td>
+      <td>LONG</td>
+      <td>30.0</td>
+      <td>105.7866</td>
+      <td>2026-02-24 13:23:08</td>
+      <td>28.40</td>
+    </tr>
+    <tr>
+      <td>2026-02-17 15:41:33</td>
+      <td>TTEK</td>
+      <td>TETRA TECH</td>
+      <td>LONG</td>
+      <td>100.0</td>
+      <td>35.6255</td>
+      <td>2026-02-18 10:10:49</td>
+      <td>71.00</td>
+    </tr>
+    <tr>
+      <td>2026-02-17 13:00:22</td>
+      <td>FDS</td>
+      <td>FACTSET RESEARCH SYSTEMS</td>
+      <td>LONG</td>
+      <td>15.0</td>
+      <td>186.9721</td>
+      <td>2026-02-17 14:55:13</td>
+      <td>59.70</td>
+    </tr>
+    <tr>
+      <td>2026-02-13 14:10:26</td>
+      <td>HTGC</td>
+      <td>HERCULES CAPITAL INC</td>
+      <td>LONG</td>
+      <td>225.0</td>
+      <td>15.6235</td>
+      <td>2026-02-17 10:06:29</td>
+      <td>73.50</td>
+    </tr>
+    <tr>
+      <td>2026-02-10 14:28:45</td>
+      <td>AJG</td>
+      <td>ARTHUR J. GALLAGHER</td>
+      <td>LONG</td>
+      <td>15.0</td>
+      <td>214.4800</td>
+      <td>2026-02-13 14:09:56</td>
+      <td>-61.30</td>
+    </tr>
+    <tr>
+      <td>2026-01-23 15:53:29</td>
+      <td>CEG</td>
+      <td>CONSTELLATION ENERGY CORPORATION</td>
+      <td>LONG</td>
+      <td>12.0</td>
+      <td>288.9958</td>
+      <td>2026-02-13 11:37:45</td>
+      <td>-6.24</td>
+    </tr>
+    <tr>
+      <td>2026-02-06 15:21:05</td>
+      <td>RDDT</td>
+      <td>REDDIT INC</td>
+      <td>LONG</td>
+      <td>25.0</td>
+      <td>139.5619</td>
+      <td>2026-02-09 09:40:29</td>
+      <td>85.50</td>
+    </tr>
+    <tr>
+      <td>2026-01-28 12:35:08</td>
+      <td>HUM</td>
+      <td>HUMANA</td>
+      <td>LONG</td>
+      <td>15.0</td>
+      <td>196.6836</td>
+      <td>2026-02-06 11:31:43</td>
+      <td>-25.30</td>
+    </tr>
+    <tr>
+      <td>2026-02-05 12:26:15</td>
+      <td>ORCL</td>
+      <td>ORACLE CORP</td>
+      <td>LONG</td>
+      <td>25.0</td>
+      <td>140.9714</td>
+      <td>2026-02-06 09:42:05</td>
+      <td>31.50</td>
+    </tr>
+    <tr>
+      <td>2026-02-04 15:47:44</td>
+      <td>HOOD</td>
+      <td>ROBINHOOD MARKETS INC</td>
+      <td>LONG</td>
+      <td>35.0</td>
+      <td>80.4304</td>
+      <td>2026-02-06 09:34:09</td>
+      <td>2.30</td>
+    </tr>
+    <tr>
+      <td>2026-01-29 15:33:20</td>
+      <td>PCOR</td>
+      <td>PROCORE TECHNOLOGIES CORP</td>
+      <td>LONG</td>
+      <td>60.0</td>
+      <td>56.6204</td>
+      <td>2026-02-05 12:20:32</td>
+      <td>-193.20</td>
+    </tr>
+    <tr>
+      <td>2026-02-04 13:24:22</td>
+      <td>ORCL</td>
+      <td>ORACLE CORP</td>
+      <td>LONG</td>
+      <td>25.0</td>
+      <td>145.2626</td>
+      <td>2026-02-04 15:41:21</td>
+      <td>58.50</td>
+    </tr>
+    <tr>
+      <td>2026-02-03 10:01:51</td>
+      <td>IOT</td>
+      <td>SAMSARA INC</td>
+      <td>LONG</td>
+      <td>120.0</td>
+      <td>24.9200</td>
+      <td>2026-02-04 13:21:59</td>
+      <td>-21.40</td>
+    </tr>
+    <tr>
+      <td>2026-02-03 15:49:50</td>
+      <td>EXLS</td>
+      <td>EXLSERVICE HOLDINGS</td>
+      <td>LONG</td>
+      <td>100.0</td>
+      <td>32.8521</td>
+      <td>2026-02-04 13:21:24</td>
+      <td>-10.00</td>
+    </tr>
+    <tr>
+      <td>2026-02-02 11:56:02</td>
+      <td>KTOS</td>
+      <td>KRATOS DEFENSE &amp; SECURITY</td>
+      <td>LONG</td>
+      <td>35.0</td>
+      <td>95.5379</td>
+      <td>2026-02-03 09:36:12</td>
+      <td>134.30</td>
+    </tr>
+    <tr>
+      <td>2026-01-30 12:23:55</td>
+      <td>PLTR</td>
+      <td>PALANTIR TECHNOLOGIES INC. CLASS A</td>
+      <td>LONG</td>
+      <td>25.0</td>
+      <td>148.3236</td>
+      <td>2026-02-02 11:06:12</td>
+      <td>41.50</td>
+    </tr>
+    <tr>
+      <td>2026-01-29 10:21:56</td>
+      <td>PLTR</td>
+      <td>PALANTIR TECHNOLOGIES INC. CLASS A</td>
+      <td>LONG</td>
+      <td>23.0</td>
+      <td>149.3336</td>
+      <td>2026-01-29 12:44:56</td>
+      <td>26.54</td>
+    </tr>
+    <tr>
+      <td>2026-01-28 15:24:44</td>
+      <td>SYM</td>
+      <td>SYMBOTIC INC. CLASS A COMMON STOCK</td>
+      <td>LONG</td>
+      <td>60.0</td>
+      <td>54.9521</td>
+      <td>2026-01-29 12:06:12</td>
+      <td>40.80</td>
+    </tr>
+    <tr>
+      <td>2026-01-21 12:01:43</td>
+      <td>SHOP</td>
+      <td>SHOPIFY INC. CLASS A</td>
+      <td>LONG</td>
+      <td>25.0</td>
+      <td>139.2283</td>
+      <td>2026-01-28 14:35:50</td>
+      <td>28.50</td>
+    </tr>
+    <tr>
+      <td>2026-01-26 15:55:04</td>
+      <td>IONQ</td>
+      <td>IONQ INC</td>
+      <td>LONG</td>
+      <td>80.0</td>
+      <td>43.2944</td>
+      <td>2026-01-27 13:22:35</td>
+      <td>117.40</td>
+    </tr>
+    <tr>
+      <td>2026-01-26 15:56:24</td>
+      <td>INTC</td>
+      <td>INTEL</td>
+      <td>LONG</td>
+      <td>100.0</td>
+      <td>42.5350</td>
+      <td>2026-01-27 09:35:23</td>
+      <td>160.00</td>
+    </tr>
+  </tbody>
 </table>
 
 </div>
 
-<div class="card">
-
-<h2>Member Access</h2>
-
-<ul>
-<li>Current Momentum Picks</li>
-<li>Open Positions</li>
-<li>Trade Alerts</li>
-<li>Email Notifications</li>
-<li>SMS Notifications</li>
-</ul>
 
 </div>
-
-<div class="card" style="text-align:center;">
-
-<h2>Want Access to Current Momentum Picks?</h2>
-
-<p>
-Members receive immediate access to active positions
-and new trade alerts.
-</p>
-
-<a class="btn" href="subscribe.html">
-Become a Member
-</a>
-
-</div>
-
-</div>
-
-<footer>
-© 2026 Extreme Trading Inc.
-</footer>
 
 </body>
+
 </html>
