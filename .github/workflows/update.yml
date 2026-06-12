@@ -8,6 +8,8 @@ permissions:
 
 env:
    C2_API_KEY: ${{ secrets.C2_API_KEY }}
+   RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+   ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
 
 jobs:
   build:
@@ -21,6 +23,8 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python dashboard.py
       - run: python generate_strategy_pages.py
+      - run: pip install resend
+      - run: python send_alerts.py
        
       - name: Commit generated files
         run: |
