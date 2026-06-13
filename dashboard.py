@@ -2,8 +2,13 @@ import os
 import requests
 import pandas as pd
 import plotly.graph_objects as go
+from datetime import datetime
+from datetime import timedelta
+from pathlib import Path
 
+Path("data").mkdir(exist_ok=True)
 API_KEY = os.environ["C2_API_KEY"]
+STRATEGY_ID = 13202557
 
 headers = {
     "Authorization": f"Bearer {API_KEY}"
@@ -141,6 +146,130 @@ table_html = table_html.replace(
     ">Annual<",
     ' style="background:#e8eefc;font-weight:bold;">Annual<'
 )
+
+###############################################################
+def download_closed_trades():
+    url = (
+        "https://api4-general.collective2.com/"
+        "Strategies/GetStrategyHistoricalClosedTrades"
+    )
+
+    params = {
+        "StrategyId": STRATEGY_ID,
+        "CommissionPlan": 0
+    }
+
+    r = requests.get(
+        url,
+        headers=headers,
+        params=params
+    )
+
+    r.raise_for_status()
+
+    data = r.json()
+
+    trades = data["Results"][0]["ClosedTrades"]
+
+    df = pd.DataFrame(trades)
+
+    df.to_csv(
+        "data/extreme_os.csv",
+        index=False
+    )
+
+    print(
+        "Saved",
+        len(df),
+        "closed trades"
+    )
+
+#################################################
+def download_open_positions():
+    url = (
+        "https://api4-general.collective2.com/"
+        "Strategies/GetStrategyOpenPositions"
+    )
+
+    params = {
+        "StrategyIds": STRATEGY_ID
+    }
+
+    r = requests.get(
+        url,
+        headers=headers,
+        params=params
+    )
+
+    r.raise_for_status()
+
+    data = r.json()
+
+    positions = data["Results"]
+
+    df = pd.DataFrame(
+        positions
+    )
+
+    df.to_csv(
+        "data/extreme_os_open.csv",
+        index=False
+    )
+
+    print(
+        "Saved",
+        len(df),
+        "open positions"
+    )
+################################################
+def download_orders():
+    today = datetime.utcnow()
+    start_date = (
+        today.strftime("%Y-%m-%d")
+    )
+
+    end_date = (
+        today.strftime("%Y-%m-%d")
+    )
+
+    url = (
+        "https://api4-general.collective2.com/"
+        "Strategies/GetStrategyHistoricalOrders"
+    )
+
+    params = {
+        "StrategyId": STRATEGY_ID,
+        "StartDate": start_date,
+        "EndDate": end_date
+    }
+
+    r = requests.get(
+        url,
+        headers=headers,
+        params=params
+    )
+
+    r.raise_for_status()
+
+    data = r.json()
+
+    orders = data["Results"][0]["Orders"]
+
+    df = pd.DataFrame(
+        orders
+    )
+
+    df.to_csv(
+        "data/extreme_os_orders.csv",
+        index=False
+    )
+
+    print(
+        "Saved",
+        len(df),
+        "orders"
+    )
+
 html = f"""
 <html>
 
@@ -331,12 +460,11 @@ ${current_equity:,.0f}
 </html>
 """
 
-
-
-
 with open("performance.html", "w", encoding="utf-8") as f:
     f.write(html)
-    
-
-
+  
 print("INDEX.HTML WRITTEN")
+
+download_closed_trades()
+download_open_positions()
+download_orders()
