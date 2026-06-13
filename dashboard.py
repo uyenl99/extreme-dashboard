@@ -247,63 +247,61 @@ def download_open_positions():
 ################################################
 def download_orders():
     today = datetime.utcnow()
-    start_date = (
-        today.strftime("%Y-%m-%d")
-    )
-
-    end_date = (
-        today.strftime("%Y-%m-%d")
-    )
-
+    
+    start_date = today.strftime("%Y-%m-%d")
+    end_date = today.strftime("%Y-%m-%d")
+    
     url = (
         "https://api4-general.collective2.com/"
         "Strategies/GetStrategyHistoricalOrders"
     )
-
+    
     params = {
         "StrategyId": STRATEGY_ID,
         "StartDate": start_date,
         "EndDate": end_date
     }
-
+    
     r = requests.get(
         url,
         headers=headers,
         params=params
     )
-
+    
     r.raise_for_status()
-
+    
     data = r.json()
-
-    orders = data["Results"][0]["Orders"]
-
-    df = pd.DataFrame(
-        orders
-    )
-    df["Symbol"] = df["C2Symbol"].apply(
-    lambda x: x.get("Underlying")
-    if isinstance(x, dict)
-    else ""
-    )
-
-    df["Description"] = df["C2Symbol"].apply(
-    lambda x: x.get("Description")
-    if isinstance(x, dict)
-    else ""
-    )
-
+    
+    orders = data["Results"]
+    
+    df = pd.DataFrame(orders)
+    
+    if "C2Symbol" in df.columns:
+    
+        df["Symbol"] = df["C2Symbol"].apply(
+            lambda x:
+                x.get("Underlying", "")
+                if isinstance(x, dict)
+                else ""
+        )
+    
+        df["Description"] = df["C2Symbol"].apply(
+            lambda x:
+                x.get("Description", "")
+                if isinstance(x, dict)
+                else ""
+        )
+    
     df.to_csv(
         "data/extreme_os_orders.csv",
         index=False
     )
-
+    
     print(
-        "Saved",
-        len(df),
-        "orders"
+        f"Saved {len(df)} orders"
     )
 
+#########################################
 html = f"""
 <html>
 
