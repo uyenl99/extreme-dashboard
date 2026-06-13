@@ -149,40 +149,52 @@ table_html = table_html.replace(
 
 ###############################################################
 def download_closed_trades():
+    
     url = (
         "https://api4-general.collective2.com/"
         "Strategies/GetStrategyHistoricalClosedTrades"
     )
-
+    
     params = {
         "StrategyId": STRATEGY_ID,
         "CommissionPlan": 0
     }
-
+    
     r = requests.get(
         url,
         headers=headers,
         params=params
     )
-
+    
     r.raise_for_status()
-
+    
     data = r.json()
-
-    trades = data["Results"][0]["ClosedTrades"]
-
+    
+    trades = data["Results"]
+    
     df = pd.DataFrame(trades)
+    df["Symbol"] = df["C2Symbol"].apply(
+    lambda x: x.get("Underlying")
+    if isinstance(x, dict)
+    else ""
+    )
+
+    df["Description"] = df["C2Symbol"].apply(
+    lambda x: x.get("Description")
+    if isinstance(x, dict)
+    else ""
+    )
 
     df.to_csv(
         "data/extreme_os.csv",
         index=False
     )
-
+    
     print(
-        "Saved",
-        len(df),
-        "closed trades"
+        f"Saved {len(df)} closed trades"
     )
+    
+
 
 #################################################
 def download_open_positions():
@@ -209,6 +221,17 @@ def download_open_positions():
 
     df = pd.DataFrame(
         positions
+    )
+    df["Symbol"] = df["C2Symbol"].apply(
+    lambda x: x.get("Underlying")
+    if isinstance(x, dict)
+    else ""
+    )
+
+    df["Description"] = df["C2Symbol"].apply(
+    lambda x: x.get("Description")
+    if isinstance(x, dict)
+    else ""
     )
 
     df.to_csv(
@@ -257,6 +280,17 @@ def download_orders():
 
     df = pd.DataFrame(
         orders
+    )
+    df["Symbol"] = df["C2Symbol"].apply(
+    lambda x: x.get("Underlying")
+    if isinstance(x, dict)
+    else ""
+    )
+
+    df["Description"] = df["C2Symbol"].apply(
+    lambda x: x.get("Description")
+    if isinstance(x, dict)
+    else ""
     )
 
     df.to_csv(
