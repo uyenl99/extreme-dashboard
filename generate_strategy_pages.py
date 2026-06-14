@@ -10,30 +10,30 @@ PUBLIC_TRADE_LIMIT = 100
 # ============================================================
 
 def load_csv(path):
-df = pd.read_csv(path)
-
-df = df.rename(columns={
-    "OpenDate": "Open Time ET",
-    "CloseDate": "Closed Time ET",
-    "ProfitLoss": "Trade P/L",
-    "OpenedQuantity": "Qty Open",
-    "AvgOpenFillPrice": "Avg Price Open",
-    "AvgCloseFillPrice": "Avg Price Close"
-})
-
-if "Closed Time ET" in df.columns:
-    df["Closed Time ET"] = pd.to_datetime(
-        df["Closed Time ET"],
-        errors="coerce"
-    )
-
-if "Open Time ET" in df.columns:
-    df["Open Time ET"] = pd.to_datetime(
-        df["Open Time ET"],
-        errors="coerce"
-    )
-
-return df
+    df = pd.read_csv(path)
+    
+    df = df.rename(columns={
+        "OpenDate": "Open Time ET",
+        "CloseDate": "Closed Time ET",
+        "ProfitLoss": "Trade P/L",
+        "OpenedQuantity": "Qty Open",
+        "AvgOpenFillPrice": "Avg Price Open",
+        "AvgCloseFillPrice": "Avg Price Close"
+    })
+    
+    if "Closed Time ET" in df.columns:
+        df["Closed Time ET"] = pd.to_datetime(
+            df["Closed Time ET"],
+            errors="coerce"
+        )
+    
+    if "Open Time ET" in df.columns:
+        df["Open Time ET"] = pd.to_datetime(
+            df["Open Time ET"],
+            errors="coerce"
+        )
+    
+    return df
 
 
 
