@@ -122,44 +122,44 @@ def build_open_positions_table(df):
     )
 
 def build_recent_closed_table(df, limit=50):
-closed_df = df[
-    df["Closed Time ET"].notna()
-].copy()
-
-closed_df = closed_df.sort_values(
-    "Closed Time ET",
-    ascending=False
-).head(limit)
-
-closed_df = closed_df[
-    [
-        "Open Time ET",
+    closed_df = df[
+        df["Closed Time ET"].notna()
+    ].copy()
+    
+    closed_df = closed_df.sort_values(
+        "Closed Time ET",
+        ascending=False
+    ).head(limit)
+    
+    closed_df = closed_df[
+        [
+            "Open Time ET",
+            "Symbol",
+            "Description",
+            "OpenSide",
+            "Qty Open",
+            "Avg Price Open",
+            "Closed Time ET",
+            "Trade P/L"
+        ]
+    ].copy()
+    
+    closed_df.columns = [
+        "Open Time",
         "Symbol",
         "Description",
-        "OpenSide",
-        "Qty Open",
-        "Avg Price Open",
-        "Closed Time ET",
-        "Trade P/L"
+        "Side",
+        "Qty",
+        "Entry",
+        "Close Time",
+        "P/L"
     ]
-].copy()
-
-closed_df.columns = [
-    "Open Time",
-    "Symbol",
-    "Description",
-    "Side",
-    "Qty",
-    "Entry",
-    "Close Time",
-    "P/L"
-]
-
-return closed_df.to_html(
-    index=False,
-    classes="trade-table"
-)
-
+    
+    return closed_df.to_html(
+        index=False,
+        classes="trade-table"
+    )
+    
 
 
 
