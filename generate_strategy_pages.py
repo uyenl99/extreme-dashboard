@@ -120,13 +120,25 @@ def build_open_positions_table(df):
         "data/extreme_os_open.csv"
     )
 
-    orders_df = pd.read_csv(
-        "data/extreme_os_orders.csv"
-    )
-    return open_df.to_html(
-        index=False,
-        classes="trade-table"
-    )
+    try:
+        orders_df = pd.read_csv(
+            "data/extreme_os_orders.csv"
+        )
+    except (
+        FileNotFoundError,
+        pd.errors.EmptyDataError
+    ):
+        orders_df = pd.DataFrame()
+    if orders_df.empty:
+        orders_html = """
+        <p>No orders today.</p>
+        """
+    else:
+        orders_html = orders_df.to_html(
+            index=False,
+            classes="trade-table"
+        )
+    return orders_html
 
 def build_recent_closed_table(df, limit=50):
     closed_df = df[
