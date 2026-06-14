@@ -24,15 +24,17 @@ def load_csv(path):
     if "Closed Time ET" in df.columns:
         df["Closed Time ET"] = pd.to_datetime(
             df["Closed Time ET"],
-            errors="coerce"
-        )
+            errors="coerce",
+            utc=True
+        ).dt.tz_localize(None)
+
     
     if "Open Time ET" in df.columns:
         df["Open Time ET"] = pd.to_datetime(
             df["Open Time ET"],
-            errors="coerce"
-        )
-    
+            errors="coerce",
+            utc=True
+        ).dt.tz_localize(None)    
     return df
 
 
