@@ -10,16 +10,32 @@ PUBLIC_TRADE_LIMIT = 100
 # ============================================================
 
 def load_csv(path):
+df = pd.read_csv(path)
 
-    df = pd.read_csv(path)
-    print(df.columns.tolist())
-    if "Closed Time ET" in df.columns:
-        df["Closed Time ET"] = pd.to_datetime(
-            df["Closed Time ET"],
-            errors="coerce"
-        )
+df = df.rename(columns={
+    "OpenDate": "Open Time ET",
+    "CloseDate": "Closed Time ET",
+    "ProfitLoss": "Trade P/L",
+    "OpenedQuantity": "Qty Open",
+    "AvgOpenFillPrice": "Avg Price Open",
+    "AvgCloseFillPrice": "Avg Price Close"
+})
 
-    return df
+if "Closed Time ET" in df.columns:
+    df["Closed Time ET"] = pd.to_datetime(
+        df["Closed Time ET"],
+        errors="coerce"
+    )
+
+if "Open Time ET" in df.columns:
+    df["Open Time ET"] = pd.to_datetime(
+        df["Open Time ET"],
+        errors="coerce"
+    )
+
+return df
+
+
 
 
 # ============================================================
@@ -105,46 +121,46 @@ def build_open_positions_table(df):
         classes="trade-table"
     )
 
-
 def build_recent_closed_table(df, limit=50):
+closed_df = df[
+    df["Closed Time ET"].notna()
+].copy()
 
-    closed_df = df[
-        df["Closed Time ET"].notna()
-    ].copy()
+closed_df = closed_df.sort_values(
+    "Closed Time ET",
+    ascending=False
+).head(limit)
 
-    closed_df = closed_df.sort_values(
-        "Closed Time ET",
-        ascending=False
-    ).head(limit)
-
-    closed_df = closed_df[
-        [
-            "Open Time ET",
-            "Symbol",
-            "Descrip",
-            "Side",
-            "Qty Open",
-            "Avg Price Open",
-            "Closed Time ET",
-            "Trade P/L"
-        ]
-    ].copy()
-
-    closed_df.columns = [
-        "Open Time",
+closed_df = closed_df[
+    [
+        "Open Time ET",
         "Symbol",
         "Description",
-        "Side",
-        "Qty",
-        "Entry",
-        "Close Time",
-        "P/L"
+        "OpenSide",
+        "Qty Open",
+        "Avg Price Open",
+        "Closed Time ET",
+        "Trade P/L"
     ]
+].copy()
 
-    return closed_df.to_html(
-        index=False,
-        classes="trade-table"
-    )
+closed_df.columns = [
+    "Open Time",
+    "Symbol",
+    "Description",
+    "Side",
+    "Qty",
+    "Entry",
+    "Close Time",
+    "P/L"
+]
+
+return closed_df.to_html(
+    index=False,
+    classes="trade-table"
+)
+
+
 
 
 # ============================================================
