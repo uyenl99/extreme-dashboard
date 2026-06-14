@@ -12,7 +12,7 @@ PUBLIC_TRADE_LIMIT = 100
 def load_csv(path):
 
     df = pd.read_csv(path)
-
+    print(df.columns.tolist())
     if "Closed Time ET" in df.columns:
         df["Closed Time ET"] = pd.to_datetime(
             df["Closed Time ET"],
