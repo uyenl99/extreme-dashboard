@@ -20,7 +20,12 @@ def load_csv(path):
         "AvgOpenFillPrice": "Avg Price Open",
         "AvgCloseFillPrice": "Avg Price Close"
     })
-    
+    if "Description" in df.columns:
+        df["Descrip"] = df["Description"]
+        
+    if "OpenSide" in df.columns:
+        df["Side"] = df["OpenSide"]
+
     if "Closed Time ET" in df.columns:
         df["Closed Time ET"] = pd.to_datetime(
             df["Closed Time ET"],
