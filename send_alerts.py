@@ -76,6 +76,13 @@ def send_entry_alert(row):
 
 def main():
     df = pd.read_csv(CSV_FILE)
+    df = df.rename(columns={
+        "OpenDate": "Open Time ET",
+        "CloseDate": "Closed Time ET",
+        "ProfitLoss": "Trade P/L",
+        "AvgOpenFillPrice": "Avg Price Open",
+        "OpenedQuantity": "Qty Open"
+    })
     
     open_positions = df[
         df["Closed Time ET"].isna()
