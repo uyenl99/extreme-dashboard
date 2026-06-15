@@ -113,5 +113,5 @@ def main():
         f"{new_alerts} new alerts."
     )
 
-if **name** == "**main**":
-main()
+if __name__ == "__main__":
+    main()
