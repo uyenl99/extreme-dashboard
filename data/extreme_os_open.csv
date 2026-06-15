@@ -1,0 +1,8 @@
+StrategyName,Currency,OpenedDate,StrategyId,Quantity,AvgPx,C2Symbol,ExchangeSymbol,Symbol,Description
+extreme-os,USD,2026-02-26T15:15:15Z,13202557,50,68.3,"{'FullSymbol': 'WHR', 'SymbolType': 'stock'}","{'Symbol': 'WHR', 'Currency': 'USD', 'SecurityExchange': 'DEFAULT', 'SecurityType': 'CS', 'PriceMultiplier': 1}",,
+extreme-os,USD,2026-04-22T18:49:16Z,13202557,100,38.64,"{'FullSymbol': 'TSCO', 'SymbolType': 'stock'}","{'Symbol': 'TSCO', 'Currency': 'USD', 'SecurityExchange': 'DEFAULT', 'SecurityType': 'CS', 'PriceMultiplier': 1}",,
+extreme-os,USD,2026-04-29T19:46:42Z,13202557,28,137.75,"{'FullSymbol': 'LULU', 'SymbolType': 'stock'}","{'Symbol': 'LULU', 'Currency': 'USD', 'SecurityExchange': 'DEFAULT', 'SecurityType': 'CS', 'PriceMultiplier': 1}",,
+extreme-os,USD,2026-05-08T14:12:38Z,13202557,55,60.87,"{'FullSymbol': 'TRMB', 'SymbolType': 'stock'}","{'Symbol': 'TRMB', 'Currency': 'USD', 'SecurityExchange': 'DEFAULT', 'SecurityType': 'CS', 'PriceMultiplier': 1}",,
+extreme-os,USD,2026-06-04T16:22:23Z,13202557,100,33.69,"{'FullSymbol': 'LUNR', 'SymbolType': 'stock'}","{'Symbol': 'LUNR', 'Currency': 'USD', 'SecurityExchange': 'DEFAULT', 'SecurityType': 'CS', 'PriceMultiplier': 1}",,
+extreme-os,USD,2026-06-12T19:23:50Z,13202557,18,197.53,"{'FullSymbol': 'ADSK', 'SymbolType': 'stock'}","{'Symbol': 'ADSK', 'Currency': 'USD', 'SecurityExchange': 'DEFAULT', 'SecurityType': 'CS', 'PriceMultiplier': 1}",,
+extreme-os,USD,2026-06-15T18:40:30Z,13202557,80,54.28,"{'FullSymbol': 'CENX', 'SymbolType': 'stock'}","{'Symbol': 'CENX', 'Currency': 'USD', 'SecurityExchange': 'DEFAULT', 'SecurityType': 'CS', 'PriceMultiplier': 1}",,
