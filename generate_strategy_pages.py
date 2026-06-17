@@ -123,6 +123,9 @@ def build_open_positions_table(df):
         index=False,
         classes="trade-table"
     )
+
+def build_open_orders_table(df):
+
     try:
         orders_df = pd.read_csv(
             "data/extreme_os_orders.csv"
