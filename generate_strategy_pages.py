@@ -119,7 +119,10 @@ def build_open_positions_table(df):
         "Qty",
         "Entry"
     ]
-
+    return open_df.to_html(
+        index=False,
+        classes="trade-table"
+    )
     try:
         orders_df = pd.read_csv(
             "data/extreme_os_orders.csv"
