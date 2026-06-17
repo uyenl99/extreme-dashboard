@@ -96,6 +96,10 @@ def strategy_stats(df):
 
 def build_open_positions_table(df):
 
+    open_df = pd.read_csv(
+        "data/extreme_os_open.csv"
+    )
+
     open_df = df[
         df["Closed Time ET"].isna()
     ][[
@@ -115,10 +119,6 @@ def build_open_positions_table(df):
         "Qty",
         "Entry"
     ]
-
-    open_df = pd.read_csv(
-        "data/extreme_os_open.csv"
-    )
 
     try:
         orders_df = pd.read_csv(
