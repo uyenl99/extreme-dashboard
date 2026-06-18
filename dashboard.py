@@ -233,7 +233,17 @@ def download_open_positions():
     if isinstance(x, dict)
     else ""
     )
-
+    df["Symbol"] = df["C2Symbol"].apply(
+        lambda x: eval(x)["FullSymbol"]
+        if isinstance(x, str)
+        else ""
+    )
+    
+    df["Description"] = df["C2Symbol"].apply(
+        lambda x: eval(x)["Description"]
+        if isinstance(x, str)
+        else ""
+    )
     df.to_csv(
         "data/extreme_os_open.csv",
         index=False
