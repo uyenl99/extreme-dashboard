@@ -1,3 +1,1 @@
-OrderStatus,FilledQuantity,AvgFillPrice,PostedDate,SignalType,Id,StrategyId,StrategyName,SignalId,OrderType,Side,OpenClose,OrderQuantity,TIF,C2Symbol,ExchangeSymbol,Symbol,Description
-2,80,56.141538,2026-06-17T16:25:26Z,1,156612894,13202557,extreme-os,156612894,1,2,C,80,0,"{'FullSymbol': 'CENX', 'SymbolType': 'stock'}","{'Symbol': 'CENX', 'Currency': 'USD', 'SecurityExchange': 'DEFAULT', 'SecurityType': 'CS', 'PriceMultiplier': 1}",,
-2,14,378.6878,2026-06-17T19:38:03Z,1,156615137,13202557,extreme-os,156615137,1,1,O,14,0,"{'FullSymbol': 'MSFT', 'SymbolType': 'stock', 'Description': 'MSFT trades on > 1 exchange'}","{'Symbol': 'MSFT', 'Currency': 'USD', 'SecurityExchange': 'DEFAULT', 'SecurityType': 'CS', 'PriceMultiplier': 1}",,MSFT trades on > 1 exchange
+
