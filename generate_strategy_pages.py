@@ -108,6 +108,8 @@ def build_open_positions_table():
     if len(open_df) == 0:
     
         return "<p>No open positions.</p>"
+    print("OPEN POSITION COLUMNS:")
+    print(open_df.columns.tolist())
     
     cols = []
     
