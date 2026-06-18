@@ -144,6 +144,7 @@ def build_open_orders_table(df):
         pd.errors.EmptyDataError
     ):
         orders_df = pd.DataFrame()
+    orders_df.columns.tolist()
     if orders_df.empty:
         orders_html = """
         <p>No orders today.</p>
