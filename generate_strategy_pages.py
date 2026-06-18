@@ -108,43 +108,29 @@ def build_open_positions_table():
     if len(open_df) == 0:
     
         return "<p>No open positions.</p>"
-    print("OPEN POSITION COLUMNS:")
-    print(open_df.columns.tolist())
     
-    cols = []
-    
-    if "OpenDate" in open_df.columns:
-        cols.append("OpenDate")
-    
-    if "Symbol" in open_df.columns:
-        cols.append("Symbol")
-    
-    if "Description" in open_df.columns:
-        cols.append("Description")
-    
-    if "OpenSide" in open_df.columns:
-        cols.append("OpenSide")
-    
-    if "OpenedQuantity" in open_df.columns:
-        cols.append("OpenedQuantity")
-    
-    if "AvgOpenFillPrice" in open_df.columns:
-        cols.append("AvgOpenFillPrice")
-    
-    table = open_df[cols].copy()
+    table = open_df[
+        [
+            "OpenedDate",
+            "Symbol",
+            "Description",
+            "Quantity",
+            "AvgPx"
+        ]
+    ].copy()
     
     table.columns = [
         "Open Time",
         "Symbol",
         "Description",
-        "Side",
         "Qty",
         "Entry"
     ]
     
     return table.to_html(
         index=False,
-        classes="trade-table"
+        classes="trade-table",
+        index_names=False
     )
 
 def build_open_orders_table(df):
