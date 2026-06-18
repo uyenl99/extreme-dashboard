@@ -451,6 +451,14 @@ def generate_strategy_member_page(
 
 <div class="card">
 
+<h2>Today's Orders</h2>
+
+{build_open_orders_table()}
+
+</div>
+
+<div class="card">
+
 <h2>Recent Closed Trades</h2>
 
 {build_recent_closed_table(df)}
