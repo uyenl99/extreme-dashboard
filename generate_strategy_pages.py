@@ -94,35 +94,56 @@ def strategy_stats(df):
 # TABLES
 # ============================================================
 
-def build_open_positions_table(df):
+def build_open_positions_table():
+try:
 
     open_df = pd.read_csv(
         "data/extreme_os_open.csv"
     )
 
-    open_df = df[
-        df["Closed Time ET"].isna()
-    ][[
-        "Open Time ET",
-        "Symbol",
-        "Descrip",
-        "Side",
-        "Qty Open",
-        "Avg Price Open"
-    ]].copy()
+except Exception:
 
-    open_df.columns = [
-        "Open Time",
-        "Symbol",
-        "Description",
-        "Side",
-        "Qty",
-        "Entry"
-    ]
-    return open_df.to_html(
-        index=False,
-        classes="trade-table"
-    )
+    return "<p>No open positions.</p>"
+
+if len(open_df) == 0:
+
+    return "<p>No open positions.</p>"
+
+cols = []
+
+if "OpenDate" in open_df.columns:
+    cols.append("OpenDate")
+
+if "Symbol" in open_df.columns:
+    cols.append("Symbol")
+
+if "Description" in open_df.columns:
+    cols.append("Description")
+
+if "OpenSide" in open_df.columns:
+    cols.append("OpenSide")
+
+if "OpenedQuantity" in open_df.columns:
+    cols.append("OpenedQuantity")
+
+if "AvgOpenFillPrice" in open_df.columns:
+    cols.append("AvgOpenFillPrice")
+
+table = open_df[cols].copy()
+
+table.columns = [
+    "Open Time",
+    "Symbol",
+    "Description",
+    "Side",
+    "Qty",
+    "Entry"
+]
+
+return table.to_html(
+    index=False,
+    classes="trade-table"
+)
 
 def build_open_orders_table(df):
 
@@ -424,7 +445,7 @@ def generate_strategy_member_page(
 
 <h2>Current Open Positions</h2>
 
-{build_open_positions_table(df)}
+{build_open_positions_table()}
 
 </div>
 
