@@ -630,7 +630,7 @@ generate_strategy_member_page(
     mom_df,
     "Momentum Members",
     "momentum-members.html",
-    "data/momentum.csv"
+    "data/extreme_os.csv"
 )
 
 generate_members_dashboard(
