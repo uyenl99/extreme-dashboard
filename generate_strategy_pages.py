@@ -133,7 +133,7 @@ def build_open_positions_table():
         index_names=False
     )
 
-def build_open_orders_table(df):
+def build_open_orders_table():
 
     try:
         orders_df = pd.read_csv(
