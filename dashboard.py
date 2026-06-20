@@ -225,7 +225,7 @@ def download_open_positions():
     r.raise_for_status()
     data = r.json()
     positions = data["Results"]
-
+    print(positions[0])
     df = pd.DataFrame(
         positions
     )
