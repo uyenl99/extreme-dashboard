@@ -67,18 +67,18 @@ monthly_r = requests.get(
     params=monthly_params
 )
 monthly_data = monthly_r.json()
-print("MONTHLY STATUS:", monthly_r.status_code)
-print(
-    monthly_data["Results"][0].keys()
-)
+#print("MONTHLY STATUS:", monthly_r.status_code)
+#print(
+#    monthly_data["Results"][0].keys()
+#)
 chart_html = fig.to_html(
     full_html=False,
     include_plotlyjs="cdn"
 )
 monthly_results = monthly_data["Results"][0]["MonthlyResults"]
-print("MONTHLY COUNT:", len(monthly_results))
-print("FIRST RECORD:", monthly_results[0])
-print("SECOND RECORD:", monthly_results[1])
+#print("MONTHLY COUNT:", len(monthly_results))
+#print("FIRST RECORD:", monthly_results[0])
+#print("SECOND RECORD:", monthly_results[1])
 
 rows = []
 for item in monthly_results:
@@ -101,8 +101,8 @@ pivot = pd.pivot_table(
     aggfunc="first"
 )
 pivot = pivot.sort_index(ascending=False)
-print("MDF SHAPE:", mdf.shape)
-print("PIVOT SHAPE:", pivot.shape)
+#print("MDF SHAPE:", mdf.shape)
+#print("PIVOT SHAPE:", pivot.shape)
 '''
 annual_returns = (
     mdf.groupby("Year")["Return"]
@@ -192,10 +192,10 @@ def download_closed_trades():
         else r["Description"],
         axis=1
     )
-    print(df.columns.tolist())
-    print(df[["Symbol", "Description"]].head(10))
-    print(df.iloc[0]["C2Symbol"])
-    print(type(df["C2Symbol"].iloc[0]))
+    #print(df.columns.tolist())
+    #print(df[["Symbol", "Description"]].head(10))
+    #print(df.iloc[0]["C2Symbol"])
+    #print(type(df["C2Symbol"].iloc[0]))
     
     df.to_csv(
         "data/extreme_os.csv",
@@ -247,9 +247,9 @@ def download_open_positions():
         else r["Description"],
         axis=1
     )    
-    print(df.columns.tolist())
-    print(df[["Symbol", "Description"]].head(10))
-    print(df.iloc[0]["C2Symbol"])
+    #print(df.columns.tolist())
+    #print(df[["Symbol", "Description"]].head(10))
+    #print(df.iloc[0]["C2Symbol"])
     df.to_csv(
         "data/extreme_os_open.csv",
         index=False
