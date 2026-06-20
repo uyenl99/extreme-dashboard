@@ -184,6 +184,8 @@ def download_closed_trades():
     if isinstance(x, dict)
     else ""
     )
+    print(df.columns.tolist())
+    print(df[["Symbol", "Description"]].head(10))
 
     df.to_csv(
         "data/extreme_os.csv",
@@ -244,6 +246,8 @@ def download_open_positions():
         if isinstance(x, str)
         else ""
     )
+    print(df.columns.tolist())
+    print(df[["Symbol", "Description"]].head(10))
     df.to_csv(
         "data/extreme_os_open.csv",
         index=False
