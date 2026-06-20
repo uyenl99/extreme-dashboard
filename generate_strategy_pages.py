@@ -23,8 +23,15 @@ def load_csv(path):
     if "Description" in df.columns:
         df["Descrip"] = df["Description"]
         
+    #if "OpenSide" in df.columns:
+    #    df["Side"] = df["OpenSide"]
     if "OpenSide" in df.columns:
-        df["Side"] = df["OpenSide"]
+        df["OpenSide"] = df["OpenSide"].replace({
+            "1": "Long",
+            1: "Long",
+            "2": "Short",
+            2: "Short"
+        })
 
     if "Closed Time ET" in df.columns:
         df["Closed Time ET"] = pd.to_datetime(
@@ -108,25 +115,24 @@ def build_open_positions_table():
     if len(open_df) == 0:
     
         return "<p>No open positions.</p>"
-    
+    print(open_df.columns.tolist())
     table = open_df[
         [
             "OpenedDate",
             "Symbol",
-            "Description",
             "Quantity",
-            "AvgPx"
+            "AvgPx",
+            "ProfitLoss"
         ]
     ].copy()
     
     table.columns = [
         "Open Time",
         "Symbol",
-        "Description",
         "Qty",
-        "Entry"
-    ]
-    
+        "Entry",
+        "P/L"
+    ]    
     return table.to_html(
         index=False,
         classes="trade-table",
@@ -189,12 +195,19 @@ def build_recent_closed_table(df, limit=50):
         "Close Time",
         "P/L"
     ]
-    
+
+    closed_df["P/L"] = closed_df["P/L"].apply(
+        lambda x:
+        f'<span class="pnl-pos">${x:,.0f}</span>'
+        if float(x) >= 0
+        else
+        f'<span class="pnl-neg">${x:,.0f}</span>'
+    )
     return closed_df.to_html(
         index=False,
-        classes="trade-table"
+        classes="trade-table",
+        escape=False
     )
-    
 
 
 
@@ -284,6 +297,15 @@ nav a {
     margin-top:15px;
     color:#60a5fa;
     font-weight:bold;
+}
+.pnl-pos{
+    color:#00c853;
+    font-weight:600;
+}
+
+.pnl-neg{
+    color:#ff5252;
+    font-weight:600;
 }
 """
 
