@@ -226,26 +226,16 @@ def download_open_positions():
     df = pd.DataFrame(
         positions
     )
-    df["Symbol"] = df["C2Symbol"].apply(
-    lambda x: x.get("Underlying")
-    if isinstance(x, dict)
-    else ""
-    )
 
-    df["Description"] = df["C2Symbol"].apply(
-    lambda x: x.get("Description")
-    if isinstance(x, dict)
-    else ""
-    )
     df["Symbol"] = df["C2Symbol"].apply(
-        lambda x: eval(x)["FullSymbol"]
-        if isinstance(x, str)
+        lambda x: x.get("FullSymbol", "")
+        if isinstance(x, dict)
         else ""
     )
     
     df["Description"] = df["C2Symbol"].apply(
-        lambda x: eval(x)["Description"]
-        if isinstance(x, str)
+        lambda x: x.get("Description", "")
+        if isinstance(x, dict)
         else ""
     )
     print(df.columns.tolist())
