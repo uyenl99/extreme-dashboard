@@ -187,6 +187,8 @@ def download_closed_trades():
     print(df.columns.tolist())
     print(df[["Symbol", "Description"]].head(10))
     print(df.iloc[0]["C2Symbol"])
+    print(type(df["C2Symbol"].iloc[0]))
+    
     df.to_csv(
         "data/extreme_os.csv",
         index=False
