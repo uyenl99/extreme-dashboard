@@ -174,15 +174,23 @@ def download_closed_trades():
     
     df = pd.DataFrame(trades)
     df["Symbol"] = df["C2Symbol"].apply(
-    lambda x: x.get("Underlying")
-    if isinstance(x, dict)
-    else ""
+        lambda x: x.get("FullSymbol", "")
+        if isinstance(x, dict)
+        else ""
     )
-
+    
     df["Description"] = df["C2Symbol"].apply(
-    lambda x: x.get("Description")
-    if isinstance(x, dict)
-    else ""
+        lambda x: x.get("Description", "")
+        if isinstance(x, dict)
+        else ""
+    )
+    
+    df["Description"] = df["Description"].fillna("")
+    df["Description"] = df.apply(
+        lambda r: r["Symbol"]
+        if str(r["Description"]).strip() == ""
+        else r["Description"],
+        axis=1
     )
     print(df.columns.tolist())
     print(df[["Symbol", "Description"]].head(10))
@@ -206,38 +214,39 @@ def download_open_positions():
         "https://api4-general.collective2.com/"
         "Strategies/GetStrategyOpenPositions"
     )
-
     params = {
         "StrategyIds": STRATEGY_ID
     }
-
     r = requests.get(
         url,
         headers=headers,
         params=params
     )
-
     r.raise_for_status()
-
     data = r.json()
-
     positions = data["Results"]
 
     df = pd.DataFrame(
         positions
     )
-
     df["Symbol"] = df["C2Symbol"].apply(
         lambda x: x.get("FullSymbol", "")
         if isinstance(x, dict)
         else ""
     )
-    
     df["Description"] = df["C2Symbol"].apply(
         lambda x: x.get("Description", "")
         if isinstance(x, dict)
         else ""
     )
+    
+    df["Description"] = df["Description"].fillna("")
+    df["Description"] = df.apply(
+        lambda r: r["Symbol"]
+        if str(r["Description"]).strip() == ""
+        else r["Description"],
+        axis=1
+    )    
     print(df.columns.tolist())
     print(df[["Symbol", "Description"]].head(10))
     print(df.iloc[0]["C2Symbol"])
@@ -254,37 +263,28 @@ def download_open_positions():
 ################################################
 def download_orders():
     today = datetime.utcnow()
-    
     start_date = today.strftime("%Y-%m-%d")
     end_date = today.strftime("%Y-%m-%d")
-    
     url = (
         "https://api4-general.collective2.com/"
         "Strategies/GetStrategyHistoricalOrders"
     )
-    
     params = {
         "StrategyId": STRATEGY_ID,
         "StartDate": start_date,
         "EndDate": end_date
     }
-    
     r = requests.get(
         url,
         headers=headers,
         params=params
     )
-    
     r.raise_for_status()
-    
     data = r.json()
     
     orders = data["Results"]
-    
     df = pd.DataFrame(orders)
-    
     if "C2Symbol" in df.columns:
-    
         df["Symbol"] = df["C2Symbol"].apply(
             lambda x:
                 x.get("Underlying", "")
