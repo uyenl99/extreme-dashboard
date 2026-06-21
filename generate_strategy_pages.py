@@ -122,7 +122,6 @@ def build_open_positions_table():
             "Symbol",
             "Quantity",
             "AvgPx",
-            "ProfitLoss"
         ]
     ].copy()
     
@@ -131,7 +130,6 @@ def build_open_positions_table():
         "Symbol",
         "Qty",
         "Entry",
-        "P/L"
     ]    
     return table.to_html(
         index=False,
