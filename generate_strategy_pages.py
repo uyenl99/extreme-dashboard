@@ -1,3 +1,4 @@
+import argparse
 import pandas as pd
 from pathlib import Path
 
@@ -362,7 +363,8 @@ def page_template(title, body):
 def generate_public_page(
         csv_file,
         output_file,
-        title):
+        title,
+        show_current_positions=False):
 
     df = load_csv(csv_file)
 
@@ -386,6 +388,22 @@ def generate_public_page(
         df,
         PUBLIC_TRADE_LIMIT
     )
+
+    current_positions_html = ""
+    if show_current_positions:
+        current_positions_html = f"""
+<div class="card">
+
+<h2>Current Open Positions</h2>
+
+<p>
+Current positions are sourced from Collective2 and updated daily.
+</p>
+
+{build_open_positions_table()}
+
+</div>
+"""
 
     body = f"""
 <div class="card">
@@ -418,7 +436,11 @@ Total P/L: ${stats['total_pl']:,.0f}
 
 </div>
 
+{current_positions_html}
+
 <div class="card">
+
+<h2>Historical Trades</h2>
 
 {table_html}
 
@@ -597,9 +619,29 @@ View Strategy →
 # MAIN
 # ============================================================
 
+parser = argparse.ArgumentParser(
+    description="Generate public and member strategy pages."
+)
+parser.add_argument(
+    "--extreme-os-only",
+    action="store_true",
+    help="Generate only the public Extreme OS page.",
+)
+args = parser.parse_args()
+
 os_df = load_csv(
     "data/extreme_os.csv"
 )
+
+if args.extreme_os_only:
+    generate_public_page(
+        "data/extreme_os.csv",
+        "extreme-os.html",
+        "Extreme OS Historical Trades",
+        show_current_positions=True
+    )
+    print("Done.")
+    raise SystemExit(0)
 
 try:
     mom_df = load_csv(
@@ -619,13 +661,8 @@ except:
 generate_public_page(
     "data/extreme_os.csv",
     "extreme-os.html",
-    "Extreme OS Historical Trades"
-)
-
-generate_public_page(
-    "data/extreme_os.csv",
-    "momentum.html",
-    "Momentum Historical Trades"
+    "Extreme OS Historical Trades",
+    show_current_positions=True
 )
 
 generate_strategy_member_page(
