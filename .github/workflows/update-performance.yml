@@ -30,19 +30,22 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Fetch Collective2 performance
+      - name: Fetch Collective2 performance and Extreme OS data
         env:
           C2_API_KEY: ${{ secrets.C2_API_KEY }}
-        run: python dashboard.py --performance-only
+        run: python dashboard.py --public-strategy-data
 
-      - name: Commit updated performance
+      - name: Generate Extreme OS public page
+        run: python generate_strategy_pages.py --extreme-os-only
+
+      - name: Commit updated public pages
         run: |
-          if git diff --quiet -- performance.html; then
-            echo "No performance changes to commit."
+          if git diff --quiet -- performance.html extreme-os.html; then
+            echo "No public page changes to commit."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add performance.html
-          git commit -m "Update Collective2 performance"
+          git add performance.html extreme-os.html
+          git commit -m "Update Collective2 public pages"
           git push origin main

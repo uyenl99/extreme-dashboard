@@ -22,7 +22,7 @@ jobs:
 
       - run: pip install -r requirements.txt
       - run: python dashboard.py
-      - run: python generate_strategy_pages.py
+      - run: python generate_strategy_pages.py --extreme-os-only
       - run: pip install resend
       - run: python send_alerts.py
        

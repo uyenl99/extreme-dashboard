@@ -20,6 +20,11 @@ parser.add_argument(
     action="store_true",
     help="Regenerate performance.html without downloading trade/member data.",
 )
+parser.add_argument(
+    "--public-strategy-data",
+    action="store_true",
+    help="Refresh closed trades and open positions, but skip private order data.",
+)
 args = parser.parse_args()
 
 headers = {
@@ -533,7 +538,10 @@ with open("performance.html", "w", encoding="utf-8") as f:
   
 print("INDEX.HTML WRITTEN")
 
-if not args.performance_only:
+if args.public_strategy_data:
+    download_closed_trades()
+    download_open_positions()
+elif not args.performance_only:
     download_closed_trades()
     download_open_positions()
     download_orders()
