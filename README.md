@@ -21,3 +21,13 @@ python generate_momentum_page.py --source ../DualMom/output_momo5
 
 This replaces the old placeholder `momentum.html` with the Dual Momentum
 backtest, SPY comparison, return tables, and monthly allocation history.
+
+### Automatic Collective2 performance updates
+
+`.github/workflows/update-performance.yml` refreshes `performance.html` from
+the Collective2 API every day at 14:00 UTC (6:00 AM PST / 7:00 AM PDT). It can
+also be run manually from the repository's Actions tab.
+
+The repository must have an Actions secret named `C2_API_KEY`. The workflow
+commits `performance.html` only when the API data changed, which triggers the
+normal Vercel production deployment.
