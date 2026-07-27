@@ -1,3 +1,4 @@
+import argparse
 import os
 import requests
 import pandas as pd
@@ -9,6 +10,17 @@ from pathlib import Path
 Path("data").mkdir(exist_ok=True)
 API_KEY = os.environ["C2_API_KEY"]
 STRATEGY_ID = 13202557
+REQUEST_TIMEOUT_SECONDS = 30
+
+parser = argparse.ArgumentParser(
+    description="Refresh Collective2 performance and optional trade data."
+)
+parser.add_argument(
+    "--performance-only",
+    action="store_true",
+    help="Regenerate performance.html without downloading trade/member data.",
+)
+args = parser.parse_args()
 
 headers = {
     "Authorization": f"Bearer {API_KEY}"
@@ -24,10 +36,14 @@ params = {
 r = requests.get(
     url,
     headers=headers,
-    params=params
+    params=params,
+    timeout=REQUEST_TIMEOUT_SECONDS,
 )
+r.raise_for_status()
 
 data = r.json()
+if not data.get("Results") or not data["Results"][0].get("DailyEquity"):
+    raise RuntimeError("Collective2 returned no daily equity history")
 daily = data["Results"][0]["DailyEquity"]
 df = pd.DataFrame(daily)
 df["Date"] = pd.to_datetime(df["Date"])
@@ -64,9 +80,13 @@ monthly_params = {
 monthly_r = requests.get(
     monthly_url,
     headers=headers,
-    params=monthly_params
+    params=monthly_params,
+    timeout=REQUEST_TIMEOUT_SECONDS,
 )
+monthly_r.raise_for_status()
 monthly_data = monthly_r.json()
+if not monthly_data.get("Results") or not monthly_data["Results"][0].get("MonthlyResults"):
+    raise RuntimeError("Collective2 returned no monthly performance history")
 #print("MONTHLY STATUS:", monthly_r.status_code)
 #print(
 #    monthly_data["Results"][0].keys()
@@ -163,7 +183,8 @@ def download_closed_trades():
     r = requests.get(
         url,
         headers=headers,
-        params=params
+        params=params,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
     
     r.raise_for_status()
@@ -220,15 +241,22 @@ def download_open_positions():
     r = requests.get(
         url,
         headers=headers,
-        params=params
+        params=params,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
     r.raise_for_status()
     data = r.json()
     positions = data["Results"]
-    print(positions[0])
     df = pd.DataFrame(
         positions
     )
+    if df.empty:
+        df.to_csv(
+            "data/extreme_os_open.csv",
+            index=False
+        )
+        print("Saved 0 open positions")
+        return
     df["Symbol"] = df["C2Symbol"].apply(
         lambda x: x.get("FullSymbol", "")
         if isinstance(x, dict)
@@ -277,7 +305,8 @@ def download_orders():
     r = requests.get(
         url,
         headers=headers,
-        params=params
+        params=params,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
     r.raise_for_status()
     data = r.json()
@@ -504,6 +533,7 @@ with open("performance.html", "w", encoding="utf-8") as f:
   
 print("INDEX.HTML WRITTEN")
 
-download_closed_trades()
-download_open_positions()
-download_orders()
+if not args.performance_only:
+    download_closed_trades()
+    download_open_positions()
+    download_orders()
