@@ -22,6 +22,17 @@ python generate_momentum_page.py --source ../DualMom/output_momo5
 This replaces the old placeholder `momentum.html` with the Dual Momentum
 backtest, SPY comparison, return tables, and monthly allocation history.
 
+### Refresh the Momentum Stocks backtest page
+
+After running `MomoSp/momo_sp_v2.py`, generate the public stock-momentum page:
+
+```powershell
+python generate_momentum_stocks_page.py --source ../MomoSp/output_momo_sp_v2
+```
+
+This writes `momentum-stocks.html` with the equity/SPY comparison, return
+tables, monthly allocations, and the latest alert from `next_signal.txt`.
+
 ### Automatic Collective2 performance updates
 
 `.github/workflows/update-performance.yml` refreshes `performance.html` from
