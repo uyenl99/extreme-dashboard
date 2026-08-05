@@ -5,30 +5,39 @@ from pathlib import Path
 import pandas as pd
 import plotly.graph_objects as go
 
+from generate_momentum_page import (
+    build_alert_table,
+    build_monthly_table,
+    build_yearly_table,
+    parse_alert,
+    pct,
+)
+
 
 REQUIRED_FILES = (
     "summary.csv",
-    "daily_equity_entries_exits.csv",
-    "dual_momentum_results.csv",
+    "daily_equity.csv",
+    "monthly_results.csv",
     "monthly_return_table.csv",
-    "next_entry_alert.txt",
+    "next_signal.txt",
 )
+INITIAL_EQUITY = 100_000.0
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Generate the public Dual Momentum backtest page."
+        description="Generate the public Momentum Stocks backtest page."
     )
     parser.add_argument(
         "--source",
         type=Path,
-        default=Path("../DualMom/output_momo5"),
-        help="Directory containing the momo5 output files.",
+        default=Path("../MomoSp/output_momo_sp_v2"),
+        help="Directory containing the MOMO-SP v2 output files.",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("momentum.html"),
+        default=Path("momentum-stocks.html"),
         help="HTML file to generate.",
     )
     return parser.parse_args()
@@ -38,89 +47,46 @@ def load_results(source):
     missing = [name for name in REQUIRED_FILES if not (source / name).is_file()]
     if missing:
         raise FileNotFoundError(
-            f"Missing required momo5 output files: {', '.join(missing)}"
+            f"Missing required MOMO-SP output files: {', '.join(missing)}"
         )
 
     summary = pd.read_csv(source / "summary.csv")
     if len(summary) != 1:
         raise ValueError("summary.csv must contain exactly one result row")
 
-    daily = pd.read_csv(
-        source / "daily_equity_entries_exits.csv", parse_dates=["Date"]
-    )
+    daily = pd.read_csv(source / "daily_equity.csv", parse_dates=["date"])
     allocations = pd.read_csv(
-        source / "dual_momentum_results.csv",
-        parse_dates=["date", "exit_date"],
+        source / "monthly_results.csv",
+        parse_dates=["entry_date", "signal_date", "exit_date"],
     )
     monthly = pd.read_csv(source / "monthly_return_table.csv")
+    alert = parse_alert(source / "next_signal.txt")
 
     for frame, column, label in (
-        (daily, "Date", "daily_equity_entries_exits"),
-        (allocations, "date", "dual_momentum_results"),
+        (daily, "date", "daily_equity"),
+        (allocations, "entry_date", "monthly_results"),
     ):
         if frame[column].isna().any() or not frame[column].is_monotonic_increasing:
             raise ValueError(f"{label}.csv dates must be valid and sorted")
 
-    alert = parse_alert(source / "next_entry_alert.txt")
     return summary.iloc[0], daily, allocations, monthly, alert
-
-
-def pct(value, decimals=2):
-    return f"{float(value) * 100:,.{decimals}f}%"
-
-
-def parse_alert(path):
-    aliases = {
-        "signal month": "Signal",
-        "signal date": "Signal",
-        "risk filter": "Regime",
-        "regime": "Regime",
-        "holdings": "Holdings",
-        "execute at": "Execution",
-        "execution": "Execution",
-        "vix 30d ma": "VIX 30d MA",
-        "spy 10d realized vol": "SPY 10d RV",
-        "spy 10d rv": "SPY 10d RV",
-    }
-    alert = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if ":" not in line:
-            continue
-        label, value = (part.strip() for part in line.split(":", 1))
-        canonical = aliases.get(label.lower())
-        if canonical:
-            alert[canonical] = value
-    return alert
-
-
-def build_alert_table(alert):
-    columns = ("Signal", "Regime", "Holdings", "Execution", "VIX 30d MA", "SPY 10d RV")
-    headers = "".join(f"<th>{column}</th>" for column in columns)
-    cells = []
-    for column in columns:
-        value = html.escape(alert.get(column, "—"))
-        css = ""
-        if column == "Regime":
-            css = ' class="regime risk-off"' if "OFF" in value.upper() else ' class="regime risk-on"'
-        cells.append(f"<td{css}>{value}</td>")
-    return f'<div class="table-wrap"><table><thead><tr>{headers}</tr></thead><tbody><tr>{"".join(cells)}</tr></tbody></table></div>'
 
 
 def build_chart(daily):
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(
-            x=daily["Date"],
-            y=daily["Equity"],
+            x=daily["date"],
+            y=daily["equity"],
             mode="lines",
-            name="Dual Momentum",
+            name="Momentum Stocks",
             line=dict(color="#60a5fa", width=3),
         )
     )
     fig.add_trace(
         go.Scatter(
-            x=daily["Date"],
-            y=daily["SPY_Equity"],
+            x=daily["date"],
+            y=daily["spy_equity"],
             mode="lines",
             name="SPY",
             line=dict(color="#94a3b8", width=1.7),
@@ -142,97 +108,62 @@ def build_chart(daily):
         full_html=False,
         include_plotlyjs="cdn",
         config={"responsive": True},
-        div_id="dual-momentum-equity-chart",
-    )
-
-
-def build_monthly_table(monthly):
-    month_names = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-    ]
-    headers = "".join(f"<th>{name}</th>" for name in month_names + ["Year Return"])
-    rows = []
-    for item in monthly.sort_values("Year", ascending=False).itertuples(index=False):
-        cells = []
-        values = [getattr(item, name) for name in month_names]
-        values.append(getattr(item, "_13"))
-        for value in values:
-            if pd.isna(value):
-                cells.append('<td class="muted">—</td>')
-            else:
-                css = "positive" if value > 0 else "negative" if value < 0 else "muted"
-                cells.append(f'<td class="{css}">{value * 100:.1f}%</td>')
-        rows.append(f"<tr><th>{int(item.Year)}</th>{''.join(cells)}</tr>")
-    return (
-        '<div class="table-wrap"><table><thead><tr><th>Year</th>'
-        f'{headers}</tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
-    )
-
-
-def build_yearly_table(monthly):
-    rows = []
-    for item in monthly.sort_values("Year", ascending=False).itertuples(index=False):
-        value = getattr(item, "_13")
-        css = "positive" if value > 0 else "negative" if value < 0 else "muted"
-        rows.append(
-            f'<tr><td>{int(item.Year)}</td><td class="{css}">{value * 100:.2f}%</td></tr>'
-        )
-    return (
-        '<div class="table-wrap compact"><table><thead><tr><th>Year</th>'
-        f'<th>Return</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
+        div_id="momentum-stocks-equity-chart",
     )
 
 
 def build_allocation_table(allocations, limit=50):
     rows = []
-    recent = allocations.sort_values("date", ascending=False).head(limit)
+    recent = (
+        allocations.rename(columns={"return": "strategy_return"})
+        .sort_values("entry_date", ascending=False)
+        .head(limit)
+    )
     for item in recent.itertuples(index=False):
-        ret_css = "positive" if item.port_ret > 0 else "negative"
+        ret_css = "positive" if item.strategy_return > 0 else "negative"
         regime = "Risk Off" if item.risk_off else "Risk On"
         regime_css = "risk-off" if item.risk_off else "risk-on"
-        holdings = ", ".join(dict.fromkeys([item.h1, item.h2, item.h3]))
         rows.append(
-            f"<tr><td>{item.date:%Y-%m}</td>"
-            f"<td>{html.escape(holdings)}</td>"
+            f"<tr><td>{item.entry_date:%Y-%m-%d}</td>"
+            f"<td>{html.escape(str(item.holdings))}</td>"
             f'<td><span class="regime {regime_css}">{regime}</span></td>'
-            f'<td class="{ret_css}">{item.port_ret * 100:.2f}%</td>'
-            f"<td>{item.spy_ret * 100:.2f}%</td>"
+            f'<td class="{ret_css}">{item.strategy_return * 100:.2f}%</td>'
+            f"<td>{item.spy_return * 100:.2f}%</td>"
             f"<td>{item.realized_vol:.2f}%</td><td>{item.vix_ma:.2f}</td></tr>"
         )
     return (
-        '<div class="table-wrap"><table><thead><tr><th>Month</th>'
+        '<div class="table-wrap"><table><thead><tr><th>Entry</th>'
         "<th>Holdings</th><th>Regime</th><th>Return</th><th>SPY</th>"
         f'<th>Realized Vol</th><th>VIX MA</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
     )
 
 
 def render_page(summary, daily, allocations, monthly, alert):
-    chart_html = build_chart(daily)
-    start_date = daily["Date"].min().strftime("%Y-%m-%d")
-    end_date = daily["Date"].max().strftime("%Y-%m-%d")
-    active_months = len(allocations)
+    total_return = summary.final_equity / INITIAL_EQUITY - 1
+    sharpe = summary.daily_sharpe_0rf
+    max_drawdown = summary.daily_max_drawdown
     metrics = (
-        ("Total Return", pct(summary.total_return)),
+        ("Total Return", pct(total_return)),
         ("CAGR", pct(summary.cagr)),
-        ("Sharpe Ratio", f"{summary.sharpe:.2f}"),
-        ("Max Drawdown", pct(summary.daily_max_drawdown)),
+        ("Sharpe Ratio", f"{sharpe:.2f}"),
+        ("Max Drawdown", pct(max_drawdown)),
         ("SPY CAGR", pct(summary.spy_cagr)),
         ("SPY Max Drawdown", pct(summary.spy_daily_max_drawdown)),
-        ("Active Months", f"{active_months:,}"),
-        ("Final Equity", f"${summary.final:,.0f}"),
+        ("Active Months", f"{len(allocations):,}"),
+        ("Final Equity", f"${summary.final_equity:,.0f}"),
     )
     metric_html = "".join(
         f'<div class="metric"><div class="metric-label">{label}</div>'
         f'<div class="metric-value">{value}</div></div>'
         for label, value in metrics
     )
+    chart_html = build_chart(daily)
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Momentum ETFs Backtest - Extreme Trading Inc.</title>
+<title>Momentum Stocks Backtest - Extreme Trading Inc.</title>
 <style>
 *{{box-sizing:border-box}} body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}} nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}} nav a{{color:white;text-decoration:none;margin-left:20px}} .container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}} .hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}} .eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}} h1{{margin:8px 0 10px}} h2{{margin-top:0}} .subtle,.muted{{color:#94a3b8}} .metrics{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:22px 0}} .metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}} .metric-label{{color:#94a3b8;font-size:13px}} .metric-value{{font-size:24px;font-weight:700;margin-top:6px}} .chart{{overflow:hidden}} .table-wrap{{overflow-x:auto}} table{{width:100%;border-collapse:collapse;background:#111827}} th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:12px;white-space:nowrap}} th{{background:#1f2937;color:white}} th:first-child,td:first-child{{text-align:left}} .positive{{color:#22c55e;font-weight:600}} .negative{{color:#f87171;font-weight:600}} .compact{{max-width:420px}} .regime{{font-weight:700}} .risk-on{{color:#60a5fa}} .risk-off{{color:#f59e0b}} .disclaimer{{font-size:13px;line-height:1.6;color:#94a3b8}} footer{{text-align:center;padding:30px;color:#94a3b8}} @media(max-width:800px){{nav{{align-items:flex-start;padding:16px;gap:12px}}nav div:last-child{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}}nav a{{margin-left:8px;font-size:12px}}.metrics{{grid-template-columns:repeat(2,1fr)}}.container{{padding:20px 10px}}}} @media(max-width:480px){{.metrics{{grid-template-columns:1fr}}}}
 </style>
@@ -240,10 +171,10 @@ def render_page(summary, daily, allocations, monthly, alert):
 <body>
 <nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="performance.html">Performance</a><a href="strategies.html">Strategies</a><a href="subscribe.html">Subscribe</a><a href="members.html">Members</a></div></nav>
 <main class="container">
-<section class="hero"><div class="eyebrow">Backtested ETF rotation strategy</div><h1>Momentum ETFs</h1><p>Dual-momentum rotation into the three strongest ETFs using 12-month momentum with a one-month skip and a volatility-based risk-off filter. Risk-off allocations move to SHY.</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: ${daily.iloc[0]["Equity"]:,.0f}</p></section>
+<section class="hero"><div class="eyebrow">Backtested stock rotation strategy</div><h1>Momentum Stocks</h1><p>Monthly equal-weight rotation into the ten strongest stocks using approximately ten months of trailing momentum. A VIX-versus-SPY realized-volatility filter moves the portfolio into the strongest defensive asset during risk-off periods.</p><p class="subtle">Backtest period: {summary.start} through {summary.end} · Starting equity: ${INITIAL_EQUITY:,.0f}</p></section>
 <section class="metrics">{metric_html}</section>
 <section class="panel"><h2>Latest Alert</h2>{build_alert_table(alert)}</section>
-<section class="panel"><h2>Equity Curve</h2><p class="subtle">Dual Momentum compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
+<section class="panel"><h2>Equity Curve</h2><p class="subtle">Momentum Stocks compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
 <section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly)}</section>
 <section class="panel"><h2>Yearly Returns</h2>{build_yearly_table(monthly)}</section>
 <section class="panel"><h2>Recent Monthly Allocations</h2>{build_allocation_table(allocations)}</section>
