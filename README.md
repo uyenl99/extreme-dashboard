@@ -24,14 +24,17 @@ backtest, SPY comparison, return tables, and monthly allocation history.
 
 ### Refresh the Momentum Stocks backtest page
 
-After running `MomoSp/momo_sp_v2.py`, generate the public stock-momentum page:
+After running `MomoSp/pit_version/momo_sp_v2a.py` and its live-signal job,
+generate the public stock-momentum page:
 
 ```powershell
-python generate_momentum_stocks_page.py --source ../MomoSp/output_momo_sp_v2
+python generate_momentum_stocks_page.py `
+  --source ../MomoSp/pit_version/output_pit_v2a `
+  --alert-source ../MomoSp/pit_version/output_pit_v2a_live/latest_signal.json
 ```
 
 This writes `momentum-stocks.html` with the equity/SPY comparison, return
-tables, monthly allocations, and the latest alert from `next_signal.txt`.
+tables, monthly allocations, and the latest v2a live alert.
 
 ### Automatic Collective2 performance updates
 
