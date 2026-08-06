@@ -11,8 +11,8 @@ REQUIRED_FILES = (
     "equity_curve.csv",
     "benchmark_curve.csv",
     "monthly_returns.csv",
-    "yearly_returns.csv",
     "trades.csv",
+    "daily_trades.csv",
 )
 
 
@@ -23,8 +23,8 @@ def parse_args():
     parser.add_argument(
         "--source",
         type=Path,
-        default=Path("../RevMurphy/output_long_short"),
-        help="Directory containing the RevMurphy output CSV files.",
+        default=Path("../RevMurphy/output_long_short_live"),
+        help="Directory containing the live RevMurphy output CSV files.",
     )
     parser.add_argument(
         "--output",
@@ -49,14 +49,17 @@ def load_results(source):
     equity = pd.read_csv(source / "equity_curve.csv", parse_dates=["date"])
     benchmarks = pd.read_csv(source / "benchmark_curve.csv", parse_dates=["date"])
     monthly = pd.read_csv(source / "monthly_returns.csv")
-    yearly = pd.read_csv(source / "yearly_returns.csv")
     trades = pd.read_csv(source / "trades.csv")
+    daily_trades = pd.read_csv(source / "daily_trades.csv", parse_dates=["date"])
 
     for frame, label in ((equity, "equity_curve"), (benchmarks, "benchmark_curve")):
         if frame["date"].isna().any() or not frame["date"].is_monotonic_increasing:
             raise ValueError(f"{label}.csv dates must be valid and sorted")
 
-    return summary.iloc[0], equity, benchmarks, monthly, yearly, trades
+    if daily_trades.empty or daily_trades["date"].isna().any():
+        raise ValueError("daily_trades.csv must contain valid alert dates")
+
+    return summary.iloc[0], equity, benchmarks, monthly, trades, daily_trades
 
 
 def pct(value, decimals=2):
@@ -133,15 +136,21 @@ def build_monthly_table(monthly):
     return f'<div class="table-wrap"><table><thead><tr><th>Year</th>{head}</tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
 
 
-def build_yearly_table(yearly):
-    rows = []
-    for item in yearly.sort_values("year", ascending=False).itertuples(index=False):
-        css = "positive" if item.return_pct > 0 else "negative" if item.return_pct < 0 else "muted"
-        rows.append(
-            f'<tr><td>{int(item.year)}</td><td>{html.escape(str(item.start_date))}</td>'
-            f'<td>{html.escape(str(item.end_date))}</td><td class="{css}">{item.return_pct * 100:.2f}%</td></tr>'
-        )
-    return f'<div class="table-wrap compact"><table><thead><tr><th>Year</th><th>Start</th><th>End</th><th>Return</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
+def build_alert_table(daily_trades):
+    alert = daily_trades.sort_values("date").iloc[-1]
+    def display(column):
+        value = alert.get(column)
+        return "—" if pd.isna(value) or str(value).strip() == "" else html.escape(str(value))
+
+    entries = display("tickers_entered")
+    exits = display("tickers_exited")
+    holdings = display("current_tickers_held")
+    return (
+        '<div class="table-wrap"><table><thead><tr><th>Signal Date</th>'
+        '<th>Entries</th><th>Exits</th><th>Current Holdings</th></tr></thead>'
+        f'<tbody><tr><td>{alert["date"]:%Y-%m-%d}</td><td>{entries}</td>'
+        f'<td>{exits}</td><td>{holdings}</td></tr></tbody></table></div>'
+    )
 
 
 def build_trade_table(trades, limit=50):
@@ -163,7 +172,7 @@ def build_trade_table(trades, limit=50):
     return f'<div class="table-wrap"><table><thead><tr><th>Ticker</th><th>Side</th><th>Entry</th><th>Exit</th><th>Days</th><th>P/L</th><th>Return</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
 
 
-def render_page(summary, equity, benchmarks, monthly, yearly, trades):
+def render_page(summary, equity, benchmarks, monthly, trades, daily_trades):
     chart_html = build_chart(equity, benchmarks)
     metrics = (
         ("Total Return", pct(summary.total_return)),
@@ -194,9 +203,9 @@ def render_page(summary, equity, benchmarks, monthly, yearly, trades):
 <main class="container">
 <section class="hero"><div class="eyebrow">Backtested long/short strategy</div><h1>Mean Reversion</h1><p>Systematic equity strategy seeking short-term price dislocations and subsequent reversion while managing long and short exposure.</p><p class="subtle">Backtest period: {summary.start_date} through {summary.end_date} · Starting equity: ${equity.iloc[0]['equity']:,.0f}</p></section>
 <section class="metrics">{metric_html}</section>
+<section class="panel"><h2>Latest Alert</h2>{build_alert_table(daily_trades)}</section>
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Select SPY, QQQ, or VOO in the legend to add benchmark comparisons.</p><div class="chart">{chart_html}</div></section>
 <section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly)}</section>
-<section class="panel"><h2>Yearly Returns</h2>{build_yearly_table(yearly)}</section>
 <section class="panel"><h2>Recent Closed Trades</h2>{build_trade_table(trades)}</section>
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
 </main>
@@ -207,9 +216,9 @@ def render_page(summary, equity, benchmarks, monthly, yearly, trades):
 
 def main():
     args = parse_args()
-    summary, equity, benchmarks, monthly, yearly, trades = load_results(args.source)
+    summary, equity, benchmarks, monthly, trades, daily_trades = load_results(args.source)
     args.output.write_text(
-        render_page(summary, equity, benchmarks, monthly, yearly, trades),
+        render_page(summary, equity, benchmarks, monthly, trades, daily_trades),
         encoding="utf-8",
     )
     print(f"Generated {args.output} from {args.source}")

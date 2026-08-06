@@ -5,7 +5,7 @@
 After running RevMurphy, generate the public page from its compact CSV outputs:
 
 ```powershell
-python generate_mean_reversion_page.py --source ../RevMurphy/output_long_short
+python generate_mean_reversion_page.py --source ../RevMurphy/output_long_short_live
 ```
 
 This writes `mean-reversion.html`. The page clearly identifies the results as a
