@@ -1,5 +1,6 @@
 import argparse
 import html
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -9,7 +10,6 @@ from generate_momentum_page import (
     build_alert_table,
     build_monthly_table,
     build_yearly_table,
-    parse_alert,
     pct,
 )
 
@@ -19,7 +19,6 @@ REQUIRED_FILES = (
     "daily_equity.csv",
     "monthly_results.csv",
     "monthly_return_table.csv",
-    "next_signal.txt",
 )
 INITIAL_EQUITY = 100_000.0
 
@@ -31,8 +30,14 @@ def parse_args():
     parser.add_argument(
         "--source",
         type=Path,
-        default=Path("../MomoSp/output_momo_sp_v2"),
-        help="Directory containing the MOMO-SP v2 output files.",
+        default=Path("../MomoSp/pit_version/output_pit_v2a"),
+        help="Directory containing the MOMO-SP v2a output files.",
+    )
+    parser.add_argument(
+        "--alert-source",
+        type=Path,
+        default=Path("../MomoSp/pit_version/output_pit_v2a_live/latest_signal.json"),
+        help="MOMO-SP v2a live-signal JSON file.",
     )
     parser.add_argument(
         "--output",
@@ -43,7 +48,22 @@ def parse_args():
     return parser.parse_args()
 
 
-def load_results(source):
+def load_alert(path):
+    if not path.is_file():
+        raise FileNotFoundError(f"Missing MOMO-SP v2a alert file: {path}")
+    signal = json.loads(path.read_text(encoding="utf-8"))
+    holdings = signal.get("holdings") or [signal.get("defensive_holding")]
+    return {
+        "Signal": signal.get("signal_date", "—"),
+        "Regime": signal.get("regime", "—"),
+        "Holdings": ", ".join(item for item in holdings if item),
+        "Execution": signal.get("execution_date", "—"),
+        "VIX 30d MA": f'{signal["vix_30d_average"]:.2f}',
+        "SPY 10d RV": f'{signal["spy_10d_realized_vol"]:.2f}',
+    }
+
+
+def load_results(source, alert_source):
     missing = [name for name in REQUIRED_FILES if not (source / name).is_file()]
     if missing:
         raise FileNotFoundError(
@@ -60,7 +80,7 @@ def load_results(source):
         parse_dates=["entry_date", "signal_date", "exit_date"],
     )
     monthly = pd.read_csv(source / "monthly_return_table.csv")
-    alert = parse_alert(source / "next_signal.txt")
+    alert = load_alert(alert_source)
 
     for frame, column, label in (
         (daily, "date", "daily_equity"),
@@ -140,7 +160,7 @@ def build_allocation_table(allocations, limit=50):
 
 def render_page(summary, daily, allocations, monthly, alert):
     total_return = summary.final_equity / INITIAL_EQUITY - 1
-    sharpe = summary.daily_sharpe_0rf
+    sharpe = summary.sharpe_0rf
     max_drawdown = summary.daily_max_drawdown
     metrics = (
         ("Total Return", pct(total_return)),
@@ -148,7 +168,7 @@ def render_page(summary, daily, allocations, monthly, alert):
         ("Sharpe Ratio", f"{sharpe:.2f}"),
         ("Max Drawdown", pct(max_drawdown)),
         ("SPY CAGR", pct(summary.spy_cagr)),
-        ("SPY Max Drawdown", pct(summary.spy_daily_max_drawdown)),
+        ("SPY Max Drawdown", pct(summary.spy_max_drawdown_period)),
         ("Active Months", f"{len(allocations):,}"),
         ("Final Equity", f"${summary.final_equity:,.0f}"),
     )
@@ -171,7 +191,7 @@ def render_page(summary, daily, allocations, monthly, alert):
 <body>
 <nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="performance.html">Performance</a><a href="strategies.html">Strategies</a><a href="subscribe.html">Subscribe</a><a href="members.html">Members</a></div></nav>
 <main class="container">
-<section class="hero"><div class="eyebrow">Backtested stock rotation strategy</div><h1>Momentum Stocks</h1><p>Monthly equal-weight rotation into the ten strongest stocks using approximately ten months of trailing momentum. A VIX-versus-SPY realized-volatility filter moves the portfolio into the strongest defensive asset during risk-off periods.</p><p class="subtle">Backtest period: {summary.start} through {summary.end} · Starting equity: ${INITIAL_EQUITY:,.0f}</p></section>
+<section class="hero"><div class="eyebrow">Backtested stock rotation strategy</div><h1>Momentum Stocks</h1><p>Monthly equal-weight rotation into the ten strongest stocks from a point-in-time Russell 1000 universe, filtered for market capitalization. A VIX-versus-SPY realized-volatility filter moves the portfolio into defensive assets during risk-off periods.</p><p class="subtle">Backtest period: {summary.start} through {summary.end} · Starting equity: ${INITIAL_EQUITY:,.0f}</p></section>
 <section class="metrics">{metric_html}</section>
 <section class="panel"><h2>Latest Alert</h2>{build_alert_table(alert)}</section>
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Momentum Stocks compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
@@ -187,7 +207,9 @@ def render_page(summary, daily, allocations, monthly, alert):
 
 def main():
     args = parse_args()
-    summary, daily, allocations, monthly, alert = load_results(args.source)
+    summary, daily, allocations, monthly, alert = load_results(
+        args.source, args.alert_source
+    )
     args.output.write_text(
         render_page(summary, daily, allocations, monthly, alert),
         encoding="utf-8",
