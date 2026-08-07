@@ -170,20 +170,6 @@ def build_monthly_table(monthly):
     )
 
 
-def build_yearly_table(monthly):
-    rows = []
-    for item in monthly.sort_values("Year", ascending=False).itertuples(index=False):
-        value = getattr(item, "_13")
-        css = "positive" if value > 0 else "negative" if value < 0 else "muted"
-        rows.append(
-            f'<tr><td>{int(item.Year)}</td><td class="{css}">{value * 100:.2f}%</td></tr>'
-        )
-    return (
-        '<div class="table-wrap compact"><table><thead><tr><th>Year</th>'
-        f'<th>Return</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
-    )
-
-
 def build_allocation_table(allocations, limit=50):
     rows = []
     recent = allocations.sort_values("date", ascending=False).head(limit)
@@ -245,7 +231,6 @@ def render_page(summary, daily, allocations, monthly, alert):
 <section class="panel"><h2>Latest Alert</h2>{build_alert_table(alert)}</section>
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Dual Momentum compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
 <section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly)}</section>
-<section class="panel"><h2>Yearly Returns</h2>{build_yearly_table(monthly)}</section>
 <section class="panel"><h2>Recent Monthly Allocations</h2>{build_allocation_table(allocations)}</section>
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
 </main>
