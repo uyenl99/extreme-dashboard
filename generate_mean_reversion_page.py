@@ -174,15 +174,21 @@ def build_trade_table(trades, limit=50):
 
 def render_page(summary, equity, benchmarks, monthly, trades, daily_trades):
     chart_html = build_chart(equity, benchmarks)
+    spy = benchmarks[["date", "SPY_equity"]].dropna()
+    spy_years = (spy["date"].iloc[-1] - spy["date"].iloc[0]).days / 365.25
+    spy_cagr = (spy["SPY_equity"].iloc[-1] / spy["SPY_equity"].iloc[0]) ** (1 / spy_years) - 1
+    spy_drawdown = (spy["SPY_equity"] / spy["SPY_equity"].cummax() - 1).min()
     metrics = (
+        ("Strategy CAGR", pct(summary.cagr)),
+        ("Strategy Max Drawdown", pct(summary.max_drawdown)),
         ("Total Return", pct(summary.total_return)),
-        ("CAGR", pct(summary.cagr)),
         ("Sharpe Ratio", f"{summary.annualized_sharpe:.2f}"),
-        ("Max Drawdown", pct(summary.max_drawdown)),
-        ("Win Rate", pct(summary.win_rate)),
-        ("Closed Trades", f"{int(summary.trades):,}"),
-        ("Average Trade", pct(summary.avg_trade_return)),
+        ("SPY CAGR", pct(spy_cagr)),
+        ("SPY Max Drawdown", pct(spy_drawdown)),
         ("Final Equity", f"${summary.final_equity:,.0f}"),
+        ("Closed Trades", f"{int(summary.trades):,}"),
+        ("Win Rate", pct(summary.win_rate)),
+        ("Average Trade", pct(summary.avg_trade_return)),
     )
     metric_html = "".join(
         f'<div class="metric"><div class="metric-label">{label}</div><div class="metric-value">{value}</div></div>'
