@@ -32,6 +32,12 @@ def parse_args():
         default=Path("mean-reversion.html"),
         help="HTML file to generate.",
     )
+    parser.add_argument(
+        "--alert-source",
+        type=Path,
+        default=Path("../RevMurphy/output_live_alerts"),
+        help="Directory containing dated Mean Reversion live-alert CSV files.",
+    )
     return parser.parse_args()
 
 
@@ -136,19 +142,41 @@ def build_monthly_table(monthly):
     return f'<div class="table-wrap"><table><thead><tr><th>Year</th>{head}</tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
 
 
-def build_alert_table(daily_trades):
-    alert = daily_trades.sort_values("date").iloc[-1]
-    def display(column):
-        value = alert.get(column)
-        return "—" if pd.isna(value) or str(value).strip() == "" else html.escape(str(value))
+def load_live_alert(daily_trades, alert_source):
+    entry_files = sorted(alert_source.glob("entry_alerts_*.csv"))
+    if not entry_files:
+        raise FileNotFoundError(f"No Mean Reversion entry alerts found in {alert_source}")
+    entry_path = entry_files[-1]
+    exit_path = alert_source / entry_path.name.replace("entry_alerts_", "exit_alerts_")
+    if not exit_path.is_file():
+        raise FileNotFoundError(f"Missing matching Mean Reversion exit alerts: {exit_path}")
 
-    entries = display("tickers_entered")
-    exits = display("tickers_exited")
-    holdings = display("current_tickers_held")
+    entries = pd.read_csv(entry_path)
+    exits = pd.read_csv(exit_path)
+    signal_date = pd.to_datetime(entries["date"].iloc[0])
+    entry_tickers = entries["ticker"].dropna().astype(str).tolist()
+
+    latest = daily_trades.sort_values("date").iloc[-1]
+    held_with_sides = str(latest.get("current_tickers_held", "")).split(",")
+    held = [item.split(":")[-1] for item in held_with_sides if item]
+    exit_candidates = set(exits["ticker"].dropna().astype(str))
+    exit_tickers = [ticker for ticker in held if ticker in exit_candidates]
+    projected = [ticker for ticker in held if ticker not in exit_candidates]
+    projected.extend(ticker for ticker in entry_tickers if ticker not in projected)
+    return signal_date, entry_tickers, exit_tickers, projected
+
+
+def build_alert_table(daily_trades, alert_source):
+    signal_date, entry_tickers, exit_tickers, projected = load_live_alert(
+        daily_trades, alert_source
+    )
+    entries = html.escape(", ".join(entry_tickers) or "—")
+    exits = html.escape(", ".join(exit_tickers) or "—")
+    holdings = html.escape(", ".join(projected) or "—")
     return (
         '<div class="table-wrap"><table><thead><tr><th>Signal Date</th>'
-        '<th>Entries</th><th>Exits</th><th>Current Holdings</th></tr></thead>'
-        f'<tbody><tr><td>{alert["date"]:%Y-%m-%d}</td><td>{entries}</td>'
+        '<th>Entry Alerts</th><th>Exit Alerts</th><th>Projected Holdings</th></tr></thead>'
+        f'<tbody><tr><td>{signal_date:%Y-%m-%d}</td><td>{entries}</td>'
         f'<td>{exits}</td><td>{holdings}</td></tr></tbody></table></div>'
     )
 
@@ -172,7 +200,7 @@ def build_trade_table(trades, limit=50):
     return f'<div class="table-wrap"><table><thead><tr><th>Ticker</th><th>Side</th><th>Entry</th><th>Exit</th><th>Days</th><th>P/L</th><th>Return</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
 
 
-def render_page(summary, equity, benchmarks, monthly, trades, daily_trades):
+def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, alert_source):
     chart_html = build_chart(equity, benchmarks)
     spy = benchmarks[["date", "SPY_equity"]].dropna()
     spy_years = (spy["date"].iloc[-1] - spy["date"].iloc[0]).days / 365.25
@@ -209,7 +237,7 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades):
 <main class="container">
 <section class="hero"><div class="eyebrow">Backtested long/short strategy</div><h1>Mean Reversion</h1><p>Systematic equity strategy seeking short-term price dislocations and subsequent reversion while managing long and short exposure.</p><p class="subtle">Backtest period: {summary.start_date} through {summary.end_date} · Starting equity: ${equity.iloc[0]['equity']:,.0f}</p></section>
 <section class="metrics">{metric_html}</section>
-<section class="panel"><h2>Latest Alert</h2>{build_alert_table(daily_trades)}</section>
+<section class="panel"><h2>Latest Alert</h2>{build_alert_table(daily_trades, alert_source)}</section>
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Select SPY, QQQ, or VOO in the legend to add benchmark comparisons.</p><div class="chart">{chart_html}</div></section>
 <section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly)}</section>
 <section class="panel"><h2>Recent Closed Trades</h2>{build_trade_table(trades)}</section>
@@ -224,7 +252,10 @@ def main():
     args = parse_args()
     summary, equity, benchmarks, monthly, trades, daily_trades = load_results(args.source)
     args.output.write_text(
-        render_page(summary, equity, benchmarks, monthly, trades, daily_trades),
+        render_page(
+            summary, equity, benchmarks, monthly, trades, daily_trades,
+            args.alert_source,
+        ),
         encoding="utf-8",
     )
     print(f"Generated {args.output} from {args.source}")
