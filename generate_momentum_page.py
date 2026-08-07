@@ -199,14 +199,14 @@ def render_page(summary, daily, allocations, monthly, alert):
     end_date = daily["Date"].max().strftime("%Y-%m-%d")
     active_months = len(allocations)
     metrics = (
+        ("Strategy CAGR", pct(summary.cagr)),
+        ("Strategy Max Drawdown", pct(summary.daily_max_drawdown)),
         ("Total Return", pct(summary.total_return)),
-        ("CAGR", pct(summary.cagr)),
         ("Sharpe Ratio", f"{summary.sharpe:.2f}"),
-        ("Max Drawdown", pct(summary.daily_max_drawdown)),
         ("SPY CAGR", pct(summary.spy_cagr)),
         ("SPY Max Drawdown", pct(summary.spy_daily_max_drawdown)),
-        ("Active Months", f"{active_months:,}"),
         ("Final Equity", f"${summary.final:,.0f}"),
+        ("Active Months", f"{active_months:,}"),
     )
     metric_html = "".join(
         f'<div class="metric"><div class="metric-label">{label}</div>'

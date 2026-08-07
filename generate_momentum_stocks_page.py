@@ -162,14 +162,14 @@ def render_page(summary, daily, allocations, monthly, alert):
     sharpe = summary.sharpe_0rf
     max_drawdown = summary.daily_max_drawdown
     metrics = (
+        ("Strategy CAGR", pct(summary.cagr)),
+        ("Strategy Max Drawdown", pct(max_drawdown)),
         ("Total Return", pct(total_return)),
-        ("CAGR", pct(summary.cagr)),
         ("Sharpe Ratio", f"{sharpe:.2f}"),
-        ("Max Drawdown", pct(max_drawdown)),
         ("SPY CAGR", pct(summary.spy_cagr)),
         ("SPY Max Drawdown", pct(summary.spy_max_drawdown_period)),
-        ("Active Months", f"{len(allocations):,}"),
         ("Final Equity", f"${summary.final_equity:,.0f}"),
+        ("Active Months", f"{len(allocations):,}"),
     )
     metric_html = "".join(
         f'<div class="metric"><div class="metric-label">{label}</div>'
