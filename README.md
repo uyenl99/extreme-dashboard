@@ -10,8 +10,18 @@ python generate_mean_reversion_page.py `
   --alert-source ../RevMurphy/output_live_alerts
 ```
 
-This writes `mean-reversion.html`. The page clearly identifies the results as a
+This writes `mean-reversion.html` with the latest alert and latest 50 trades,
+including entry and exit prices. The page clearly identifies the results as a
 simulated backtest and does not import the large `all_signals.csv` file.
+
+### Automatic Mean Reversion updates
+
+`scripts/update_mean_reversion_daily.ps1` refreshes the RevMurphy backtest and
+live alerts, regenerates the page and strategy-card metrics, and creates or
+updates a draft pull request so Vercel provides a preview before production is
+changed. A Windows scheduled task runs it daily at 12:30 PM local Pacific time.
+The PC must be on and online, and `POLYGON_API_KEY` must be available as a user
+environment variable.
 
 ### Refresh the Dual Momentum backtest page
 
