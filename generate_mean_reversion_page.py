@@ -1,5 +1,6 @@
 import argparse
 import html
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -37,6 +38,12 @@ def parse_args():
         type=Path,
         default=Path("../RevMurphy/output_live_alerts"),
         help="Directory containing dated Mean Reversion live-alert CSV files.",
+    )
+    parser.add_argument(
+        "--strategies-page",
+        type=Path,
+        default=Path("strategies.html"),
+        help="Strategies page whose Mean Reversion card metrics should be refreshed.",
     )
     return parser.parse_args()
 
@@ -182,22 +189,40 @@ def build_alert_table(daily_trades, alert_source):
 
 
 def build_trade_table(trades, limit=50):
-    closed = trades[trades["status"].astype(str).str.lower() == "closed"].copy()
-    closed["exit_date"] = pd.to_datetime(closed["exit_date"], errors="coerce")
-    closed = closed.sort_values("exit_date", ascending=False).head(limit)
+    recent = trades.copy()
+    recent["entry_date"] = pd.to_datetime(recent["entry_date"], errors="coerce")
+    recent["exit_date"] = pd.to_datetime(recent["exit_date"], errors="coerce")
+    recent["activity_date"] = recent["exit_date"].fillna(recent["entry_date"])
+    recent = recent.sort_values("activity_date", ascending=False).head(limit)
     rows = []
-    for item in closed.itertuples(index=False):
-        css = "positive" if item.pnl_dollars >= 0 else "negative"
+    for item in recent.itertuples(index=False):
+        is_closed = str(item.status).lower() == "closed"
+        css = "positive" if is_closed and item.pnl_dollars >= 0 else "negative" if is_closed else "muted"
         side_css = "long" if str(item.side).lower() == "long" else "short"
+        exit_date = item.exit_date.strftime("%Y-%m-%d") if is_closed else "—"
+        exit_price = f"${float(item.exit_price):,.2f}" if is_closed else "—"
+        pnl = f"${float(item.pnl_dollars):,.0f}" if is_closed else "—"
+        trade_return = f"{float(item.return_pct) * 100:.2f}%" if is_closed else "—"
         rows.append(
             f"<tr><td>{html.escape(str(item.ticker))}</td>"
             f'<td><span class="side {side_css}">{html.escape(str(item.side).title())}</span></td>'
-            f"<td>{html.escape(str(item.entry_date))}</td><td>{html.escape(str(item.exit_date.date()))}</td>"
-            f"<td>{float(item.holding_days):.0f}</td>"
-            f'<td class="{css}">${float(item.pnl_dollars):,.0f}</td>'
-            f'<td class="{css}">{float(item.return_pct) * 100:.2f}%</td></tr>'
+            f"<td>{item.entry_date:%Y-%m-%d}</td><td>${float(item.entry_price):,.2f}</td>"
+            f"<td>{exit_date}</td><td>{exit_price}</td>"
+            f'<td class="{css}">{pnl}</td><td class="{css}">{trade_return}</td>'
+            f"<td>{html.escape(str(item.status).title())}</td></tr>"
         )
-    return f'<div class="table-wrap"><table><thead><tr><th>Ticker</th><th>Side</th><th>Entry</th><th>Exit</th><th>Days</th><th>P/L</th><th>Return</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
+    return f'<div class="table-wrap"><table><thead><tr><th>Ticker</th><th>Side</th><th>Entry Date</th><th>Entry Price</th><th>Exit Date</th><th>Exit Price</th><th>P/L</th><th>Return</th><th>Status</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
+
+
+def update_strategy_card(path, summary):
+    text = path.read_text(encoding="utf-8")
+    start = text.index("<h2>Mean Reversion</h2>")
+    end = text.index("</div>", start)
+    card = text[start:end]
+    card = re.sub(r"[\d.]+% Backtest CAGR", f"{summary.cagr * 100:.2f}% Backtest CAGR", card)
+    card = re.sub(r"[\d.]+ Sharpe Ratio", f"{summary.annualized_sharpe:.2f} Sharpe Ratio", card)
+    card = re.sub(r"-[\d.]+% Maximum Drawdown", f"{summary.max_drawdown * 100:.2f}% Maximum Drawdown", card)
+    path.write_text(text[:start] + card + text[end:], encoding="utf-8")
 
 
 def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, alert_source):
@@ -240,7 +265,7 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
 <section class="panel"><h2>Latest Alert</h2>{build_alert_table(daily_trades, alert_source)}</section>
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Select SPY, QQQ, or VOO in the legend to add benchmark comparisons.</p><div class="chart">{chart_html}</div></section>
 <section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly)}</section>
-<section class="panel"><h2>Recent Closed Trades</h2>{build_trade_table(trades)}</section>
+<section class="panel"><h2>Latest 50 Trades</h2>{build_trade_table(trades)}</section>
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
 </main>
 <footer>© 2026 Extreme Trading Inc.</footer>
@@ -258,6 +283,7 @@ def main():
         ),
         encoding="utf-8",
     )
+    update_strategy_card(args.strategies_page, summary)
     print(f"Generated {args.output} from {args.source}")
 
 
