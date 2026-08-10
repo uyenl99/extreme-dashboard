@@ -17,10 +17,11 @@ simulated backtest and does not import the large `all_signals.csv` file.
 ### Automatic Mean Reversion updates
 
 `scripts/update_mean_reversion_daily.ps1` refreshes the RevMurphy backtest and
-live alerts, regenerates the page and strategy-card metrics, and commits only
-the two generated website files directly to `main`. A Windows scheduled task
-runs it daily at 12:30 PM local Pacific time. The PC must be on and online, and
-`POLYGON_API_KEY` must be available as a user environment variable.
+live alerts, regenerates the page and strategy-card metrics, and creates or
+updates a draft pull request so Vercel provides a preview before production is
+changed. A Windows scheduled task runs it daily at 12:30 PM local Pacific time.
+The PC must be on and online, and `POLYGON_API_KEY` must be available as a user
+environment variable.
 
 ### Refresh the Dual Momentum backtest page
 
