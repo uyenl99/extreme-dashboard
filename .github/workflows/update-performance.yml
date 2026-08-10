@@ -3,11 +3,12 @@ name: Update Collective2 Performance
 on:
   workflow_dispatch:
   schedule:
-    # 14:00 UTC is 6:00 AM PST / 7:00 AM PDT.
-    - cron: "0 14 * * *"
+    # 20:30 UTC is 12:30 PM PST / 1:30 PM PDT.
+    - cron: "30 20 * * *"
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: update-collective2-performance
@@ -21,6 +22,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -38,7 +40,10 @@ jobs:
       - name: Generate Extreme OS public page
         run: python generate_strategy_pages.py --extreme-os-only
 
-      - name: Commit updated public pages
+      - name: Create or update daily preview PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_BRANCH: automation/extreme-os-daily-preview
         run: |
           if git diff --quiet -- performance.html extreme-os.html; then
             echo "No public page changes to commit."
@@ -46,6 +51,15 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$PREVIEW_BRANCH"
           git add performance.html extreme-os.html
-          git commit -m "Update Collective2 public pages"
-          git push origin main
+          git commit -m "Update Collective2 preview"
+          git push --force-with-lease -u origin "$PREVIEW_BRANCH"
+          PR_URL=$(gh pr list --head "$PREVIEW_BRANCH" --base main --state open --json url --jq '.[0].url')
+          if [ -z "$PR_URL" ]; then
+            gh pr create --draft --base main --head "$PREVIEW_BRANCH" \
+              --title "Daily Extreme OS preview" \
+              --body "Automated Collective2 refresh. Review the Vercel preview before merging."
+          else
+            echo "Updated daily preview PR: $PR_URL"
+          fi

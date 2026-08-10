@@ -2,8 +2,8 @@ import argparse
 import pandas as pd
 from pathlib import Path
 
-PUBLIC_DELAY_HOURS = 96
-PUBLIC_TRADE_LIMIT = 100
+PUBLIC_DELAY_HOURS = 0
+PUBLIC_TRADE_LIMIT = 50
 
 
 # ============================================================
@@ -180,6 +180,7 @@ def build_recent_closed_table(df, limit=50):
             "Qty Open",
             "Avg Price Open",
             "Closed Time ET",
+            "Avg Price Close",
             "Trade P/L"
         ]
     ].copy()
@@ -192,6 +193,7 @@ def build_recent_closed_table(df, limit=50):
         "Qty",
         "Entry",
         "Close Time",
+        "Exit",
         "P/L"
     ]
 
@@ -411,7 +413,7 @@ Current positions are sourced from Collective2 and updated daily.
 <h1>{title}</h1>
 
 <p>
-Historical trades delayed 96 hours.
+Trades are sourced from Collective2 and updated daily without an added delay.
 </p>
 
 </div>
