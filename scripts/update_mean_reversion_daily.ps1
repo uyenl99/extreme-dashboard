@@ -1,8 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
-$stocksRoot = Split-Path -Parent $repoRoot
-$revMurphyRoot = Join-Path $stocksRoot "RevMurphy"
+$revMurphyRoot = "C:\junk\stocks\RevMurphy"
 $backtestOutput = Join-Path $revMurphyRoot "output_long_short_live"
 $alertOutput = Join-Path $revMurphyRoot "output_live_alerts"
 $automationRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
