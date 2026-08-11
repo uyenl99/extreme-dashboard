@@ -39,7 +39,7 @@ try {
 
     Push-Location $revMurphyRoot
     try {
-        & $python "main_long_short.py" --end $today --output-dir $backtestOutput --no-force-final-exit
+        & $python "main_long_short.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion backtest refresh failed." }
         & $python "live_alerts.py" --date $today --output-dir $alertOutput --refresh --cutoff "15:30"
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion live-alert refresh failed." }
