@@ -41,7 +41,7 @@ try {
     try {
         & $python "main_long_short.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion backtest refresh failed." }
-        & $python "live_alerts.py" --date $today --output-dir $alertOutput --refresh --cutoff "15:30"
+        & $python "live_alerts.py" --date $today --output-dir $alertOutput --refresh --cutoff "15:30" --max-tickers 0
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion live-alert refresh failed." }
     }
     finally { Pop-Location }
