@@ -6,12 +6,13 @@ $alertOutput = Join-Path $revMurphyRoot "output_live_alerts_5x5"
 $automationRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
 $checkout = Join-Path $automationRoot "extreme-dashboard"
 $logDirectory = Join-Path $automationRoot "logs"
-$python = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
+$python = Join-Path $revMurphyRoot ".venv\Scripts\python.exe"
 $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
 $gh = "C:\Program Files\GitHub CLI\gh.exe"
 $previewBranch = "automation/mean-reversion-daily-preview"
 $today = Get-Date -Format "yyyy-MM-dd"
 $log = Join-Path $logDirectory "mean-reversion-$today.log"
+$commandLog = Join-Path $logDirectory "mean-reversion-$today-commands.log"
 
 New-Item -ItemType Directory -Force -Path $automationRoot, $logDirectory | Out-Null
 Start-Transcript -Path $log -Append
@@ -34,21 +35,18 @@ try {
     & $git -C $checkout checkout -B $previewBranch origin/main
     if ($LASTEXITCODE -ne 0) { throw "Could not reset the daily preview branch." }
 
-    & $python -m pip install -r (Join-Path $checkout "requirements.txt") -r (Join-Path $revMurphyRoot "requirements.txt")
-    if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed." }
-
     Push-Location $revMurphyRoot
     try {
-        & $python "main_long_short.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0
+        & $python "main_long_short.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion backtest refresh failed." }
-        & $python "live_alerts.py" --mode "long_short" --date $today --output-dir $alertOutput --portfolio-trades (Join-Path $revMurphyRoot "output_long_short_5x5\trades.csv") --refresh --cutoff "15:30" --max-tickers 0 --long-positions 5 --short-positions 5
+        & $python "live_alerts.py" --mode "long_short" --date $today --output-dir $alertOutput --portfolio-trades (Join-Path $revMurphyRoot "output_long_short_5x5\trades.csv") --refresh --cutoff "15:30" --max-tickers 0 --long-positions 5 --short-positions 5 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion live-alert refresh failed." }
     }
     finally { Pop-Location }
 
     Push-Location $checkout
     try {
-        & $python "generate_mean_reversion_page.py" --source $backtestOutput --alert-source $alertOutput
+        & $python "generate_mean_reversion_page.py" --source $backtestOutput --alert-source $alertOutput 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion page generation failed." }
 
         & $git add -- mean-reversion.html strategies.html
