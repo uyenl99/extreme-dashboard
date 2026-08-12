@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 
 $revMurphyRoot = "C:\junk\stocks\RevMurphy"
 $backtestOutput = Join-Path $revMurphyRoot "output_long_short_live"
-$alertOutput = Join-Path $revMurphyRoot "output_live_alerts"
+$alertOutput = Join-Path $revMurphyRoot "output_live_alerts_5x5"
 $automationRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
 $checkout = Join-Path $automationRoot "extreme-dashboard"
 $logDirectory = Join-Path $automationRoot "logs"
@@ -41,7 +41,7 @@ try {
     try {
         & $python "main_long_short.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion backtest refresh failed." }
-        & $python "live_alerts.py" --date $today --output-dir $alertOutput --refresh --cutoff "15:30" --max-tickers 0
+        & $python "live_alerts.py" --mode "long_short" --date $today --output-dir $alertOutput --portfolio-trades (Join-Path $revMurphyRoot "output_long_short_5x5\trades.csv") --refresh --cutoff "15:30" --max-tickers 0 --long-positions 5 --short-positions 5
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion live-alert refresh failed." }
     }
     finally { Pop-Location }

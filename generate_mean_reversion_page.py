@@ -161,29 +161,52 @@ def load_live_alert(daily_trades, alert_source):
     entries = pd.read_csv(entry_path)
     exits = pd.read_csv(exit_path)
     signal_date = pd.to_datetime(entries["date"].iloc[0])
-    entry_tickers = entries["ticker"].dropna().astype(str).tolist()
+    if "side" in entries.columns:
+        sides = entries["side"].fillna("").astype(str).str.lower()
+        long_entries = entries.loc[sides == "long", "ticker"].dropna().astype(str).tolist()
+        short_entries = entries.loc[sides == "short", "ticker"].dropna().astype(str).tolist()
+    else:
+        long_entries = entries["ticker"].dropna().astype(str).tolist()
+        short_entries = []
+    entry_tickers = long_entries + short_entries
 
-    latest = daily_trades.sort_values("date").iloc[-1]
-    held_with_sides = str(latest.get("current_tickers_held", "")).split(",")
-    held = [item.split(":")[-1] for item in held_with_sides if item]
-    exit_candidates = set(exits["ticker"].dropna().astype(str))
+    date_tag = entry_path.stem.replace("entry_alerts_", "")
+    holdings_path = alert_source / f"portfolio_holdings_{date_tag}.csv"
+    portfolio_exits_path = alert_source / f"portfolio_exit_alerts_{date_tag}.csv"
+    if holdings_path.is_file():
+        holdings = pd.read_csv(holdings_path)
+        held = holdings["ticker"].dropna().astype(str).tolist()
+    else:
+        latest = daily_trades.sort_values("date").iloc[-1]
+        held_with_sides = str(latest.get("current_tickers_held", "")).split(",")
+        held = [item.split(":")[-1] for item in held_with_sides if item]
+    portfolio_exits = pd.read_csv(portfolio_exits_path) if portfolio_exits_path.is_file() else exits
+    exit_candidates = set(portfolio_exits["ticker"].dropna().astype(str))
     exit_tickers = [ticker for ticker in held if ticker in exit_candidates]
     projected = [ticker for ticker in held if ticker not in exit_candidates]
-    projected.extend(ticker for ticker in entry_tickers if ticker not in projected)
-    return signal_date, entry_tickers, exit_tickers, projected
+    trade_entries_path = alert_source / f"trade_entries_{date_tag}.csv"
+    if trade_entries_path.is_file():
+        trade_entries = pd.read_csv(trade_entries_path)
+        projected_entries = trade_entries["ticker"].dropna().astype(str).tolist()
+    else:
+        projected_entries = entry_tickers
+    projected.extend(ticker for ticker in projected_entries if ticker not in projected)
+    return signal_date, long_entries, short_entries, exit_tickers, projected
 
 
 def build_alert_table(daily_trades, alert_source):
-    signal_date, entry_tickers, exit_tickers, projected = load_live_alert(
+    signal_date, long_entries, short_entries, exit_tickers, projected = load_live_alert(
         daily_trades, alert_source
     )
-    entries = html.escape(", ".join(entry_tickers) or "—")
+    longs = html.escape(", ".join(long_entries) or "—")
+    shorts = html.escape(", ".join(short_entries) or "—")
     exits = html.escape(", ".join(exit_tickers) or "—")
     holdings = html.escape(", ".join(projected) or "—")
     return (
         '<div class="table-wrap"><table><thead><tr><th>Signal Date</th>'
-        '<th>Entry Alerts</th><th>Exit Alerts</th><th>Projected Holdings</th></tr></thead>'
-        f'<tbody><tr><td>{signal_date:%Y-%m-%d}</td><td>{entries}</td>'
+        '<th>Long Entry Alerts</th><th>Short Entry Alerts</th><th>Exit Alerts</th>'
+        '<th>Projected Holdings</th></tr></thead>'
+        f'<tbody><tr><td>{signal_date:%Y-%m-%d}</td><td>{longs}</td><td>{shorts}</td>'
         f'<td>{exits}</td><td>{holdings}</td></tr></tbody></table></div>'
     )
 
