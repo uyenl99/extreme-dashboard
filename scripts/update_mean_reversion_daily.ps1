@@ -39,7 +39,7 @@ try {
     try {
         & $python "main_long_short.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion backtest refresh failed." }
-        & $python "live_alerts.py" --mode "long_short" --date $today --output-dir $alertOutput --portfolio-trades (Join-Path $revMurphyRoot "output_long_short_5x5\trades.csv") --refresh --cutoff "15:30" --max-tickers 0 --long-positions 5 --short-positions 5 2>&1 | Tee-Object -FilePath $commandLog -Append
+        & $python "live_alerts_optimized.py" --minute-workers 4 --mode "long_short" --date $today --output-dir $alertOutput --portfolio-trades (Join-Path $revMurphyRoot "output_long_short_5x5\trades.csv") --refresh --cutoff "15:30" --max-tickers 0 --long-positions 5 --short-positions 5 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion live-alert refresh failed." }
     }
     finally { Pop-Location }
