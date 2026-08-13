@@ -640,7 +640,7 @@ if args.extreme_os_only:
         "data/extreme_os.csv",
         "extreme-os.html",
         "Extreme OS Historical Trades",
-        show_current_positions=True
+        show_current_positions=False
     )
     print("Done.")
     raise SystemExit(0)
@@ -664,26 +664,11 @@ generate_public_page(
     "data/extreme_os.csv",
     "extreme-os.html",
     "Extreme OS Historical Trades",
-    show_current_positions=True
+    show_current_positions=False
 )
 
-generate_strategy_member_page(
-    os_df,
-    "Extreme OS Members",
-    "extreme-os-members.html",
-    "data/extreme_os.csv"
-)
-
-generate_strategy_member_page(
-    mom_df,
-    "Momentum Members",
-    "momentum-members.html",
-    "data/extreme_os.csv"
-)
-
-generate_members_dashboard(
-    os_df,
-    mom_df
-)
+# Member pages are intentionally not generated from CSV data. Live member
+# data is returned only by the authenticated /api/member-data endpoint.
+print("Skipped protected member pages.")
 
 print("Done.")

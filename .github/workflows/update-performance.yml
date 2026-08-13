@@ -32,7 +32,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Fetch Collective2 performance and Extreme OS data
+      - name: Fetch Collective2 performance and delayed-trade source data
         env:
           C2_API_KEY: ${{ secrets.C2_API_KEY }}
         run: python dashboard.py --public-strategy-data

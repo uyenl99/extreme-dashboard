@@ -1,0 +1,116 @@
+(() => {
+  const state = { config: null, session: null, recovery: false };
+  const $ = (id) => document.getElementById(id);
+  const show = (id, visible = true) => { $(id).hidden = !visible; };
+  const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const date = (value) => value ? new Date(value).toLocaleString() : "—";
+  const money = (value) => value == null ? "—" : Number(value).toLocaleString(undefined, { style: "currency", currency: "USD" });
+
+  function saveSession(session) {
+    state.session = session;
+    if (session) localStorage.setItem("eti_member_session", JSON.stringify(session));
+    else localStorage.removeItem("eti_member_session");
+  }
+
+  function readCallback() {
+    const hash = new URLSearchParams(location.hash.slice(1));
+    if (!hash.get("access_token")) return;
+    state.recovery = hash.get("type") === "recovery";
+    saveSession({ access_token: hash.get("access_token"), refresh_token: hash.get("refresh_token"), expires_at: Math.floor(Date.now() / 1000) + Number(hash.get("expires_in") || 3600) });
+    history.replaceState(null, "", location.pathname + location.search);
+  }
+
+  async function refreshSession() {
+    if (!state.session?.refresh_token) return false;
+    const response = await fetch(`${state.config.supabaseUrl}/auth/v1/token?grant_type=refresh_token`, { method: "POST", headers: { apikey: state.config.supabaseAnonKey, "content-type": "application/json" }, body: JSON.stringify({ refresh_token: state.session.refresh_token }) });
+    if (!response.ok) { saveSession(null); return false; }
+    const payload = await response.json();
+    saveSession({ access_token: payload.access_token, refresh_token: payload.refresh_token, expires_at: Math.floor(Date.now() / 1000) + payload.expires_in });
+    return true;
+  }
+
+  async function api(path, options = {}) {
+    if (state.session?.expires_at < Math.floor(Date.now() / 1000) + 30) await refreshSession();
+    return fetch(path, { ...options, headers: { "content-type": "application/json", authorization: `Bearer ${state.session?.access_token || ""}`, ...(options.headers || {}) } });
+  }
+
+  async function authRequest(path, body, method = "POST") {
+    const options = { method, headers: { apikey: state.config.supabaseAnonKey, authorization: `Bearer ${state.session?.access_token || ""}`, "content-type": "application/json" } };
+    if (method !== "GET" && method !== "HEAD") options.body = JSON.stringify(body);
+    return fetch(`${state.config.supabaseUrl}/auth/v1/${path}`, options);
+  }
+
+  function adoptAuth(payload) {
+    if (!payload.access_token) return false;
+    saveSession({ access_token: payload.access_token, refresh_token: payload.refresh_token, expires_at: Math.floor(Date.now() / 1000) + payload.expires_in });
+    return true;
+  }
+
+  function table(columns, rows) {
+    if (!rows.length) return '<p class="empty">Nothing to show right now.</p>';
+    return `<table><thead><tr>${columns.map((c) => `<th>${escapeHtml(c.label)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${columns.map((c) => `<td>${c.render ? c.render(row[c.key], row) : escapeHtml(row[c.key])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  }
+
+  function render(data) {
+    $("position-count").textContent = data.positions.length; $("alert-count").textContent = data.alerts.length; $("trade-count").textContent = data.trades.length;
+    $("updated-at").textContent = `Updated ${date(data.updatedAt)}`;
+    $("alerts-table").innerHTML = table([{key:"time",label:"Time",render:date},{key:"symbol",label:"Symbol"},{key:"action",label:"Action"},{key:"quantity",label:"Quantity"},{key:"status",label:"Status"}], data.alerts);
+    $("positions-table").innerHTML = table([{key:"openedAt",label:"Opened",render:date},{key:"symbol",label:"Symbol"},{key:"quantity",label:"Quantity"},{key:"averagePrice",label:"Average price",render:money}], data.positions);
+    $("trades-table").innerHTML = table([{key:"closedAt",label:"Closed",render:date},{key:"symbol",label:"Symbol"},{key:"side",label:"Side",render:(v)=>String(v)==="1"?"Long":String(v)==="2"?"Short":escapeHtml(v)},{key:"quantity",label:"Quantity"},{key:"openPrice",label:"Open",render:money},{key:"closePrice",label:"Close",render:money},{key:"profitLoss",label:"P/L",render:(v)=>`<span class="${Number(v)>=0?"positive":"negative"}">${money(v)}</span>`}], data.trades);
+  }
+
+  async function loadDashboard() {
+    show("loading"); show("auth-panel", false); show("password-panel", false); show("subscribe-panel", false); show("dashboard", false); show("account-actions", false);
+    if (!state.session) { show("loading", false); show("auth-panel"); return; }
+    if (state.recovery) { show("loading", false); show("password-panel"); return; }
+    const userResponse = await authRequest("user", {}, "GET");
+    if (!userResponse.ok) { saveSession(null); show("loading", false); show("auth-panel"); return; }
+    const user = await userResponse.json(); $("member-email").textContent = user.email;
+    const response = await api("/api/member-data"); show("loading", false); show("account-actions");
+    if (response.status === 401) { saveSession(null); show("account-actions", false); show("auth-panel"); return; }
+    if (response.status === 403) { show("subscribe-panel"); return; }
+    if (!response.ok) { show("auth-panel"); $("auth-message").textContent = "Member data is temporarily unavailable."; return; }
+    render(await response.json()); show("dashboard");
+  }
+
+  $("login-form").addEventListener("submit", async (event) => {
+    event.preventDefault(); const button = event.submitter; button.disabled = true;
+    const response = await authRequest("token?grant_type=password", { email: $("email").value, password: $("password").value });
+    const payload = await response.json();
+    if (response.ok && adoptAuth(payload)) { $("auth-message").textContent = ""; await loadDashboard(); }
+    else $("auth-message").textContent = payload.error_description || payload.msg || "Incorrect email or password.";
+    button.disabled = false;
+  });
+
+  $("signup-button").addEventListener("click", async () => {
+    if (!$("email").reportValidity() || !$("password").reportValidity()) return;
+    const confirmationUrl = `${location.origin}/members.html`;
+    const response = await authRequest(`signup?redirect_to=${encodeURIComponent(confirmationUrl)}`, { email: $("email").value, password: $("password").value }); const payload = await response.json();
+    if (response.ok && adoptAuth(payload)) await loadDashboard();
+    else if (response.ok) $("auth-message").textContent = "Check your email to confirm your account, then sign in.";
+    else $("auth-message").textContent = payload.msg || payload.error_description || "Unable to create account.";
+  });
+
+  $("reset-button").addEventListener("click", async () => {
+    if (!$("email").reportValidity()) return;
+    const response = await authRequest("recover", { email: $("email").value, redirect_to: `${location.origin}/members.html` });
+    $("auth-message").textContent = response.ok ? "Check your email for the password-reset link." : "Unable to send the reset email.";
+  });
+
+  $("password-form").addEventListener("submit", async (event) => {
+    event.preventDefault(); const response = await authRequest("user", { password: $("new-password").value }, "PUT");
+    if (response.ok) { state.recovery = false; $("password-message").textContent = "Password updated."; await loadDashboard(); }
+    else $("password-message").textContent = "Unable to update the password.";
+  });
+
+  document.querySelectorAll(".checkout-button").forEach((button) => button.addEventListener("click", async () => { const response = await api("/api/create-checkout-session", { method: "POST", body: JSON.stringify({ price: button.dataset.price }) }); const body = await response.json(); if (body.url) location.href = body.url; else alert(body.error || "Unable to start checkout."); }));
+  $("billing-button").addEventListener("click", async () => { const response = await api("/api/create-portal-session", { method: "POST", body: "{}" }); const body = await response.json(); if (body.url) location.href = body.url; else alert(body.error || "Unable to open billing."); });
+  $("signout-button").addEventListener("click", () => { saveSession(null); location.reload(); });
+
+  (async () => {
+    state.config = await fetch("/api/public-config").then((r) => r.json()); readCallback();
+    if (!state.session) { try { saveSession(JSON.parse(localStorage.getItem("eti_member_session"))); } catch {} }
+    if (!state.config.supabaseUrl || !state.config.supabaseAnonKey) { show("loading", false); show("auth-panel"); $("auth-message").textContent = "Member accounts are being configured."; return; }
+    await loadDashboard();
+  })().catch(() => { show("loading", false); show("auth-panel"); $("auth-message").textContent = "Member sign-in is temporarily unavailable."; });
+})();

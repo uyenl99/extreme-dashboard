@@ -1,0 +1,7 @@
+data/
+__pycache__/
+*.py
+requirements.txt
+.github/
+.agents/
+.codex/
