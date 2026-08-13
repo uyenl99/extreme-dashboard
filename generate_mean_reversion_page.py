@@ -227,7 +227,74 @@ def format_positions(positions):
     return ", ".join(f"{ticker} ({side})" for ticker, side in positions)
 
 
-def build_alert_table(daily_trades, alert_source):
+def read_optional_csv(path):
+    if not path.is_file() or path.stat().st_size == 0:
+        return pd.DataFrame()
+    try:
+        return pd.read_csv(path)
+    except pd.errors.EmptyDataError:
+        return pd.DataFrame()
+
+
+def build_portfolio_tables(alert_source, signal_date, total_equity):
+    date_tag = signal_date.strftime("%Y%m%d")
+    entries = read_optional_csv(alert_source / f"trade_entries_{date_tag}.csv")
+    exits = read_optional_csv(alert_source / f"portfolio_exit_alerts_{date_tag}.csv")
+    holdings = read_optional_csv(alert_source / f"portfolio_holdings_{date_tag}.csv")
+
+    change_rows = []
+    for row in exits.itertuples(index=False):
+        side = str(row.side).title()
+        change_rows.append(
+            f"<tr><td>Exit</td><td>{html.escape(str(row.ticker))}</td>"
+            f'<td><span class="side {side.lower()}">{side}</span></td>'
+            f"<td>Close position</td><td>—</td><td>${float(row.close):,.2f}</td></tr>"
+        )
+    for row in entries.itertuples(index=False):
+        side = str(row.side).title()
+        target_value = total_equity / 5 if side.lower() == "long" else total_equity * 0.20 / 5
+        price = float(row.close)
+        estimated_shares = target_value / price if price else 0.0
+        action = "Buy" if side.lower() == "long" else "Sell Short"
+        change_rows.append(
+            f"<tr><td>{action}</td><td>{html.escape(str(row.ticker))}</td>"
+            f'<td><span class="side {side.lower()}">{side}</span></td>'
+            f"<td>${target_value:,.0f}</td><td>{estimated_shares:,.2f}</td>"
+            f"<td>${price:,.2f}</td></tr>"
+        )
+    if not change_rows:
+        change_rows.append('<tr><td colspan="6" class="muted">None — no portfolio changes today.</td></tr>')
+    changes = (
+        '<div class="table-wrap"><table><thead><tr><th>Action</th><th>Ticker</th>'
+        '<th>Direction</th><th>Target Position Value</th><th>Estimated Shares</th>'
+        f'<th>Alert Price</th></tr></thead><tbody>{"".join(change_rows)}</tbody></table></div>'
+    )
+
+    position_rows = []
+    for row in holdings.itertuples(index=False):
+        side = str(row.side).title()
+        shares = float(row.shares)
+        price = float(row.close)
+        position_value = abs(shares * price)
+        weight = position_value / total_equity if total_equity else 0.0
+        position_rows.append(
+            f"<tr><td>{html.escape(str(row.ticker))}</td>"
+            f'<td><span class="side {side.lower()}">{side}</span></td>'
+            f"<td>{shares:,.2f}</td><td>${price:,.2f}</td>"
+            f"<td>${position_value:,.0f}</td><td>{weight * 100:.2f}%</td></tr>"
+        )
+    if not position_rows:
+        position_rows.append('<tr><td colspan="6" class="muted">No open positions.</td></tr>')
+    positions = (
+        f'<p class="subtle">Total strategy equity: ${total_equity:,.0f}</p>'
+        '<div class="table-wrap"><table><thead><tr><th>Ticker</th><th>Direction</th>'
+        '<th>Shares</th><th>Current Price</th><th>Current Position Value</th>'
+        f'<th>Position Size (% Equity)</th></tr></thead><tbody>{"".join(position_rows)}</tbody></table></div>'
+    )
+    return changes, positions
+
+
+def build_alert_table(daily_trades, alert_source, total_equity):
     signal_date, long_entries, short_entries, exit_positions, projected = load_live_alert(
         daily_trades, alert_source
     )
@@ -235,13 +302,15 @@ def build_alert_table(daily_trades, alert_source):
     shorts = html.escape(format_positions((ticker, "Short") for ticker in short_entries) or "—")
     exits = html.escape(format_positions(exit_positions) or "—")
     holdings = html.escape(format_positions(projected) or "—")
-    return (
+    alerts = (
         '<div class="table-wrap"><table><thead><tr><th>Signal Date</th>'
         '<th>Long Entry Alerts</th><th>Short Entry Alerts</th><th>Exit Alerts</th>'
         '<th>Projected Holdings</th></tr></thead>'
         f'<tbody><tr><td>{signal_date:%Y-%m-%d}</td><td>{longs}</td><td>{shorts}</td>'
         f'<td>{exits}</td><td>{holdings}</td></tr></tbody></table></div>'
     )
+    changes, positions = build_portfolio_tables(alert_source, signal_date, total_equity)
+    return alerts, changes, positions
 
 
 def build_trade_table(trades, limit=50):
@@ -283,6 +352,9 @@ def update_strategy_card(path, summary):
 
 def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, alert_source):
     generated_at = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M %p %Z")
+    alert_table, portfolio_changes, latest_positions = build_alert_table(
+        daily_trades, alert_source, float(equity.iloc[-1]["equity"])
+    )
     chart_html = build_chart(equity, benchmarks)
     spy = benchmarks[["date", "SPY_equity"]].dropna()
     spy_years = (spy["date"].iloc[-1] - spy["date"].iloc[0]).days / 365.25
@@ -319,7 +391,9 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
 <main class="container">
 <section class="hero"><div class="eyebrow">Backtested long/short strategy</div><h1>Mean Reversion</h1><p>Systematic equity strategy seeking short-term price dislocations and subsequent reversion while managing long and short exposure.</p><p class="subtle">Backtest period: {summary.start_date} through {summary.end_date} · Starting equity: ${equity.iloc[0]['equity']:,.0f}</p><p class="subtle">Dashboard updated: {generated_at}</p></section>
 <section class="metrics">{metric_html}</section>
-<section class="panel"><h2>Latest Alert</h2>{build_alert_table(daily_trades, alert_source)}</section>
+<section class="panel"><h2>Latest Alert</h2>{alert_table}</section>
+<section class="panel"><h2>Actionable Portfolio Changes</h2>{portfolio_changes}</section>
+<section class="panel"><h2>Latest Positions</h2>{latest_positions}</section>
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Select SPY, QQQ, or VOO in the legend to add benchmark comparisons.</p><div class="chart">{chart_html}</div></section>
 <section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly)}</section>
 <section class="panel"><h2>Latest 50 Trades</h2>{build_trade_table(trades)}</section>
