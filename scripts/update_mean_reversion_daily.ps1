@@ -1,19 +1,24 @@
+param(
+    [ValidateSet("Alerts", "Backtest")]
+    [string]$Mode = "Alerts"
+)
+
 $ErrorActionPreference = "Stop"
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
-$stocksRoot = Split-Path -Parent $repoRoot
-$revMurphyRoot = Join-Path $stocksRoot "RevMurphy"
-$backtestOutput = Join-Path $revMurphyRoot "output_long_short_live"
-$alertOutput = Join-Path $revMurphyRoot "output_live_alerts"
+$revMurphyRoot = "C:\junk\stocks\RevMurphy"
+$backtestOutput = Join-Path $revMurphyRoot "output_long_short_5x5"
+$alertOutput = Join-Path $revMurphyRoot "output_live_alerts_5x5"
 $automationRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
 $checkout = Join-Path $automationRoot "extreme-dashboard"
 $logDirectory = Join-Path $automationRoot "logs"
-$python = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
+$python = Join-Path $revMurphyRoot ".venv\Scripts\python.exe"
 $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
 $gh = "C:\Program Files\GitHub CLI\gh.exe"
 $previewBranch = "automation/mean-reversion-daily-preview"
 $today = Get-Date -Format "yyyy-MM-dd"
-$log = Join-Path $logDirectory "mean-reversion-$today.log"
+$modeTag = $Mode.ToLowerInvariant()
+$log = Join-Path $logDirectory "mean-reversion-$modeTag-$today.log"
+$commandLog = Join-Path $logDirectory "mean-reversion-$modeTag-$today-commands.log"
 
 New-Item -ItemType Directory -Force -Path $automationRoot, $logDirectory | Out-Null
 Start-Transcript -Path $log -Append
@@ -33,24 +38,27 @@ try {
 
     & $git -C $checkout fetch origin main
     if ($LASTEXITCODE -ne 0) { throw "Could not fetch main." }
+    & $git -C $checkout fetch origin "+refs/heads/$previewBranch`:refs/remotes/origin/$previewBranch"
+    if ($LASTEXITCODE -ne 0) { throw "Could not refresh the daily preview branch lease." }
     & $git -C $checkout checkout -B $previewBranch origin/main
     if ($LASTEXITCODE -ne 0) { throw "Could not reset the daily preview branch." }
 
-    & $python -m pip install -r (Join-Path $checkout "requirements.txt") -r (Join-Path $revMurphyRoot "requirements.txt")
-    if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed." }
-
     Push-Location $revMurphyRoot
     try {
-        & $python "main_long_short.py" --end $today --output-dir $backtestOutput --no-force-final-exit
-        if ($LASTEXITCODE -ne 0) { throw "Mean Reversion backtest refresh failed." }
-        & $python "live_alerts.py" --date $today --output-dir $alertOutput --refresh --cutoff "15:30"
-        if ($LASTEXITCODE -ne 0) { throw "Mean Reversion live-alert refresh failed." }
+        if ($Mode -eq "Alerts") {
+            & $python "live_alerts_optimized.py" --minute-workers 4 --mode "long_short" --date $today --output-dir $alertOutput --portfolio-trades (Join-Path $backtestOutput "trades.csv") --refresh --cutoff "15:30" --max-tickers 0 --long-positions 5 --short-positions 5 2>&1 | Tee-Object -FilePath $commandLog -Append
+            if ($LASTEXITCODE -ne 0) { throw "Mean Reversion live-alert refresh failed." }
+        }
+        else {
+            & $python "main_long_short.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0 --long-positions 5 --short-positions 5 2>&1 | Tee-Object -FilePath $commandLog -Append
+            if ($LASTEXITCODE -ne 0) { throw "Mean Reversion 5x5 backtest refresh failed." }
+        }
     }
     finally { Pop-Location }
 
     Push-Location $checkout
     try {
-        & $python "generate_mean_reversion_page.py" --source $backtestOutput --alert-source $alertOutput
+        & $python "generate_mean_reversion_page.py" --source $backtestOutput --alert-source $alertOutput 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion page generation failed." }
 
         & $git add -- mean-reversion.html strategies.html
@@ -62,7 +70,7 @@ try {
 
         & $git config user.name "Extreme Dashboard Automation"
         & $git config user.email "uyenl99@users.noreply.github.com"
-        & $git commit -m "Update Mean Reversion results $today"
+        & $git commit -m "Update Mean Reversion $modeTag $today"
         if ($LASTEXITCODE -ne 0) { throw "Automated commit failed." }
         & $git push --force-with-lease -u origin $previewBranch
         if ($LASTEXITCODE -ne 0) { throw "Could not push the daily preview branch." }

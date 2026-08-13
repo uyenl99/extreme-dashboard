@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 concurrency:
   group: update-collective2-performance
@@ -40,9 +39,8 @@ jobs:
       - name: Generate Extreme OS public page
         run: python generate_strategy_pages.py --extreme-os-only
 
-      - name: Create or update daily preview PR
+      - name: Push daily preview branch
         env:
-          GH_TOKEN: ${{ github.token }}
           PREVIEW_BRANCH: automation/extreme-os-daily-preview
         run: |
           if git diff --quiet -- performance.html extreme-os.html; then
@@ -55,11 +53,3 @@ jobs:
           git add performance.html extreme-os.html
           git commit -m "Update Collective2 preview"
           git push --force-with-lease -u origin "$PREVIEW_BRANCH"
-          PR_URL=$(gh pr list --head "$PREVIEW_BRANCH" --base main --state open --json url --jq '.[0].url')
-          if [ -z "$PR_URL" ]; then
-            gh pr create --draft --base main --head "$PREVIEW_BRANCH" \
-              --title "Daily Extreme OS preview" \
-              --body "Automated Collective2 refresh. Review the Vercel preview before merging."
-          else
-            echo "Updated daily preview PR: $PR_URL"
-          fi
