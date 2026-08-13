@@ -38,8 +38,20 @@ try {
 
     & $git -C $checkout fetch origin main
     if ($LASTEXITCODE -ne 0) { throw "Could not fetch main." }
-    & $git -C $checkout fetch origin "+refs/heads/$previewBranch`:refs/remotes/origin/$previewBranch"
-    if ($LASTEXITCODE -ne 0) { throw "Could not refresh the daily preview branch lease." }
+    & $git -C $checkout ls-remote --exit-code --heads origin $previewBranch | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        & $git -C $checkout fetch origin "+refs/heads/$previewBranch`:refs/remotes/origin/$previewBranch"
+        if ($LASTEXITCODE -ne 0) { throw "Could not refresh the daily preview branch lease." }
+    }
+    elseif ($LASTEXITCODE -eq 2) {
+        & $git -C $checkout update-ref -d "refs/remotes/origin/$previewBranch"
+        Write-Output "Daily preview branch does not exist yet; it will be created from main."
+    }
+    else {
+        throw "Could not query the daily preview branch."
+    }
+    & $git -C $checkout reset --hard origin/main
+    if ($LASTEXITCODE -ne 0) { throw "Could not clean the disposable automation checkout." }
     & $git -C $checkout checkout -B $previewBranch origin/main
     if ($LASTEXITCODE -ne 0) { throw "Could not reset the daily preview branch." }
 
