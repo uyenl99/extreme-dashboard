@@ -38,6 +38,8 @@ try {
 
     & $git -C $checkout fetch origin main
     if ($LASTEXITCODE -ne 0) { throw "Could not fetch main." }
+    & $git -C $checkout fetch origin "+refs/heads/$previewBranch`:refs/remotes/origin/$previewBranch"
+    if ($LASTEXITCODE -ne 0) { throw "Could not refresh the daily preview branch lease." }
     & $git -C $checkout checkout -B $previewBranch origin/main
     if ($LASTEXITCODE -ne 0) { throw "Could not reset the daily preview branch." }
 

@@ -1,6 +1,7 @@
 import argparse
 import html
 import re
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -249,6 +250,7 @@ def update_strategy_card(path, summary):
 
 
 def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, alert_source):
+    generated_at = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M %p %Z")
     chart_html = build_chart(equity, benchmarks)
     spy = benchmarks[["date", "SPY_equity"]].dropna()
     spy_years = (spy["date"].iloc[-1] - spy["date"].iloc[0]).days / 365.25
@@ -283,7 +285,7 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
 <body>
 <nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="performance.html">Performance</a><a href="strategies.html">Strategies</a><a href="subscribe.html">Subscribe</a><a href="members.html">Members</a></div></nav>
 <main class="container">
-<section class="hero"><div class="eyebrow">Backtested long/short strategy</div><h1>Mean Reversion</h1><p>Systematic equity strategy seeking short-term price dislocations and subsequent reversion while managing long and short exposure.</p><p class="subtle">Backtest period: {summary.start_date} through {summary.end_date} · Starting equity: ${equity.iloc[0]['equity']:,.0f}</p></section>
+<section class="hero"><div class="eyebrow">Backtested long/short strategy</div><h1>Mean Reversion</h1><p>Systematic equity strategy seeking short-term price dislocations and subsequent reversion while managing long and short exposure.</p><p class="subtle">Backtest period: {summary.start_date} through {summary.end_date} · Starting equity: ${equity.iloc[0]['equity']:,.0f}</p><p class="subtle">Dashboard updated: {generated_at}</p></section>
 <section class="metrics">{metric_html}</section>
 <section class="panel"><h2>Latest Alert</h2>{build_alert_table(daily_trades, alert_source)}</section>
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Select SPY, QQQ, or VOO in the legend to add benchmark comparisons.</p><div class="chart">{chart_html}</div></section>
