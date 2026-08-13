@@ -1,7 +1,12 @@
+param(
+    [ValidateSet("Alerts", "Backtest")]
+    [string]$Mode = "Alerts"
+)
+
 $ErrorActionPreference = "Stop"
 
 $revMurphyRoot = "C:\junk\stocks\RevMurphy"
-$backtestOutput = Join-Path $revMurphyRoot "output_long_short_live"
+$backtestOutput = Join-Path $revMurphyRoot "output_long_short_5x5"
 $alertOutput = Join-Path $revMurphyRoot "output_live_alerts_5x5"
 $automationRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
 $checkout = Join-Path $automationRoot "extreme-dashboard"
@@ -11,8 +16,9 @@ $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\
 $gh = "C:\Program Files\GitHub CLI\gh.exe"
 $previewBranch = "automation/mean-reversion-daily-preview"
 $today = Get-Date -Format "yyyy-MM-dd"
-$log = Join-Path $logDirectory "mean-reversion-$today.log"
-$commandLog = Join-Path $logDirectory "mean-reversion-$today-commands.log"
+$modeTag = $Mode.ToLowerInvariant()
+$log = Join-Path $logDirectory "mean-reversion-$modeTag-$today.log"
+$commandLog = Join-Path $logDirectory "mean-reversion-$modeTag-$today-commands.log"
 
 New-Item -ItemType Directory -Force -Path $automationRoot, $logDirectory | Out-Null
 Start-Transcript -Path $log -Append
@@ -37,10 +43,14 @@ try {
 
     Push-Location $revMurphyRoot
     try {
-        & $python "main_long_short.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0 2>&1 | Tee-Object -FilePath $commandLog -Append
-        if ($LASTEXITCODE -ne 0) { throw "Mean Reversion backtest refresh failed." }
-        & $python "live_alerts_optimized.py" --minute-workers 4 --mode "long_short" --date $today --output-dir $alertOutput --portfolio-trades (Join-Path $revMurphyRoot "output_long_short_5x5\trades.csv") --refresh --cutoff "15:30" --max-tickers 0 --long-positions 5 --short-positions 5 2>&1 | Tee-Object -FilePath $commandLog -Append
-        if ($LASTEXITCODE -ne 0) { throw "Mean Reversion live-alert refresh failed." }
+        if ($Mode -eq "Alerts") {
+            & $python "live_alerts_optimized.py" --minute-workers 4 --mode "long_short" --date $today --output-dir $alertOutput --portfolio-trades (Join-Path $backtestOutput "trades.csv") --refresh --cutoff "15:30" --max-tickers 0 --long-positions 5 --short-positions 5 2>&1 | Tee-Object -FilePath $commandLog -Append
+            if ($LASTEXITCODE -ne 0) { throw "Mean Reversion live-alert refresh failed." }
+        }
+        else {
+            & $python "main_long_short.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0 --long-positions 5 --short-positions 5 2>&1 | Tee-Object -FilePath $commandLog -Append
+            if ($LASTEXITCODE -ne 0) { throw "Mean Reversion 5x5 backtest refresh failed." }
+        }
     }
     finally { Pop-Location }
 
@@ -58,7 +68,7 @@ try {
 
         & $git config user.name "Extreme Dashboard Automation"
         & $git config user.email "uyenl99@users.noreply.github.com"
-        & $git commit -m "Update Mean Reversion results $today"
+        & $git commit -m "Update Mean Reversion $modeTag $today"
         if ($LASTEXITCODE -ne 0) { throw "Automated commit failed." }
         & $git push --force-with-lease -u origin $previewBranch
         if ($LASTEXITCODE -ne 0) { throw "Could not push the daily preview branch." }
