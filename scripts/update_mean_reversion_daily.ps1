@@ -50,6 +50,8 @@ try {
     else {
         throw "Could not query the daily preview branch."
     }
+    & $git -C $checkout reset --hard origin/main
+    if ($LASTEXITCODE -ne 0) { throw "Could not clean the disposable automation checkout." }
     & $git -C $checkout checkout -B $previewBranch origin/main
     if ($LASTEXITCODE -ne 0) { throw "Could not reset the daily preview branch." }
 
