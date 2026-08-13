@@ -169,40 +169,72 @@ def load_live_alert(daily_trades, alert_source):
     else:
         long_entries = entries["ticker"].dropna().astype(str).tolist()
         short_entries = []
-    entry_tickers = long_entries + short_entries
+    entry_sides = {ticker: "Long" for ticker in long_entries}
+    entry_sides.update({ticker: "Short" for ticker in short_entries})
 
     date_tag = entry_path.stem.replace("entry_alerts_", "")
     holdings_path = alert_source / f"portfolio_holdings_{date_tag}.csv"
     portfolio_exits_path = alert_source / f"portfolio_exit_alerts_{date_tag}.csv"
     if holdings_path.is_file():
         holdings = pd.read_csv(holdings_path)
-        held = holdings["ticker"].dropna().astype(str).tolist()
+        held_positions = [
+            (str(row.ticker), str(row.side).title())
+            for row in holdings.dropna(subset=["ticker"]).itertuples(index=False)
+        ]
     else:
         latest = daily_trades.sort_values("date").iloc[-1]
         held_with_sides = str(latest.get("current_tickers_held", "")).split(",")
-        held = [item.split(":")[-1] for item in held_with_sides if item]
+        held_positions = []
+        for item in held_with_sides:
+            if not item:
+                continue
+            parts = item.split(":", 1)
+            held_positions.append(
+                (parts[-1], parts[0].title() if len(parts) == 2 else "Unknown")
+            )
     portfolio_exits = pd.read_csv(portfolio_exits_path) if portfolio_exits_path.is_file() else exits
-    exit_candidates = set(portfolio_exits["ticker"].dropna().astype(str))
-    exit_tickers = [ticker for ticker in held if ticker in exit_candidates]
-    projected = [ticker for ticker in held if ticker not in exit_candidates]
+    exit_sides = {
+        str(row.ticker): str(getattr(row, "side", "Unknown")).title()
+        for row in portfolio_exits.dropna(subset=["ticker"]).itertuples(index=False)
+    }
+    exit_positions = [
+        (ticker, exit_sides.get(ticker, side))
+        for ticker, side in held_positions
+        if ticker in exit_sides
+    ]
+    projected = [
+        (ticker, side) for ticker, side in held_positions if ticker not in exit_sides
+    ]
     trade_entries_path = alert_source / f"trade_entries_{date_tag}.csv"
     if trade_entries_path.is_file():
         trade_entries = pd.read_csv(trade_entries_path)
-        projected_entries = trade_entries["ticker"].dropna().astype(str).tolist()
+        projected_entries = [
+            (str(row.ticker), str(row.side).title())
+            for row in trade_entries.dropna(subset=["ticker"]).itertuples(index=False)
+        ]
     else:
-        projected_entries = entry_tickers
-    projected.extend(ticker for ticker in projected_entries if ticker not in projected)
-    return signal_date, long_entries, short_entries, exit_tickers, projected
+        projected_entries = [(ticker, side) for ticker, side in entry_sides.items()]
+    projected_tickers = {ticker for ticker, _ in projected}
+    projected.extend(
+        (ticker, side)
+        for ticker, side in projected_entries
+        if ticker not in projected_tickers
+    )
+    return signal_date, long_entries, short_entries, exit_positions, projected
+
+
+def format_positions(positions):
+    return ", ".join(f"{ticker} ({side})" for ticker, side in positions)
 
 
 def build_alert_table(daily_trades, alert_source):
-    signal_date, long_entries, short_entries, exit_tickers, projected = load_live_alert(
+    signal_date, long_entries, short_entries, exit_positions, projected = load_live_alert(
         daily_trades, alert_source
     )
-    longs = html.escape(", ".join(long_entries) or "—")
-    shorts = html.escape(", ".join(short_entries) or "—")
-    exits = html.escape(", ".join(exit_tickers) or "—")
-    holdings = html.escape(", ".join(projected) or "—")
+    longs = html.escape(format_positions((ticker, "Long") for ticker in long_entries) or "—")
+    shorts = html.escape(format_positions((ticker, "Short") for ticker in short_entries) or "—")
+    exits = html.escape(format_positions(exit_positions) or "—")
+    holdings = html.escape(format_positions(projected) or "—")
     return (
         '<div class="table-wrap"><table><thead><tr><th>Signal Date</th>'
         '<th>Long Entry Alerts</th><th>Short Entry Alerts</th><th>Exit Alerts</th>'
