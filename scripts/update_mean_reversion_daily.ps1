@@ -58,11 +58,11 @@ try {
     Push-Location $revMurphyRoot
     try {
         if ($Mode -eq "Alerts") {
-            & $python "live_alerts_optimized.py" --minute-workers 4 --mode "long_short" --date $today --output-dir $alertOutput --portfolio-trades (Join-Path $backtestOutput "trades.csv") --refresh --cutoff "15:30" --max-tickers 0 --long-positions 5 --short-positions 5 2>&1 | Tee-Object -FilePath $commandLog -Append
+            & $python "live_alerts_optimized.py" --minute-workers 4 --mode "long_short" --date $today --output-dir $alertOutput --portfolio-trades (Join-Path $backtestOutput "trades.csv") --refresh --cutoff "15:30" --max-tickers 0 --long-positions 5 --short-positions 5 --cluster-lookback-days 126 --cluster-threshold 0.70 --max-per-cluster 1 2>&1 | Tee-Object -FilePath $commandLog -Append
             if ($LASTEXITCODE -ne 0) { throw "Mean Reversion live-alert refresh failed." }
         }
         else {
-            & $python "main_long_short.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0 --long-positions 5 --short-positions 5 2>&1 | Tee-Object -FilePath $commandLog -Append
+            & $python "main_long_short.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0 --long-positions 5 --short-positions 5 --cluster-lookback-days 126 --cluster-threshold 0.70 --max-per-cluster 1 2>&1 | Tee-Object -FilePath $commandLog -Append
             if ($LASTEXITCODE -ne 0) { throw "Mean Reversion 5x5 backtest refresh failed." }
         }
     }
