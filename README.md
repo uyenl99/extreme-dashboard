@@ -23,6 +23,13 @@ changed. A Windows scheduled task runs it daily at 12:30 PM local Pacific time.
 The PC must be on and online, and `POLYGON_API_KEY` must be available as a user
 environment variable.
 
+### Automatic Momentum ETF updates
+
+`scripts/update_momentum_weekdays.ps1` refreshes and publishes Momentum ETF1 and
+Momentum ETF2 every weekday at 4:00 PM Pacific. Installation, logging,
+verification, and manual-run instructions are documented in
+[`MOMENTUM_AUTO_UPDATE.md`](MOMENTUM_AUTO_UPDATE.md).
+
 ### Refresh the Dual Momentum backtest page
 
 After running `DualMom/momo5.py`, generate the public page from its outputs:
