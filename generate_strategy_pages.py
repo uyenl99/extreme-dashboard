@@ -319,6 +319,14 @@ nav a {
     font-weight:600;
 }
 
+.performance-details {
+    width:100%;
+    height:1180px;
+    margin-top:20px;
+    border:0;
+    background:#111827;
+}
+
 @media (max-width:760px) {
     .performance-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
@@ -428,6 +436,8 @@ def generate_public_page(
 <div class="performance-stat"><div class="performance-label">Start Date</div><div class="performance-value">{summary['start_date']}</div></div>
 <div class="performance-stat"><div class="performance-label">Last Update</div><div class="performance-value">{summary['last_update']}</div></div>
 </div>
+
+<iframe class="performance-details" src="data/performance_details.html" title="Extreme OS monthly returns and equity curve" loading="lazy"></iframe>
 
 </div>
 """

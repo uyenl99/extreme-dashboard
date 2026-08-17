@@ -544,6 +544,33 @@ Path("data/performance_summary.json").write_text(
     encoding="utf-8",
 )
 
+Path("data/performance_details.html").write_text(
+    f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{{margin:0;background:#111827;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif;font-size:14px}}
+h2{{margin:20px 0 12px}}
+table{{width:100%;border-collapse:collapse}}
+.returns-table td{{padding:2px 6px;font-size:12px;background:#111827;color:#e5e7eb;border:1px solid #374151}}
+.returns-table th{{padding:4px 6px;font-size:12px;background:#1f2937;color:white;border:1px solid #374151}}
+td,th{{text-align:right}}
+td:first-child,th:first-child{{text-align:center}}
+</style>
+</head>
+<body>
+<h2>Monthly Returns (%)</h2>
+{table_html}
+<h2>Equity Curve</h2>
+{chart_html}
+</body>
+</html>
+""",
+    encoding="utf-8",
+)
+
 print("PERFORMANCE SUMMARY WRITTEN")
 
 if args.public_strategy_data:
