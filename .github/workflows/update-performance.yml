@@ -2,9 +2,6 @@ name: Update Collective2 Performance
 
 on:
   workflow_dispatch:
-  schedule:
-    # 20:30 UTC is 12:30 PM PST / 1:30 PM PDT.
-    - cron: "30 20 * * *"
 
 permissions:
   contents: write
