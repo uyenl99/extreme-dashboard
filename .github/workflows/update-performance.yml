@@ -43,13 +43,13 @@ jobs:
         env:
           PREVIEW_BRANCH: automation/extreme-os-daily-preview
         run: |
-          if git diff --quiet -- data/performance_summary.json data/performance_details.html extreme-os.html; then
+          if git diff --quiet -- data/performance_summary.json performance-details.html extreme-os.html; then
             echo "No public page changes to commit."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "$PREVIEW_BRANCH"
-          git add data/performance_summary.json data/performance_details.html extreme-os.html
+          git add data/performance_summary.json performance-details.html extreme-os.html
           git commit -m "Update Collective2 preview"
           git push --force-with-lease -u origin "$PREVIEW_BRANCH"

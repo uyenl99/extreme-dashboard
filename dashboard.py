@@ -544,7 +544,7 @@ Path("data/performance_summary.json").write_text(
     encoding="utf-8",
 )
 
-Path("data/performance_details.html").write_text(
+Path("performance-details.html").write_text(
     f"""<!doctype html>
 <html lang="en">
 <head>

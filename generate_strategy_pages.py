@@ -437,7 +437,7 @@ def generate_public_page(
 <div class="performance-stat"><div class="performance-label">Last Update</div><div class="performance-value">{summary['last_update']}</div></div>
 </div>
 
-<iframe class="performance-details" src="data/performance_details.html" title="Extreme OS monthly returns and equity curve" loading="lazy"></iframe>
+<iframe class="performance-details" src="performance-details.html" title="Extreme OS monthly returns and equity curve" loading="lazy"></iframe>
 
 </div>
 """
