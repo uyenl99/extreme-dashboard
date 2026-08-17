@@ -2,7 +2,12 @@ $ErrorActionPreference = "Stop"
 
 $dualMomUpdate = "C:\junk\stocks\DualMom\update_momo5_daily.ps1"
 $inflationRoot = "C:\junk\stocks\inflationcompass"
+$momoSpRoot = "C:\junk\stocks\MomoSp\pit_version"
+$momoSpUpdate = Join-Path $momoSpRoot "update_v2a_live.py"
+$momoSpOutput = Join-Path $momoSpRoot "output_pit_r1000_5b_latest"
+$momoSpAlert = Join-Path $momoSpRoot "output_pit_v2a_live\latest_signal.json"
 $webRoot = "C:\junk\stocks\Web"
+$momoSpGenerator = Join-Path $webRoot "generate_momentum_stocks_page.py"
 $python = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
 $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
 $logRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\logs"
@@ -12,7 +17,14 @@ $log = Join-Path $logRoot "momentum-weekday-$today.log"
 New-Item -ItemType Directory -Force $logRoot | Out-Null
 Start-Transcript -Path $log -Append
 try {
-    foreach ($path in @($dualMomUpdate, $python, $git, (Join-Path $inflationRoot "inflation_compass.py"))) {
+    foreach ($path in @(
+        $dualMomUpdate,
+        $python,
+        $git,
+        (Join-Path $inflationRoot "inflation_compass.py"),
+        $momoSpUpdate,
+        $momoSpGenerator
+    )) {
         if (-not (Test-Path -LiteralPath $path)) { throw "Required path not found: $path" }
     }
 
@@ -39,15 +51,41 @@ try {
     & $git -c "safe.directory=C:/junk/stocks/Web" -C $webRoot diff --quiet -- inflation-compass
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Momentum ETF2 is current; no site assets changed."
-        return
     }
-    if ($LASTEXITCODE -ne 1) { throw "Could not inspect Momentum ETF2 changes." }
+    elseif ($LASTEXITCODE -ne 1) { throw "Could not inspect Momentum ETF2 changes." }
 
-    & $git -c "safe.directory=C:/junk/stocks/Web" -C $webRoot add -- inflation-compass
-    & $git -c "safe.directory=C:/junk/stocks/Web" -C $webRoot commit -m "Refresh Momentum ETF2 results"
-    if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2 commit failed." }
-    & $git -c "safe.directory=C:/junk/stocks/Web" -C $webRoot push origin HEAD:main
-    if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2 publish failed." }
-    Write-Host "Momentum ETF1 and Momentum ETF2 refreshed; Vercel production deployment triggered."
+    # Momentum SP: refresh the production V2A data/live signal and rebuild its page.
+    Push-Location $momoSpRoot
+    try {
+        & $python $momoSpUpdate
+        if ($LASTEXITCODE -ne 0) { throw "Momentum SP refresh failed." }
+    }
+    finally { Pop-Location }
+
+    Push-Location $webRoot
+    try {
+        & $python $momoSpGenerator `
+            --source $momoSpOutput `
+            --alert-source $momoSpAlert `
+            --output (Join-Path $webRoot "momentum-stocks.html")
+        if ($LASTEXITCODE -ne 0) { throw "Momentum SP page generation failed." }
+    }
+    finally { Pop-Location }
+
+    & $git -c "safe.directory=C:/junk/stocks/Web" -C $webRoot diff --quiet -- inflation-compass momentum-stocks.html
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Momentum ETF2 and Momentum SP are current; no site changes to publish."
+    }
+    elseif ($LASTEXITCODE -eq 1) {
+        & $git -c "safe.directory=C:/junk/stocks/Web" -C $webRoot add -- inflation-compass momentum-stocks.html
+        & $git -c "safe.directory=C:/junk/stocks/Web" -C $webRoot commit -m "Refresh Momentum ETF2 and Momentum Stocks results"
+        if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2/Momentum SP commit failed." }
+        & $git -c "safe.directory=C:/junk/stocks/Web" -C $webRoot push origin HEAD:main
+        if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2/Momentum SP publish failed." }
+        Write-Host "Momentum ETF2 and Momentum SP published; Vercel production deployment triggered."
+    }
+    else { throw "Could not inspect Momentum ETF2/Momentum SP changes." }
+
+    Write-Host "Momentum ETF1, Momentum ETF2, and Momentum SP refreshed."
 }
 finally { Stop-Transcript }
