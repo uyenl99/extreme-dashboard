@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import requests
 import pandas as pd
@@ -18,7 +19,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "--performance-only",
     action="store_true",
-    help="Regenerate performance.html without downloading trade/member data.",
+    help="Refresh the public performance summary without downloading trade/member data.",
 )
 parser.add_argument(
     "--public-strategy-data",
@@ -533,10 +534,17 @@ ${current_equity:,.0f}
 </html>
 """
 
-with open("performance.html", "w", encoding="utf-8") as f:
-    f.write(html)
-  
-print("INDEX.HTML WRITTEN")
+Path("data/performance_summary.json").write_text(
+    json.dumps({
+        "current_equity": f"${current_equity:,.0f}",
+        "total_return": f"{total_return:.1f}%",
+        "start_date": str(start_date),
+        "last_update": str(last_date),
+    }, indent=2) + "\n",
+    encoding="utf-8",
+)
+
+print("PERFORMANCE SUMMARY WRITTEN")
 
 if args.public_strategy_data:
     download_closed_trades()

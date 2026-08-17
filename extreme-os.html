@@ -87,6 +87,34 @@ nav a {
     margin-bottom:8px;
 }
 
+.performance-grid {
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:15px;
+}
+
+.performance-stat {
+    background:#0f172a;
+    border:1px solid #374151;
+    border-radius:8px;
+    padding:16px;
+}
+
+.performance-label {
+    color:#9ca3af;
+    font-size:13px;
+    margin-bottom:6px;
+}
+
+.performance-value {
+    font-size:22px;
+    font-weight:600;
+}
+
+@media (max-width:760px) {
+    .performance-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
 .view-link {
     margin-top:15px;
     color:#60a5fa;
@@ -116,8 +144,6 @@ nav a {
 
 <div>
 <a href="index.html">Home</a>
-<a href="performance.html">Performance</a>
-<a href="strategies.html">Strategies</a>
 <a href="members.html">Members</a>
 </div>
 
@@ -135,6 +161,21 @@ Trades are sourced from Collective2 and updated daily without an added delay.
 </p>
 
 </div>
+
+
+<div class="card">
+
+<h2>Verified Collective2 Performance</h2>
+
+<div class="performance-grid">
+<div class="performance-stat"><div class="performance-label">Current Equity</div><div class="performance-value">$73,173</div></div>
+<div class="performance-stat"><div class="performance-label">Total Return</div><div class="performance-value">7276.3%</div></div>
+<div class="performance-stat"><div class="performance-label">Start Date</div><div class="performance-value">2005-02-17</div></div>
+<div class="performance-stat"><div class="performance-label">Last Update</div><div class="performance-value">2026-08-10</div></div>
+</div>
+
+</div>
+
 
 <div class="card">
 
@@ -155,6 +196,7 @@ Total P/L: $-62
 </div>
 
 </div>
+
 
 
 <div class="card">

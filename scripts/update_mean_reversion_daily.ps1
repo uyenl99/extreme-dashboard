@@ -73,7 +73,7 @@ try {
         & $python "generate_mean_reversion_page.py" --source $backtestOutput --alert-source $alertOutput 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion page generation failed." }
 
-        & $git add -- mean-reversion.html strategies.html
+        & $git add -- mean-reversion.html index.html
         & $git diff --cached --quiet
         if ($LASTEXITCODE -eq 0) {
             Write-Output "No Mean Reversion website changes to publish."

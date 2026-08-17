@@ -43,7 +43,7 @@ def parse_args():
     parser.add_argument(
         "--strategies-page",
         type=Path,
-        default=Path("strategies.html"),
+        default=Path("index.html"),
         help="Strategies page whose Mean Reversion card metrics should be refreshed.",
     )
     return parser.parse_args()
@@ -387,7 +387,7 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
 </style>
 </head>
 <body>
-<nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="performance.html">Performance</a><a href="strategies.html">Strategies</a><a href="subscribe.html">Subscribe</a><a href="members.html">Members</a></div></nav>
+<nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Members</a></div></nav>
 <main class="container">
 <section class="hero"><div class="eyebrow">Backtested long/short strategy</div><h1>Mean Reversion</h1><p>Systematic equity strategy seeking short-term price dislocations and subsequent reversion while managing long and short exposure.</p><p class="subtle">Backtest period: {summary.start_date} through {summary.end_date} · Starting equity: ${equity.iloc[0]['equity']:,.0f}</p><p class="subtle">Dashboard updated: {generated_at}</p></section>
 <section class="metrics">{metric_html}</section>

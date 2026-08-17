@@ -1,21 +1,23 @@
 <!DOCTYPE html>
+
 <html>
 <head>
 <meta charset="utf-8">
-<title>Extreme Trading Inc.</title>
+<title>Home - Extreme Trading Inc.</title>
 
 <style>
 
 body{
     margin:0;
     font-family:Arial,sans-serif;
-    background:#0B1020;
-    color:white;
+    background:#f8fafc;
+    color:#222;
 }
 
 nav{
     display:flex;
     justify-content:space-between;
+    align-items:center;
     padding:20px 60px;
     background:#111827;
 }
@@ -27,120 +29,64 @@ nav a{
 }
 
 .hero{
+    padding:80px 10%;
+    background:#0f172a;
+    color:white;
     text-align:center;
-    padding:120px 20px;
 }
 
 .hero h1{
-    font-size:60px;
+    font-size:54px;
     margin-bottom:10px;
 }
 
-.hero p{
-    font-size:24px;
-    color:#B0B8C8;
-}
-
-.btn{
-    display:inline-block;
-    margin:15px;
-    padding:14px 28px;
-    background:#2EA3FF;
-    color:white;
-    text-decoration:none;
-    border-radius:8px;
-}
-
 .section{
-    padding:80px 10%;
+    max-width:1200px;
+    margin:auto;
+    padding:50px 30px;
 }
 
 .cards{
     display:flex;
-    gap:30px;
     flex-wrap:wrap;
+    gap:25px;
 }
 
 .card{
     flex:1;
-    min-width:250px;
-    background:#151C2F;
+    min-width:280px;
+    background:white;
     padding:30px;
     border-radius:12px;
-}
-
-.card h3{
-    margin-top:0;
-}
-
-footer{
-    text-align:center;
-    padding:40px;
-    color:#B0B8C8;
-}
-
-.hero{
-    background:#0f172a;
-    color:white;
-    text-align:center;
-    padding:100px 20px;
-}
-
-.hero h1{
-    font-size:56px;
-    margin-bottom:20px;
-}
-
-.hero p{
-    max-width:700px;
-    margin:auto;
-    font-size:20px;
-}
-
-.stats{
-    display:flex;
-    justify-content:center;
-    gap:25px;
-    flex-wrap:wrap;
-    padding:60px 20px;
-}
-
-.stat-card{
-    background:white;
-    padding:25px;
-    min-width:220px;
-    border-radius:12px;
     box-shadow:0 2px 10px rgba(0,0,0,.1);
-    text-align:center;
 }
 
-.stat-number{
-    font-size:38px;
-    font-weight:bold;
-    color:#2563eb;
-}
-
-.stat-label{
-    margin-top:10px;
-}
-
-.feature,
-.performance-section,
-.cta{
-    text-align:center;
-    padding:70px 20px;
-    max-width:1000px;
-    margin:auto;
+.card h2{
+    margin-top:0;
 }
 
 .btn{
     display:inline-block;
+    padding:12px 20px;
     background:#2563eb;
     color:white;
     text-decoration:none;
-    padding:14px 24px;
-    border-radius:8px;
+    border-radius:6px;
     font-weight:bold;
+}
+
+.coming-soon{
+    color:#666;
+    font-style:italic;
+}
+
+.cta{
+    text-align:center;
+    margin-top:60px;
+    padding:40px;
+    background:white;
+    border-radius:12px;
+    box-shadow:0 2px 10px rgba(0,0,0,.1);
 }
 
 footer{
@@ -148,158 +94,213 @@ footer{
     padding:40px;
     color:#666;
 }
-    
+
+footer a{
+    color:#2563eb;
+    text-decoration:none;
+}
+
 </style>
+
 </head>
+
 <body>
 
 <nav>
-    <div>
-        <strong>EXTREME TRADING</strong>
-    </div>
 
-    <div>
-        <a href="index.html">Home</a>
-        <a href="performance.html">Performance</a>
-        <a href="strategies.html">Strategies</a>
-        <a href="subscribe.html">Subscribe</a>
-        <a href="members.html">Members</a>
-        <a href="about.html">About</a>
-        <a href="contact.html">Contact</a>
-    </div>
+<div>
+<strong>Extreme Trading Inc.</strong>
+</div>
+
+<div>
+<a href="index.html">Home</a>
+<a href="subscribe.html">Subscribe</a>
+<a href="members.html">Members</a>
+<a href="about.html">About</a>
+<a href="contact.html">Contact</a>
+</div>
+
 </nav>
 
-<section class="hero">
+<div class="hero">
 
-    <h1>Find High-Potential Stock Opportunities</h1>
+<h1>Trading Strategies</h1>
 
-    <p>
-        Data-driven stock selection and systematic trading strategies
-        focused on identifying high-probability opportunities.
-    </p>
+<p>
+Explore our systematic stock selection strategies and
+track record of historical performance.
+</p>
 
-    <div style="margin-top:30px;">
+</div>
 
-        <a class="btn" href="performance.html">
-            View Performance
-        </a>
+<div class="section">
 
-        <a class="btn"
-           href="subscribe.html"
-           style="margin-left:15px;">
-            Subscribe
-        </a>
+<div class="cards">
 
-    </div>
+<div class="card">
 
-</section>
+<h2>Extreme OS</h2>
 
-<section class="stats">
+<p>
+Our flagship strategy focused on identifying
+high-probability stock opportunities using
+systematic analysis and disciplined risk management.
+</p>
 
-    <div class="stat-card">
-        <div class="stat-number">21+</div>
-        <div class="stat-label">Years Track Record</div>
-    </div>
+<p>
+✓ Active Strategy<br>
+✓ Historical Track Record<br>
+✓ Member Trade Alerts
+</p>
 
-    <div class="stat-card">
-        <div class="stat-number">Live</div>
-        <div class="stat-label">Performance Reporting</div>
-    </div>
+<a class="btn" href="extreme-os.html">
+Learn More
+</a>
 
-    <div class="stat-card">
-        <div class="stat-number">Daily</div>
-        <div class="stat-label">Dashboard Updates</div>
-    </div>
+</div>
 
-    <div class="stat-card">
-        <div class="stat-number">1</div>
-        <div class="stat-label">Flagship Strategy</div>
-    </div>
+<div class="card">
 
-</section>
+<h2>Momentum ETF1</h2>
 
-<section class="feature">
+<p>
+Dual-momentum ETF rotation targeting the
+strongest assets while using a volatility
+filter to shift into a defensive allocation.
+</p>
 
-    <h2>Extreme OS</h2>
+<p>
+✓ 26.23% Backtest CAGR<br>
+✓ 1.30 Sharpe Ratio<br>
+✓ -17.74% Maximum Drawdown
+</p>
 
-    <p>
-        Our flagship stock selection strategy combines
-        systematic analysis, disciplined execution,
-        and risk management principles.
-    </p>
+<a class="btn" href="momentum.html">
+View Backtest Results
+</a>
 
-    <a class="btn" href="extreme-os.html">
-        Learn More
-    </a>
+</div>
 
-</section>
+<div class="card">
 
-<section class="performance-section">
+<h2>Momentum ETF2</h2>
 
-    <h2>Transparent Performance</h2>
+<p>
+Inflation Compass rotation across technology, energy,
+utilities, consumer staples, and intermediate Treasuries
+using market growth and inflation expectations.
+</p>
 
-    <p>
-        View the complete equity curve, monthly returns,
-        and historical performance record.
-    </p>
+<p>
+&#10003; 22.64% Backtest CAGR<br>
+&#10003; 1.31 Sharpe Ratio<br>
+&#10003; -17.46% Monthly Maximum Drawdown
+</p>
 
-    <a class="btn" href="performance.html">
-        View Live Performance
-    </a>
+<a class="btn" href="momentum2.html">
+View Backtest Results
+</a>
 
-</section>
+</div>
 
-<section class="feature">
+<div class="card">
 
-    <h2>Why Subscribers Join</h2>
+<h2>Momentum Stocks</h2>
 
-    <ul style="
-        max-width:600px;
-        margin:auto;
-        text-align:left;
-        line-height:2;
-    ">
-        <li>Transparent Track Record</li>
-        <li>Systematic Stock Selection</li>
-        <li>Disciplined Risk Management</li>
-        <li>Ongoing Market Monitoring</li>
-    </ul>
+<p>
+Monthly rotation into the strongest stocks with
+a point-in-time Russell 1000 universe and
+a volatility-based risk filter.
+</p>
 
-</section>
+<p>
+âœ“ 44.90% Backtest CAGR<br>
+âœ“ 1.39 Sharpe Ratio<br>
+âœ“ -37.02% Maximum Drawdown
+</p>
 
-<section class="cta">
+<a class="btn" href="momentum-stocks.html">
+View Backtest Results
+</a>
 
-    <h2>Ready to Explore Extreme OS?</h2>
+</div>
 
-    <p>
-        Review performance and learn more about our strategy.
-    </p>
+<div class="card">
 
-    <a class="btn" href="performance.html">
-        View Performance
-    </a>
+<h2>Mean Reversion</h2>
 
-    <a class="btn"
-       href="subscribe.html"
-       style="margin-left:15px;">
-       Subscribe
-    </a>
+<p>
+Systematic long/short strategy targeting
+short-term price dislocations and subsequent
+mean-reversion opportunities.
+</p>
 
-</section>
+<p>
+✓ 29.09% Backtest CAGR<br>
+✓ 1.58 Sharpe Ratio<br>
+✓ -20.60% Maximum Drawdown
+</p>
+
+<a class="btn" href="mean-reversion.html">
+View Backtest Results
+</a>
+
+</div>
+
+<div class="card">
+
+<h2>Members Dashboard Preview</h2>
+
+<p>
+See examples of current picks, open positions,
+trade alerts, and the information available
+to subscribers.
+</p>
+
+<p>
+✓ Current Picks<br>
+✓ Open Positions<br>
+✓ Trade Alerts
+</p>
+
+<a class="btn" href="members.html">
+View Preview
+</a>
+
+</div>
+
+</div>
+
+<div class="cta">
+
+<h2>Want Access to Current Picks?</h2>
+
+<p>
+Subscribers receive current opportunities,
+open positions, strategy updates,
+email alerts, and future SMS notifications.
+</p>
+
+<a class="btn" href="subscribe.html">
+Become a Member
+</a>
+
+</div>
+
+</div>
 
 <footer>
 
-    <p>
-        © 2026 Extreme Trading Inc.
-    </p>
+<p>
+© 2026 Extreme Trading Inc.
+</p>
 
-    <p>
-        <a href="performance.html">Performance</a> |
-        <a href="strategies.html">Strategies</a> |
-        <a href="subscribe.html">Subscribe</a> |
-        <a href="about.html">About</a> |
-        <a href="contact.html">Contact</a>
-    </p>
+<p>
+<a href="index.html">Home</a> |
+<a href="members.html">Members</a> |
+<a href="subscribe.html">Subscribe</a> |
+<a href="contact.html">Contact</a>
+</p>
 
 </footer>
 

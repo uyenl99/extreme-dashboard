@@ -1,4 +1,5 @@
 import argparse
+import json
 import pandas as pd
 from pathlib import Path
 
@@ -294,6 +295,34 @@ nav a {
     margin-bottom:8px;
 }
 
+.performance-grid {
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:15px;
+}
+
+.performance-stat {
+    background:#0f172a;
+    border:1px solid #374151;
+    border-radius:8px;
+    padding:16px;
+}
+
+.performance-label {
+    color:#9ca3af;
+    font-size:13px;
+    margin-bottom:6px;
+}
+
+.performance-value {
+    font-size:22px;
+    font-weight:600;
+}
+
+@media (max-width:760px) {
+    .performance-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
 .view-link {
     margin-top:15px;
     color:#60a5fa;
@@ -339,8 +368,6 @@ def page_template(title, body):
 
 <div>
 <a href="index.html">Home</a>
-<a href="performance.html">Performance</a>
-<a href="strategies.html">Strategies</a>
 <a href="members.html">Members</a>
 </div>
 
@@ -386,6 +413,25 @@ def generate_public_page(
 
     stats = strategy_stats(df)
 
+    summary_path = Path("data/performance_summary.json")
+    performance_html = ""
+    if output_file == "extreme-os.html" and summary_path.exists():
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        performance_html = f"""
+<div class="card">
+
+<h2>Verified Collective2 Performance</h2>
+
+<div class="performance-grid">
+<div class="performance-stat"><div class="performance-label">Current Equity</div><div class="performance-value">{summary['current_equity']}</div></div>
+<div class="performance-stat"><div class="performance-label">Total Return</div><div class="performance-value">{summary['total_return']}</div></div>
+<div class="performance-stat"><div class="performance-label">Start Date</div><div class="performance-value">{summary['start_date']}</div></div>
+<div class="performance-stat"><div class="performance-label">Last Update</div><div class="performance-value">{summary['last_update']}</div></div>
+</div>
+
+</div>
+"""
+
     table_html = build_recent_closed_table(
         df,
         PUBLIC_TRADE_LIMIT
@@ -417,6 +463,8 @@ Trades are sourced from Collective2 and updated daily without an added delay.
 </p>
 
 </div>
+
+{performance_html}
 
 <div class="card">
 
