@@ -29,26 +29,38 @@ function Invoke-Stage {
 }
 
 function Start-And-WaitCollective2 {
-    $dispatchTime = [DateTime]::UtcNow
-    & $gh workflow run $collective2Workflow --repo $repo --ref main
+    $dispatchOutput = & $gh workflow run $collective2Workflow --repo $repo --ref main 2>&1
+    $dispatchOutput | ForEach-Object { Write-Host $_ }
     if ($LASTEXITCODE -ne 0) { throw "Could not dispatch the Collective2 workflow." }
 
-    $run = $null
-    for ($attempt = 1; $attempt -le 30 -and -not $run; $attempt++) {
-        Start-Sleep -Seconds 5
-        $runs = & $gh run list --repo $repo --workflow $collective2Workflow --event workflow_dispatch --limit 10 `
-            --json databaseId,createdAt,status,url | ConvertFrom-Json
-        if ($LASTEXITCODE -ne 0) { throw "Could not query the Collective2 workflow run." }
-        $run = $runs |
-            Where-Object { [DateTime]$_.createdAt -ge $dispatchTime.AddMinutes(-1) } |
-            Sort-Object { [DateTime]$_.createdAt } -Descending |
-            Select-Object -First 1
-    }
-    if (-not $run) { throw "Timed out waiting for the dispatched Collective2 workflow to appear." }
+    $runUrl = [regex]::Match("$dispatchOutput", 'https://github\.com/[^\s]+/actions/runs/(\d+)')
+    if (-not $runUrl.Success) { throw "The Collective2 dispatch did not return a workflow run URL." }
+    $runId = $runUrl.Groups[1].Value
 
-    Write-Host "Collective2 workflow: $($run.url)"
-    & $gh run watch $run.databaseId --repo $repo --exit-status
-    if ($LASTEXITCODE -ne 0) { throw "Collective2 workflow failed." }
+    Write-Host "Collective2 workflow: $($runUrl.Value)"
+    $conclusion = $null
+    for ($attempt = 1; $attempt -le 360; $attempt++) {
+        $savedErrorActionPreference = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        $stateJson = & $gh api "repos/$repo/actions/runs/$runId" 2>$null
+        $apiExitCode = $LASTEXITCODE
+        $ErrorActionPreference = $savedErrorActionPreference
+        if ($apiExitCode -ne 0) {
+            Write-Host "Collective2 status is not available yet; retrying."
+            Start-Sleep -Seconds 5
+            continue
+        }
+        $currentRun = $stateJson | ConvertFrom-Json
+        $status = "$($currentRun.status)"
+        $conclusion = "$($currentRun.conclusion)"
+        Write-Host "Collective2 status: $status $conclusion"
+        if ($status -eq "completed") { break }
+        Start-Sleep -Seconds 10
+    }
+    if ($status -ne "completed") { throw "Timed out waiting for the Collective2 workflow to finish." }
+    if ($conclusion -ne "success") {
+        throw "Collective2 workflow finished with conclusion '$conclusion'."
+    }
 }
 
 Start-Transcript -Path $log -Append
