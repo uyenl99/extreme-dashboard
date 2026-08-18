@@ -317,8 +317,13 @@ def build_trade_table(trades, limit=50):
     recent = trades.copy()
     recent["entry_date"] = pd.to_datetime(recent["entry_date"], errors="coerce")
     recent["exit_date"] = pd.to_datetime(recent["exit_date"], errors="coerce")
-    recent["activity_date"] = recent["exit_date"].fillna(recent["entry_date"])
-    recent = recent.sort_values("activity_date", ascending=False).head(limit)
+    recent["is_closed"] = recent["status"].fillna("").astype(str).str.lower().eq("closed")
+    recent["sort_date"] = recent["exit_date"].where(recent["is_closed"], recent["entry_date"])
+    recent = recent.sort_values(
+        ["is_closed", "sort_date", "entry_date"],
+        ascending=[True, False, False],
+        kind="stable",
+    ).head(limit)
     rows = []
     for item in recent.itertuples(index=False):
         is_closed = str(item.status).lower() == "closed"
