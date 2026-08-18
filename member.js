@@ -1,5 +1,5 @@
 (() => {
-  const state = { config: null, session: null, recovery: false };
+  const state = { config: null, session: null, recovery: false, checkoutEmail: "" };
   const $ = (id) => document.getElementById(id);
   const show = (id, visible = true) => { $(id).hidden = !visible; };
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -60,7 +60,7 @@
   }
 
   async function loadDashboard() {
-    show("loading"); show("auth-panel", false); show("password-panel", false); show("subscribe-panel", false); show("dashboard", false); show("account-actions", false);
+    show("loading"); show("auth-panel", false); show("activate-panel", false); show("password-panel", false); show("dashboard", false); show("account-actions", false);
     if (!state.session) { show("loading", false); show("auth-panel"); return; }
     if (state.recovery) { show("loading", false); show("password-panel"); return; }
     const userResponse = await authRequest("user", {}, "GET");
@@ -68,7 +68,11 @@
     const user = await userResponse.json(); $("member-email").textContent = user.email;
     const response = await api("/api/member-data"); show("loading", false); show("account-actions");
     if (response.status === 401) { saveSession(null); show("account-actions", false); show("auth-panel"); return; }
-    if (response.status === 403) { show("subscribe-panel"); return; }
+    if (response.status === 403) {
+      saveSession(null); show("account-actions", false); show("auth-panel");
+      $("auth-message").textContent = "This email does not have an active subscription. Subscribe before signing in.";
+      return;
+    }
     if (!response.ok) { show("auth-panel"); $("auth-message").textContent = "Member data is temporarily unavailable."; return; }
     render(await response.json()); show("dashboard");
   }
@@ -82,13 +86,16 @@
     button.disabled = false;
   });
 
-  $("signup-button").addEventListener("click", async () => {
-    if (!$("email").reportValidity() || !$("password").reportValidity()) return;
+  $("activate-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!state.checkoutEmail || !$("activate-password").reportValidity()) return;
+    const button = event.submitter; button.disabled = true;
     const confirmationUrl = `${location.origin}/members.html`;
-    const response = await authRequest(`signup?redirect_to=${encodeURIComponent(confirmationUrl)}`, { email: $("email").value, password: $("password").value }); const payload = await response.json();
+    const response = await authRequest(`signup?redirect_to=${encodeURIComponent(confirmationUrl)}`, { email: state.checkoutEmail, password: $("activate-password").value }); const payload = await response.json();
     if (response.ok && adoptAuth(payload)) await loadDashboard();
-    else if (response.ok) $("auth-message").textContent = "Check your email to confirm your account, then sign in.";
-    else $("auth-message").textContent = payload.msg || payload.error_description || "Unable to create account.";
+    else if (response.ok) $("activate-message").textContent = "Check your email to confirm your account, then sign in.";
+    else $("activate-message").textContent = payload.msg || payload.error_description || "Unable to create account.";
+    button.disabled = false;
   });
 
   $("reset-button").addEventListener("click", async () => {
@@ -103,7 +110,6 @@
     else $("password-message").textContent = "Unable to update the password.";
   });
 
-  document.querySelectorAll(".checkout-button").forEach((button) => button.addEventListener("click", async () => { const response = await api("/api/create-checkout-session", { method: "POST", body: JSON.stringify({ price: button.dataset.price }) }); const body = await response.json(); if (body.url) location.href = body.url; else alert(body.error || "Unable to start checkout."); }));
   $("billing-button").addEventListener("click", async () => { const response = await api("/api/create-portal-session", { method: "POST", body: "{}" }); const body = await response.json(); if (body.url) location.href = body.url; else alert(body.error || "Unable to open billing."); });
   $("signout-button").addEventListener("click", () => { saveSession(null); location.reload(); });
 
@@ -111,6 +117,16 @@
     state.config = await fetch("/api/public-config").then((r) => r.json()); readCallback();
     if (!state.session) { try { saveSession(JSON.parse(localStorage.getItem("eti_member_session"))); } catch {} }
     if (!state.config.supabaseUrl || !state.config.supabaseAnonKey) { show("loading", false); show("auth-panel"); $("auth-message").textContent = "Member accounts are being configured."; return; }
+    const query = new URLSearchParams(location.search);
+    const checkoutSessionId = query.get("checkout") === "success" ? query.get("session_id") : "";
+    if (checkoutSessionId && !state.session) {
+      const checkout = await fetch(`/api/checkout-status?session_id=${encodeURIComponent(checkoutSessionId)}`);
+      if (checkout.ok) {
+        const result = await checkout.json(); state.checkoutEmail = result.email;
+        $("checkout-email").textContent = result.email; show("loading", false); show("auth-panel", false); show("activate-panel"); return;
+      }
+      $("auth-message").textContent = "We could not verify that subscription. Please contact support if you completed payment.";
+    }
     await loadDashboard();
   })().catch(() => { show("loading", false); show("auth-panel"); $("auth-message").textContent = "Member sign-in is temporarily unavailable."; });
 })();

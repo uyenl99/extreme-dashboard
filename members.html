@@ -17,14 +17,25 @@
   </section>
 
   <section id="auth-panel" class="panel auth-panel">
-    <h2>Member sign in</h2>
-    <p>Use your individual member email and password.</p>
+    <h2>Subscriber sign in</h2>
+    <p>Already subscribed? Use the email and password connected to your membership.</p>
     <form id="login-form">
       <label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email" required>
       <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" minlength="8" required>
-      <div class="button-row"><button class="button" type="submit">Sign in</button><button id="signup-button" class="button secondary" type="button">Create account</button><button id="reset-button" class="text-button" type="button">Forgot password?</button></div>
+      <div class="button-row"><button class="button" type="submit">Sign in</button><a class="button secondary" href="subscribe.html">Subscribe first</a><button id="reset-button" class="text-button" type="button">Forgot password?</button></div>
     </form>
     <p id="auth-message" class="message" aria-live="polite"></p>
+  </section>
+
+  <section id="activate-panel" class="panel auth-panel" hidden>
+    <span class="eyebrow">Payment confirmed</span>
+    <h2>Create your member password</h2>
+    <p>Your subscription email is <strong id="checkout-email"></strong>.</p>
+    <form id="activate-form">
+      <label for="activate-password">Password</label><input id="activate-password" type="password" autocomplete="new-password" minlength="8" required>
+      <div class="button-row"><button class="button" type="submit">Create member account</button></div>
+    </form>
+    <p id="activate-message" class="message" aria-live="polite"></p>
   </section>
 
   <section id="password-panel" class="panel auth-panel" hidden>
@@ -32,12 +43,6 @@
     <form id="password-form"><label for="new-password">New password</label><div class="form-row"><input id="new-password" type="password" autocomplete="new-password" minlength="8" required><button class="button" type="submit">Update password</button></div></form>
     <p id="password-message" class="message" aria-live="polite"></p>
   </section>
-
-  <section id="subscribe-panel" class="panel" hidden>
-    <h2>Activate your membership</h2><p>Your account is ready, but this email does not have an active Stripe subscription.</p>
-    <div class="button-row"><button class="button checkout-button" data-price="starter">Starter — $49/mo</button><button class="button secondary checkout-button" data-price="pro">Professional — $99/mo</button></div>
-  </section>
-
 
   <section id="dashboard" hidden>
     <div class="status-row"><div><span class="live-dot"></span>Live member data</div><div id="updated-at"></div></div>

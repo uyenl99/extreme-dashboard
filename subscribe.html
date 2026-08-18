@@ -72,6 +72,10 @@ nav a{
     border-radius:6px;
 }
 
+button.btn{border:0;cursor:pointer;font:inherit}
+button.btn:disabled{opacity:.65;cursor:wait}
+.notice{max-width:1200px;margin:24px auto 0;padding:0 30px;color:#b91c1c}
+
 footer{
     text-align:center;
     padding:40px;
@@ -95,8 +99,8 @@ footer{
 </nav>
 
 <div class="hero">
-    <h1>Subscription Plans</h1>
-    <p>Choose a plan and create your individual member account.</p>
+    <h1>Extreme Trading Membership</h1>
+    <p>Complete payment, then create your member password.</p>
 </div>
 
 <div class="section">
@@ -105,51 +109,17 @@ footer{
 
 <div class="card">
 
-<h2>Starter</h2>
+<h2>Monthly Membership</h2>
 
 <div class="price">
-$49/mo
+$100/mo
 </div>
 
 <p>
-Strategy updates and performance access.
+Full member access to strategy updates, performance, live alerts, current positions, and trade history.
 </p>
 
-<a class="btn" href="members.html?plan=starter">Create Account</a>
-
-</div>
-
-<div class="card">
-
-<h2>Professional</h2>
-
-<div class="price">
-$99/mo
-</div>
-
-<p>
-Advanced strategy access and research content.
-</p>
-
-<a class="btn" href="members.html?plan=pro">Create Account</a>
-
-</div>
-
-<div class="card">
-
-<h2>Institutional</h2>
-
-<div class="price">
-Custom
-</div>
-
-<p>
-Customized solutions and direct consultation.
-</p>
-
-<a class="btn" href="contact.html">
-Contact Us
-</a>
+<button class="btn checkout-button" type="button">Subscribe for $100/month</button>
 
 </div>
 
@@ -160,6 +130,30 @@ Contact Us
 <footer>
 © 2026 Extreme Trading Inc.
 </footer>
+
+<script>
+const params = new URLSearchParams(location.search);
+if (params.get("checkout") === "cancelled") {
+    const notice = document.createElement("p");
+    notice.className = "notice";
+    notice.textContent = "Checkout was cancelled. You have not been charged.";
+    document.querySelector(".hero").after(notice);
+}
+document.querySelectorAll(".checkout-button").forEach((button) => button.addEventListener("click", async () => {
+    button.disabled = true;
+    const response = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}"
+    });
+    const payload = await response.json();
+    if (payload.url) location.href = payload.url;
+    else {
+        alert(payload.error || "Unable to start checkout.");
+        button.disabled = false;
+    }
+}));
+</script>
 
 </body>
 </html>
