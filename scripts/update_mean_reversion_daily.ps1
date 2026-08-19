@@ -84,15 +84,60 @@ try {
         & $git config user.email "uyenl99@users.noreply.github.com"
         & $git commit -m "Update Mean Reversion $modeTag $today"
         if ($LASTEXITCODE -ne 0) { throw "Automated commit failed." }
+
+        $unexpectedChanges = & $git status --porcelain
+        if ($LASTEXITCODE -ne 0) { throw "Could not verify the automation checkout after commit." }
+        if ($unexpectedChanges) {
+            throw "Unexpected tracked or untracked files remain after the automated commit: $($unexpectedChanges -join ', ')"
+        }
+
         & $git push --force-with-lease -u origin $previewBranch
         if ($LASTEXITCODE -ne 0) { throw "Could not push the daily preview branch." }
 
-        $prUrl = & $gh pr list --repo "uyenl99/extreme-dashboard" --head $previewBranch --state open --json url --jq ".[0].url"
-        if ($LASTEXITCODE -ne 0) { throw "Could not query the daily preview pull request." }
-        if (-not $prUrl) {
-            $prUrl = & $gh pr create --repo "uyenl99/extreme-dashboard" --draft --base main --head $previewBranch --title "Daily Mean Reversion preview" --body "Automated Mean Reversion refresh for $today. Review the Vercel preview before merging."
-            if ($LASTEXITCODE -ne 0) { throw "Could not create the daily preview pull request." }
+        $branchReady = $false
+        for ($attempt = 1; $attempt -le 24 -and -not $branchReady; $attempt++) {
+            $savedErrorActionPreference = $ErrorActionPreference
+            $ErrorActionPreference = "Continue"
+            $compareJson = & $gh api "repos/uyenl99/extreme-dashboard/compare/main...$previewBranch" 2>$null
+            $compareExitCode = $LASTEXITCODE
+            $ErrorActionPreference = $savedErrorActionPreference
+            if ($compareExitCode -eq 0) {
+                $comparison = $compareJson | ConvertFrom-Json
+                $branchReady = [int]$comparison.ahead_by -gt 0
+            }
+            if (-not $branchReady) {
+                Write-Output "Preview branch is not visible ahead of main yet; retrying ($attempt/24)."
+                Start-Sleep -Seconds 5
+            }
         }
+        if (-not $branchReady) { throw "Preview branch did not become visible ahead of main." }
+
+        $prUrl = $null
+        for ($attempt = 1; $attempt -le 12 -and -not $prUrl; $attempt++) {
+            $savedErrorActionPreference = $ErrorActionPreference
+            $ErrorActionPreference = "Continue"
+            $prListJson = & $gh pr list --repo "uyenl99/extreme-dashboard" --head $previewBranch --state open --json url 2>$null
+            $prListExitCode = $LASTEXITCODE
+            $ErrorActionPreference = $savedErrorActionPreference
+            if ($prListExitCode -eq 0) {
+                $openPr = $prListJson | ConvertFrom-Json | Select-Object -First 1
+                if ($openPr) { $prUrl = $openPr.url }
+            }
+            if ($prUrl) { break }
+
+            $savedErrorActionPreference = $ErrorActionPreference
+            $ErrorActionPreference = "Continue"
+            $createOutput = & $gh pr create --repo "uyenl99/extreme-dashboard" --draft --base main --head $previewBranch --title "Daily Mean Reversion preview" --body "Automated Mean Reversion refresh for $today. Review the Vercel preview before merging." 2>&1
+            $createExitCode = $LASTEXITCODE
+            $ErrorActionPreference = $savedErrorActionPreference
+            if ($createExitCode -eq 0) {
+                $prUrl = "$createOutput".Trim()
+                break
+            }
+            Write-Output "PR creation attempt $attempt/12 failed: $createOutput"
+            Start-Sleep -Seconds 10
+        }
+        if (-not $prUrl) { throw "Could not create or find the daily preview pull request after 12 attempts." }
         Write-Output "Daily preview PR: $prUrl"
     }
     finally { Pop-Location }
