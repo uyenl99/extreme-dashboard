@@ -68,7 +68,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Could not check out the shared preview branch." }
     }
     Invoke-Stage "Mean Reversion 5x5 backtest" {
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $meanReversionUpdate -Mode Backtest -Publish $false -TargetCheckout $webRoot
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $meanReversionUpdate -Mode Backtest -NoPublish -TargetCheckout $webRoot
     }
     Invoke-Stage "Momentum ETF1, ETF2, and SP" {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $momentumUpdate -NoPublish
