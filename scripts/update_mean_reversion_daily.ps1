@@ -1,6 +1,8 @@
 param(
     [ValidateSet("Alerts", "Backtest")]
-    [string]$Mode = "Alerts"
+    [string]$Mode = "Alerts",
+    [bool]$Publish = $true,
+    [string]$TargetCheckout = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -9,7 +11,7 @@ $revMurphyRoot = "C:\junk\stocks\RevMurphy"
 $backtestOutput = Join-Path $revMurphyRoot "output_long_short_5x5"
 $alertOutput = Join-Path $revMurphyRoot "output_live_alerts_5x5"
 $automationRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
-$checkout = Join-Path $automationRoot "extreme-dashboard"
+$checkout = if ($TargetCheckout) { $TargetCheckout } else { Join-Path $automationRoot "extreme-dashboard" }
 $logDirectory = Join-Path $automationRoot "logs"
 $python = Join-Path $revMurphyRoot ".venv\Scripts\python.exe"
 $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
@@ -31,11 +33,13 @@ try {
         throw "POLYGON_API_KEY is not available to the scheduled task user."
     }
 
-    if (-not (Test-Path (Join-Path $checkout ".git"))) {
+    if (-not $Publish -and -not $TargetCheckout) { throw "TargetCheckout is required when Publish is false." }
+    if ($Publish -and -not (Test-Path (Join-Path $checkout ".git"))) {
         & $git clone "https://github.com/uyenl99/extreme-dashboard.git" $checkout
         if ($LASTEXITCODE -ne 0) { throw "Initial dashboard clone failed." }
     }
 
+    if ($Publish) {
     & $git -C $checkout fetch origin main
     if ($LASTEXITCODE -ne 0) { throw "Could not fetch main." }
     & $git -C $checkout ls-remote --exit-code --heads origin $previewBranch | Out-Null
@@ -54,6 +58,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Could not clean the disposable automation checkout." }
     & $git -C $checkout checkout -B $previewBranch origin/main
     if ($LASTEXITCODE -ne 0) { throw "Could not reset the daily preview branch." }
+    }
 
     Push-Location $revMurphyRoot
     try {
@@ -72,6 +77,11 @@ try {
     try {
         & $python "generate_mean_reversion_page.py" --source $backtestOutput --alert-source $alertOutput 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion page generation failed." }
+
+        if (-not $Publish) {
+            Write-Output "Mean Reversion files generated for the shared batch; publishing deferred."
+            return
+        }
 
         & $git add -- mean-reversion.html index.html
         & $git diff --cached --quiet

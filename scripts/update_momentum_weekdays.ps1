@@ -1,6 +1,10 @@
+param([switch]$NoPublish)
+
 $ErrorActionPreference = "Stop"
 
 $dualMomUpdate = "C:\junk\stocks\DualMom\update_momo5_daily.ps1"
+$dualMomRoot = "C:\junk\stocks\DualMom"
+$plotlyDir = Join-Path $dualMomRoot ".python_packages"
 $inflationRoot = "C:\junk\stocks\inflationcompass"
 $momoSpRoot = "C:\junk\stocks\MomoSp\pit_version"
 $momoSpUpdate = Join-Path $momoSpRoot "update_v2a_live.py"
@@ -28,9 +32,25 @@ try {
         if (-not (Test-Path -LiteralPath $path)) { throw "Required path not found: $path" }
     }
 
-    # Momentum ETF1: refresh data, rebuild momentum.html, commit and publish if changed.
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $dualMomUpdate
-    if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 update failed." }
+    if ($NoPublish) {
+        Push-Location $dualMomRoot
+        try {
+            & $python "refresh_momo5_data.py"
+            if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 data refresh failed." }
+            & $python "momo5.py"
+            if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 backtest failed." }
+            $generatorCode = "import runpy,sys; sys.path.insert(0,r'$plotlyDir'); sys.argv=['generate_momentum_page.py','--source',r'$dualMomRoot\output_momo5','--output',r'$webRoot\momentum.html']; runpy.run_path(r'$webRoot\generate_momentum_page.py',run_name='__main__')"
+            & $python -c $generatorCode
+            if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 page generation failed." }
+            & $python "update_momentum_html_current.py" --source "output_momo5" --html (Join-Path $webRoot "momentum.html")
+            if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 current-month update failed." }
+        }
+        finally { Pop-Location }
+    }
+    else {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $dualMomUpdate
+        if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 update failed." }
+    }
 
     # Ensure the independent Inflation Compass runtime is reproducible on unattended runs.
     & $python -m pip install -r (Join-Path $inflationRoot "requirements.txt") --disable-pip-version-check
@@ -76,13 +96,16 @@ try {
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Momentum ETF2 and Momentum SP are current; no site changes to publish."
     }
-    elseif ($LASTEXITCODE -eq 1) {
+    elseif ($LASTEXITCODE -eq 1 -and -not $NoPublish) {
         & $git -c "safe.directory=C:/junk/stocks/Web" -C $webRoot add -- inflation-compass momentum-stocks.html
         & $git -c "safe.directory=C:/junk/stocks/Web" -C $webRoot commit -m "Refresh Momentum ETF2 and Momentum Stocks results"
         if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2/Momentum SP commit failed." }
         & $git -c "safe.directory=C:/junk/stocks/Web" -C $webRoot push origin HEAD:main
         if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2/Momentum SP publish failed." }
         Write-Host "Momentum ETF2 and Momentum SP published; Vercel production deployment triggered."
+    }
+    elseif ($LASTEXITCODE -eq 1 -and $NoPublish) {
+        Write-Host "Momentum files generated for the shared batch; publishing deferred."
     }
     else { throw "Could not inspect Momentum ETF2/Momentum SP changes." }
 
