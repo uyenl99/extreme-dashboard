@@ -38,15 +38,15 @@ jobs:
 
       - name: Push daily preview branch
         env:
-          PREVIEW_BRANCH: automation/extreme-os-daily-preview
+          PREVIEW_BRANCH: automation/daily-strategies-preview
         run: |
-          if git diff --quiet -- data/performance_summary.json performance-details.html extreme-os.html; then
-            echo "No public page changes to commit."
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "$PREVIEW_BRANCH"
-          git add data/performance_summary.json performance-details.html extreme-os.html
-          git commit -m "Update Collective2 preview"
+          if git diff --quiet -- data/performance_summary.json performance-details.html extreme-os.html; then
+            echo "Collective2 files are current; creating the shared branch from main."
+          else
+            git add data/performance_summary.json performance-details.html extreme-os.html
+            git commit -m "Stage Collective2 daily update"
+          fi
           git push --force-with-lease -u origin "$PREVIEW_BRANCH"
