@@ -1,7 +1,7 @@
 param(
     [ValidateSet("Alerts", "Backtest")]
     [string]$Mode = "Alerts",
-    [bool]$Publish = $true,
+    [switch]$NoPublish,
     [string]$TargetCheckout = ""
 )
 
@@ -19,6 +19,7 @@ $gh = "C:\Program Files\GitHub CLI\gh.exe"
 $previewBranch = "automation/mean-reversion-daily-preview"
 $today = Get-Date -Format "yyyy-MM-dd"
 $modeTag = $Mode.ToLowerInvariant()
+$Publish = -not $NoPublish
 $log = Join-Path $logDirectory "mean-reversion-$modeTag-$today.log"
 $commandLog = Join-Path $logDirectory "mean-reversion-$modeTag-$today-commands.log"
 

@@ -51,6 +51,13 @@ This file records automation failures so they are not repeated. A calculation is
 - Fix: Stage the actual generator outputs and fail if `git status --porcelain` is non-empty after the automated commit.
 - Prevention: Maintain one explicit generated-output list and verify a clean checkout after every automated commit.
 
+## 2026-08-19 — Boolean argument failed under Windows PowerShell 5.1
+
+- Impact: The sequential run completed Collective2, then stopped before the Mean Reversion backtest and Momentum stages.
+- Cause: A Boolean `$false` passed to a child `powershell.exe -File` process was serialized as text and could not bind to a `[bool]` parameter.
+- Fix: Replace the Boolean publishing argument with an explicit `[switch]$NoPublish` parameter.
+- Prevention: Use switch parameters for cross-process flags and validate parameter binding with Windows PowerShell 5.1 before activating a scheduled flow.
+
 ## Required release checklist
 
 1. Test with the exact Task Scheduler user, environment, executable, and PowerShell version.
