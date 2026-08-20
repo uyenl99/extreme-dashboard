@@ -31,6 +31,12 @@ def parse_args():
         default=Path("momentum.html"),
         help="HTML file to generate.",
     )
+    parser.add_argument(
+        "--audience",
+        choices=("public", "member"),
+        default="public",
+        help="Public omits current holdings, alerts, and recent allocations.",
+    )
     return parser.parse_args()
 
 
@@ -213,7 +219,7 @@ def build_allocation_table(allocations, limit=50):
     )
 
 
-def render_page(summary, daily, allocations, monthly, alert, partial=None):
+def render_page(summary, daily, allocations, monthly, alert, partial=None, audience="public"):
     chart_html = build_chart(daily)
     start_date = daily["Date"].min().strftime("%Y-%m-%d")
     end_date = daily["Date"].max().strftime("%Y-%m-%d")
@@ -233,6 +239,18 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None):
         f'<div class="metric-value">{value}</div></div>'
         for label, value in metrics
     )
+    member_sections = ""
+    if audience == "member":
+        member_sections = (
+            f'<section class="panel"><h2>Latest Alert</h2>{build_alert_table(alert)}</section>'
+            f'<section class="panel"><h2>Recent Monthly Allocations</h2>{build_allocation_table(allocations)}</section>'
+        )
+    else:
+        member_sections = (
+            '<section class="panel"><h2>Member Signals</h2>'
+            '<p class="subtle">Current holdings, latest alerts, and recent allocations are available to members.</p>'
+            '<p><a href="subscribe.html">View membership options</a></p></section>'
+        )
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -248,10 +266,10 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None):
 <main class="container">
 <section class="hero"><div class="eyebrow">Backtested ETF rotation strategy</div><h1>Momentum ETFs</h1><p>Dual-momentum rotation into the three strongest ETFs using 12-month momentum with a one-month skip and a volatility-based risk-off filter. Risk-off allocations move to SHY.</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: ${daily.iloc[0]["Equity"]:,.0f}</p></section>
 <section class="metrics">{metric_html}</section>
-<section class="panel"><h2>Latest Alert</h2>{build_alert_table(alert)}</section>
+{member_sections if audience == "member" else ""}
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Dual Momentum compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
 <section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly, partial)}</section>
-<section class="panel"><h2>Recent Monthly Allocations</h2>{build_allocation_table(allocations)}</section>
+{member_sections if audience == "public" else ""}
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
 </main>
 <footer>© 2026 Extreme Trading Inc.</footer>
@@ -259,14 +277,30 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None):
 </html>"""
 
 
+def validate_public_page(page):
+    forbidden = (
+        "<h2>Latest Alert</h2>",
+        "<h2>Recent Monthly Allocations</h2>",
+        "<h2>Current Partial Month</h2>",
+        'id="current-month"',
+        "Entry</th><th>Latest</th><th>Return",
+    )
+    leaked = [value for value in forbidden if value in page]
+    if leaked:
+        raise RuntimeError(f"Public Momentum ETF page contains member-only content: {leaked}")
+
+
 def main():
     args = parse_args()
     summary, daily, allocations, monthly, alert, partial = load_results(args.source)
-    args.output.write_text(
-        render_page(summary, daily, allocations, monthly, alert, partial),
-        encoding="utf-8",
+    page = render_page(
+        summary, daily, allocations, monthly, alert, partial, audience=args.audience
     )
-    print(f"Generated {args.output} from {args.source}")
+    if args.audience == "public":
+        validate_public_page(page)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(page, encoding="utf-8")
+    print(f"Generated {args.audience} {args.output} from {args.source}")
 
 
 if __name__ == "__main__":
