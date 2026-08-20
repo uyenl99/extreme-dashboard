@@ -15,10 +15,13 @@ $momoSpGenerator = Join-Path $webRoot "generate_momentum_stocks_page.py"
 $python = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
 $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
 $logRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\logs"
+$privateMemberRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\member-pages"
+$privateMomentumPage = Join-Path $privateMemberRoot "momentum-members.html"
 $today = Get-Date -Format "yyyy-MM-dd"
 $log = Join-Path $logRoot "momentum-weekday-$today.log"
 
 New-Item -ItemType Directory -Force $logRoot | Out-Null
+New-Item -ItemType Directory -Force $privateMemberRoot | Out-Null
 Start-Transcript -Path $log -Append
 try {
     foreach ($path in @(
@@ -39,11 +42,15 @@ try {
             if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 data refresh failed." }
             & $python "momo5.py"
             if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 backtest failed." }
-            $generatorCode = "import runpy,sys; sys.path.insert(0,r'$plotlyDir'); sys.argv=['generate_momentum_page.py','--source',r'$dualMomRoot\output_momo5','--output',r'$webRoot\momentum.html']; runpy.run_path(r'$webRoot\generate_momentum_page.py',run_name='__main__')"
-            & $python -c $generatorCode
-            if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 page generation failed." }
-            & $python "update_momentum_html_current.py" --source "output_momo5" --html (Join-Path $webRoot "momentum.html")
-            if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 current-month update failed." }
+            $publicGeneratorCode = "import runpy,sys; sys.path.insert(0,r'$plotlyDir'); sys.argv=['generate_momentum_page.py','--source',r'$dualMomRoot\output_momo5','--output',r'$webRoot\momentum.html','--audience','public']; runpy.run_path(r'$webRoot\generate_momentum_page.py',run_name='__main__')"
+            & $python -c $publicGeneratorCode
+            if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 public page generation failed." }
+            $memberGeneratorCode = "import runpy,sys; sys.path.insert(0,r'$plotlyDir'); sys.argv=['generate_momentum_page.py','--source',r'$dualMomRoot\output_momo5','--output',r'$privateMomentumPage','--audience','member']; runpy.run_path(r'$webRoot\generate_momentum_page.py',run_name='__main__')"
+            & $python -c $memberGeneratorCode
+            if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 member page generation failed." }
+            & $python "update_momentum_html_current.py" --source "output_momo5" --html $privateMomentumPage
+            if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 private current-holdings update failed." }
+            Write-Host "Private Momentum ETF1 member page: $privateMomentumPage"
         }
         finally { Pop-Location }
     }
