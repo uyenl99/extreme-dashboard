@@ -53,6 +53,8 @@ def load_results(source):
         parse_dates=["date", "exit_date"],
     )
     monthly = pd.read_csv(source / "monthly_return_table.csv")
+    partial_path = source / "partial_month_return.csv"
+    partial = pd.read_csv(partial_path).iloc[0] if partial_path.is_file() else None
 
     for frame, column, label in (
         (daily, "Date", "daily_equity_entries_exits"),
@@ -62,7 +64,7 @@ def load_results(source):
             raise ValueError(f"{label}.csv dates must be valid and sorted")
 
     alert = parse_alert(source / "next_entry_alert.txt")
-    return summary.iloc[0], daily, allocations, monthly, alert
+    return summary.iloc[0], daily, allocations, monthly, alert, partial
 
 
 def pct(value, decimals=2):
@@ -146,25 +148,43 @@ def build_chart(daily):
     )
 
 
-def build_monthly_table(monthly):
+def build_monthly_table(monthly, partial=None):
     month_names = [
         "Jan", "Feb", "Mar", "Apr", "May", "Jun",
         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ]
     headers = "".join(f"<th>{name}</th>" for name in month_names + ["Year Return"])
+    display = monthly.copy()
+    partial_year = partial_month = None
+    if partial is not None:
+        partial_date = pd.Timestamp(partial["latest_day"])
+        partial_year = partial_date.year
+        partial_month = partial_date.strftime("%b")
+        if partial_year not in display["Year"].astype(int).values:
+            display = pd.concat([display, pd.DataFrame([{"Year": partial_year}])], ignore_index=True)
+        display.loc[display["Year"].astype(int) == partial_year, partial_month] = float(partial["partial_return"])
+        completed = display.loc[display["Year"].astype(int) == partial_year, month_names].iloc[0].dropna()
+        display.loc[display["Year"].astype(int) == partial_year, "Year Return"] = (1.0 + completed).prod() - 1.0
+
     rows = []
-    for item in monthly.sort_values("Year", ascending=False).itertuples(index=False):
+    for item in display.sort_values("Year", ascending=False).itertuples(index=False):
         cells = []
         values = [getattr(item, name) for name in month_names]
         values.append(getattr(item, "_13"))
-        for value in values:
+        for index, value in enumerate(values):
             if pd.isna(value):
                 cells.append('<td class="muted">—</td>')
             else:
                 css = "positive" if value > 0 else "negative" if value < 0 else "muted"
-                cells.append(f'<td class="{css}">{value * 100:.1f}%</td>')
+                is_partial = int(item.Year) == partial_year and index < 12 and month_names[index] == partial_month
+                suffix = "*" if is_partial else ""
+                title = ' title="Partial month-to-date return"' if is_partial else ""
+                cells.append(f'<td class="{css}"{title}>{value * 100:.1f}%{suffix}</td>')
         rows.append(f"<tr><th>{int(item.Year)}</th>{''.join(cells)}</tr>")
-    return (
+    note = ""
+    if partial is not None:
+        note = f'<p class="subtle">* Partial month-to-date return through {html.escape(str(partial["latest_day"]))}.</p>'
+    return note + (
         '<div class="table-wrap"><table><thead><tr><th>Year</th>'
         f'{headers}</tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
     )
@@ -193,7 +213,7 @@ def build_allocation_table(allocations, limit=50):
     )
 
 
-def render_page(summary, daily, allocations, monthly, alert):
+def render_page(summary, daily, allocations, monthly, alert, partial=None):
     chart_html = build_chart(daily)
     start_date = daily["Date"].min().strftime("%Y-%m-%d")
     end_date = daily["Date"].max().strftime("%Y-%m-%d")
@@ -230,7 +250,7 @@ def render_page(summary, daily, allocations, monthly, alert):
 <section class="metrics">{metric_html}</section>
 <section class="panel"><h2>Latest Alert</h2>{build_alert_table(alert)}</section>
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Dual Momentum compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
-<section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly)}</section>
+<section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly, partial)}</section>
 <section class="panel"><h2>Recent Monthly Allocations</h2>{build_allocation_table(allocations)}</section>
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
 </main>
@@ -241,9 +261,9 @@ def render_page(summary, daily, allocations, monthly, alert):
 
 def main():
     args = parse_args()
-    summary, daily, allocations, monthly, alert = load_results(args.source)
+    summary, daily, allocations, monthly, alert, partial = load_results(args.source)
     args.output.write_text(
-        render_page(summary, daily, allocations, monthly, alert),
+        render_page(summary, daily, allocations, monthly, alert, partial),
         encoding="utf-8",
     )
     print(f"Generated {args.output} from {args.source}")
