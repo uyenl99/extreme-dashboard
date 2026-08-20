@@ -58,6 +58,13 @@ This file records automation failures so they are not repeated. A calculation is
 - Fix: Replace the Boolean publishing argument with an explicit `[switch]$NoPublish` parameter.
 - Prevention: Use switch parameters for cross-process flags and validate parameter binding with Windows PowerShell 5.1 before activating a scheduled flow.
 
+## 2026-08-19 — GitHub CLI could not find Git under Task Scheduler
+
+- Impact: All five strategy calculations completed and the shared branch was pushed, but the common PR was not opened.
+- Cause: `gh pr create` launches Git internally, while the Task Scheduler environment did not include the bundled Git directory in `PATH`.
+- Fix: Prepend the configured Git executable directory to `PATH` before invoking GitHub CLI.
+- Prevention: Validate both direct executable calls and any subprocess dependencies they launch under the exact scheduled-task environment.
+
 ## Required release checklist
 
 1. Test with the exact Task Scheduler user, environment, executable, and PowerShell version.
