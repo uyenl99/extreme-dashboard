@@ -46,6 +46,12 @@ def parse_args():
         default=Path("index.html"),
         help="Strategies page whose Mean Reversion card metrics should be refreshed.",
     )
+    parser.add_argument(
+        "--audience",
+        choices=("public", "member"),
+        default="public",
+        help="Public omits alerts, positions, portfolio actions, and recent trades.",
+    )
     return parser.parse_args()
 
 
@@ -355,11 +361,24 @@ def update_strategy_card(path, summary):
     path.write_text(text[:start] + card + text[end:], encoding="utf-8")
 
 
-def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, alert_source):
+def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, alert_source, audience="public"):
     generated_at = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M %p %Z")
-    alert_table, portfolio_changes, latest_positions = build_alert_table(
-        daily_trades, alert_source, float(equity.iloc[-1]["equity"])
-    )
+    if audience == "member":
+        alert_table, portfolio_changes, latest_positions = build_alert_table(
+            daily_trades, alert_source, float(equity.iloc[-1]["equity"])
+        )
+        protected_sections = (
+            f'<section class="panel"><h2>Latest Alert</h2>{alert_table}</section>'
+            f'<section class="panel"><h2>Actionable Portfolio Changes</h2>{portfolio_changes}</section>'
+            f'<section class="panel"><h2>Latest Positions</h2>{latest_positions}</section>'
+            f'<section class="panel"><h2>Latest 50 Trades</h2>{build_trade_table(trades)}</section>'
+        )
+    else:
+        protected_sections = (
+            '<section class="panel"><h2>Member Signals</h2>'
+            '<p class="subtle">Latest alerts, actionable portfolio changes, current positions, and recent trades are available to members.</p>'
+            '<p><a href="subscribe.html">View membership options</a></p></section>'
+        )
     chart_html = build_chart(equity, benchmarks)
     spy = benchmarks[["date", "SPY_equity"]].dropna()
     spy_years = (spy["date"].iloc[-1] - spy["date"].iloc[0]).days / 365.25
@@ -396,12 +415,10 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
 <main class="container">
 <section class="hero"><div class="eyebrow">Backtested long/short strategy</div><h1>Mean Reversion</h1><p>Systematic equity strategy seeking short-term price dislocations and subsequent reversion while managing long and short exposure.</p><p class="subtle">Backtest period: {summary.start_date} through {summary.end_date} · Starting equity: ${equity.iloc[0]['equity']:,.0f}</p><p class="subtle">Dashboard updated: {generated_at}</p></section>
 <section class="metrics">{metric_html}</section>
-<section class="panel"><h2>Latest Alert</h2>{alert_table}</section>
-<section class="panel"><h2>Actionable Portfolio Changes</h2>{portfolio_changes}</section>
-<section class="panel"><h2>Latest Positions</h2>{latest_positions}</section>
+{protected_sections if audience == "member" else ""}
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Select SPY, QQQ, or VOO in the legend to add benchmark comparisons.</p><div class="chart">{chart_html}</div></section>
 <section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly)}</section>
-<section class="panel"><h2>Latest 50 Trades</h2>{build_trade_table(trades)}</section>
+{protected_sections if audience == "public" else ""}
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
 </main>
 <footer>© 2026 Extreme Trading Inc.</footer>
@@ -412,15 +429,24 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
 def main():
     args = parse_args()
     summary, equity, benchmarks, monthly, trades, daily_trades = load_results(args.source)
-    args.output.write_text(
-        render_page(
+    page = render_page(
             summary, equity, benchmarks, monthly, trades, daily_trades,
-            args.alert_source,
-        ),
-        encoding="utf-8",
+            args.alert_source, args.audience,
     )
+    if args.audience == "public":
+        forbidden = (
+            "<h2>Latest Alert</h2>",
+            "<h2>Actionable Portfolio Changes</h2>",
+            "<h2>Latest Positions</h2>",
+            "<h2>Latest 50 Trades</h2>",
+        )
+        leaked = [item for item in forbidden if item in page]
+        if leaked:
+            raise RuntimeError(f"Public Mean Reversion page contains member-only content: {leaked}")
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(page, encoding="utf-8")
     update_strategy_card(args.strategies_page, summary)
-    print(f"Generated {args.output} from {args.source}")
+    print(f"Generated {args.audience} {args.output} from {args.source}")
 
 
 if __name__ == "__main__":

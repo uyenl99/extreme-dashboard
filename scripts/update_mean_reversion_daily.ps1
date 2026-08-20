@@ -22,8 +22,10 @@ $modeTag = $Mode.ToLowerInvariant()
 $Publish = -not $NoPublish
 $log = Join-Path $logDirectory "mean-reversion-$modeTag-$today.log"
 $commandLog = Join-Path $logDirectory "mean-reversion-$modeTag-$today-commands.log"
+$privateMemberRoot = Join-Path $automationRoot "member-pages"
+$privateMeanReversionPage = Join-Path $privateMemberRoot "mean-reversion-members.html"
 
-New-Item -ItemType Directory -Force -Path $automationRoot, $logDirectory | Out-Null
+New-Item -ItemType Directory -Force -Path $automationRoot, $logDirectory, $privateMemberRoot | Out-Null
 Start-Transcript -Path $log -Append
 
 try {
@@ -76,8 +78,11 @@ try {
 
     Push-Location $checkout
     try {
-        & $python "generate_mean_reversion_page.py" --source $backtestOutput --alert-source $alertOutput 2>&1 | Tee-Object -FilePath $commandLog -Append
-        if ($LASTEXITCODE -ne 0) { throw "Mean Reversion page generation failed." }
+        & $python "generate_mean_reversion_page.py" --source $backtestOutput --alert-source $alertOutput --output "mean-reversion.html" --audience public 2>&1 | Tee-Object -FilePath $commandLog -Append
+        if ($LASTEXITCODE -ne 0) { throw "Mean Reversion public page generation failed." }
+        & $python "generate_mean_reversion_page.py" --source $backtestOutput --alert-source $alertOutput --output $privateMeanReversionPage --audience member 2>&1 | Tee-Object -FilePath $commandLog -Append
+        if ($LASTEXITCODE -ne 0) { throw "Mean Reversion member page generation failed." }
+        Write-Output "Private Mean Reversion member page: $privateMeanReversionPage"
 
         if (-not $Publish) {
             Write-Output "Mean Reversion files generated for the shared batch; publishing deferred."
