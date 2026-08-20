@@ -3,7 +3,7 @@ import json
 import pandas as pd
 from pathlib import Path
 
-PUBLIC_DELAY_HOURS = 0
+PUBLIC_DELAY_HOURS = 96
 PUBLIC_TRADE_LIMIT = 50
 
 
@@ -431,13 +431,11 @@ def generate_public_page(
 <h2>Verified Collective2 Performance</h2>
 
 <div class="performance-grid">
-<div class="performance-stat"><div class="performance-label">Current Equity</div><div class="performance-value">{summary['current_equity']}</div></div>
-<div class="performance-stat"><div class="performance-label">Total Return</div><div class="performance-value">{summary['total_return']}</div></div>
-<div class="performance-stat"><div class="performance-label">Start Date</div><div class="performance-value">{summary['start_date']}</div></div>
-<div class="performance-stat"><div class="performance-label">Last Update</div><div class="performance-value">{summary['last_update']}</div></div>
+<div class="performance-stat"><div class="performance-label">Annual Return</div><div class="performance-value">{summary.get('annual_return', 'N/A')}</div></div>
+<div class="performance-stat"><div class="performance-label">Max Drawdown</div><div class="performance-value">{summary.get('max_drawdown', 'N/A')}</div></div>
+<div class="performance-stat"><div class="performance-label">Number of Trades</div><div class="performance-value">{summary.get('number_of_trades', 'N/A')}</div></div>
+<div class="performance-stat"><div class="performance-label">Win Trades %</div><div class="performance-value">{summary.get('win_trades_pct', 'N/A')}</div></div>
 </div>
-
-<iframe class="performance-details" src="performance-details.html" title="Extreme OS monthly returns and equity curve" loading="lazy"></iframe>
 
 </div>
 """
@@ -469,32 +467,12 @@ Current positions are sourced from Collective2 and updated daily.
 <h1>{title}</h1>
 
 <p>
-Trades are sourced from Collective2 and updated daily without an added delay.
+Trades are sourced from Collective2 and updated daily. Public trade details are shown after a 96-hour delay.
 </p>
 
 </div>
 
 {performance_html}
-
-<div class="card">
-
-<div class="stat">
-Total Trades: {stats['total_trades']}
-</div>
-
-<div class="stat">
-Win Rate: {stats['win_rate']:.1f}%
-</div>
-
-<div class="stat">
-Average Trade: ${stats['avg_trade']:,.2f}
-</div>
-
-<div class="stat">
-Total P/L: ${stats['total_pl']:,.0f}
-</div>
-
-</div>
 
 {current_positions_html}
 
