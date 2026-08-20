@@ -12,16 +12,21 @@ $momoSpOutput = Join-Path $momoSpRoot "output_pit_r1000_5b_latest"
 $momoSpAlert = Join-Path $momoSpRoot "output_pit_v2a_live\latest_signal.json"
 $webRoot = Split-Path -Parent $PSScriptRoot
 $momoSpGenerator = Join-Path $webRoot "generate_momentum_stocks_page.py"
+$momentumEtf2Generator = Join-Path $webRoot "generate_momentum_etf2_page.py"
 $python = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
 $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
 $logRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\logs"
 $privateMemberRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\member-pages"
 $privateMomentumPage = Join-Path $privateMemberRoot "momentum-members.html"
+$privateMomentumEtf2Page = Join-Path $privateMemberRoot "momentum2-members.html"
+$privateMomentumStocksPage = Join-Path $privateMemberRoot "momentum-stocks-members.html"
+$privateAssetRoot = Join-Path $privateMemberRoot "assets"
 $today = Get-Date -Format "yyyy-MM-dd"
 $log = Join-Path $logRoot "momentum-weekday-$today.log"
 
 New-Item -ItemType Directory -Force $logRoot | Out-Null
 New-Item -ItemType Directory -Force $privateMemberRoot | Out-Null
+New-Item -ItemType Directory -Force $privateAssetRoot | Out-Null
 Start-Transcript -Path $log -Append
 try {
     foreach ($path in @(
@@ -30,7 +35,8 @@ try {
         $git,
         (Join-Path $inflationRoot "inflation_compass.py"),
         $momoSpUpdate,
-        $momoSpGenerator
+        $momoSpGenerator,
+        $momentumEtf2Generator
     )) {
         if (-not (Test-Path -LiteralPath $path)) { throw "Required path not found: $path" }
     }
@@ -69,10 +75,32 @@ try {
     }
     finally { Pop-Location }
 
+    & $python $momentumEtf2Generator `
+        --source (Join-Path $inflationRoot "output") `
+        --output (Join-Path $webRoot "momentum2.html") `
+        --audience public `
+        --chart-src "inflation-compass/wealth.png"
+    if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2 public page generation failed." }
+    Copy-Item -LiteralPath (Join-Path $inflationRoot "output\wealth.png") `
+        -Destination (Join-Path $privateAssetRoot "momentum-etf2-wealth.png") -Force
+    & $python $momentumEtf2Generator `
+        --source (Join-Path $inflationRoot "output") `
+        --output $privateMomentumEtf2Page `
+        --audience member `
+        --chart-src "assets/momentum-etf2-wealth.png"
+    if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2 member page generation failed." }
+    Write-Host "Private Momentum ETF2 member page: $privateMomentumEtf2Page"
+
     $assetRoot = Join-Path $webRoot "inflation-compass"
     New-Item -ItemType Directory -Force $assetRoot | Out-Null
-    foreach ($name in @("summary.csv", "monthly_pnl_by_year.csv", "latest_alert.json", "wealth.png", "last_50_trades.csv")) {
+    foreach ($name in @("summary.csv", "monthly_pnl_by_year.csv", "wealth.png")) {
         Copy-Item -LiteralPath (Join-Path $inflationRoot "output\$name") -Destination (Join-Path $assetRoot $name) -Force
+    }
+    foreach ($protectedName in @("latest_alert.json", "last_50_trades.csv")) {
+        $publicProtectedPath = Join-Path $assetRoot $protectedName
+        if (Test-Path -LiteralPath $publicProtectedPath) {
+            Remove-Item -LiteralPath $publicProtectedPath -Force
+        }
     }
 
     & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot diff --quiet -- inflation-compass
@@ -94,17 +122,25 @@ try {
         & $python $momoSpGenerator `
             --source $momoSpOutput `
             --alert-source $momoSpAlert `
-            --output (Join-Path $webRoot "momentum-stocks.html")
-        if ($LASTEXITCODE -ne 0) { throw "Momentum SP page generation failed." }
+            --output (Join-Path $webRoot "momentum-stocks.html") `
+            --audience public
+        if ($LASTEXITCODE -ne 0) { throw "Momentum SP public page generation failed." }
+        & $python $momoSpGenerator `
+            --source $momoSpOutput `
+            --alert-source $momoSpAlert `
+            --output $privateMomentumStocksPage `
+            --audience member
+        if ($LASTEXITCODE -ne 0) { throw "Momentum SP member page generation failed." }
+        Write-Host "Private Momentum Stocks member page: $privateMomentumStocksPage"
     }
     finally { Pop-Location }
 
-    & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot diff --quiet -- inflation-compass momentum-stocks.html
+    & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot diff --quiet -- inflation-compass momentum2.html momentum-stocks.html
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Momentum ETF2 and Momentum SP are current; no site changes to publish."
     }
     elseif ($LASTEXITCODE -eq 1 -and -not $NoPublish) {
-        & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot add -- inflation-compass momentum-stocks.html
+        & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot add -- inflation-compass momentum2.html momentum-stocks.html
         & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot commit -m "Refresh Momentum ETF2 and Momentum Stocks results"
         if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2/Momentum SP commit failed." }
         & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot push origin HEAD:main
