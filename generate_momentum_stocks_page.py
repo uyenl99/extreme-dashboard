@@ -44,6 +44,12 @@ def parse_args():
         default=Path("momentum-stocks.html"),
         help="HTML file to generate.",
     )
+    parser.add_argument(
+        "--audience",
+        choices=("public", "member"),
+        default="public",
+        help="Public omits current alerts and recent allocations.",
+    )
     return parser.parse_args()
 
 
@@ -157,7 +163,7 @@ def build_allocation_table(allocations, limit=50):
     )
 
 
-def render_page(summary, daily, allocations, monthly, alert):
+def render_page(summary, daily, allocations, monthly, alert, audience="public"):
     total_return = summary.final_equity / INITIAL_EQUITY - 1
     sharpe = summary.sharpe_0rf
     max_drawdown = summary.daily_max_drawdown
@@ -177,6 +183,17 @@ def render_page(summary, daily, allocations, monthly, alert):
         for label, value in metrics
     )
     chart_html = build_chart(daily)
+    if audience == "member":
+        protected_sections = (
+            f'<section class="panel"><h2>Latest Alert</h2>{build_alert_table(alert)}</section>'
+            f'<section class="panel"><h2>Recent Monthly Allocations</h2>{build_allocation_table(allocations)}</section>'
+        )
+    else:
+        protected_sections = (
+            '<section class="panel"><h2>Member Signals</h2>'
+            '<p class="subtle">Current holdings, latest alerts, and recent allocations are available to members.</p>'
+            '<p><a href="subscribe.html">View membership options</a></p></section>'
+        )
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -192,10 +209,10 @@ def render_page(summary, daily, allocations, monthly, alert):
 <main class="container">
 <section class="hero"><div class="eyebrow">Backtested stock rotation strategy</div><h1>Momentum Stocks</h1><p>Monthly equal-weight rotation into the ten strongest stocks from a point-in-time Russell 1000 universe, filtered for market capitalization. A VIX-versus-SPY realized-volatility filter moves the portfolio into defensive assets during risk-off periods.</p><p class="subtle">Backtest period: {summary.start} through {summary.end} · Starting equity: ${INITIAL_EQUITY:,.0f}</p></section>
 <section class="metrics">{metric_html}</section>
-<section class="panel"><h2>Latest Alert</h2>{build_alert_table(alert)}</section>
+{protected_sections if audience == "member" else ""}
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Momentum Stocks compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
 <section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly)}</section>
-<section class="panel"><h2>Recent Monthly Allocations</h2>{build_allocation_table(allocations)}</section>
+{protected_sections if audience == "public" else ""}
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
 </main>
 <footer>© 2026 Extreme Trading Inc.</footer>
@@ -208,11 +225,15 @@ def main():
     summary, daily, allocations, monthly, alert = load_results(
         args.source, args.alert_source
     )
-    args.output.write_text(
-        render_page(summary, daily, allocations, monthly, alert),
-        encoding="utf-8",
-    )
-    print(f"Generated {args.output} from {args.source}")
+    page = render_page(summary, daily, allocations, monthly, alert, args.audience)
+    if args.audience == "public":
+        forbidden = ("<h2>Latest Alert</h2>", "<h2>Recent Monthly Allocations</h2>")
+        leaked = [item for item in forbidden if item in page]
+        if leaked:
+            raise RuntimeError(f"Public Momentum Stocks page contains member-only content: {leaked}")
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(page, encoding="utf-8")
+    print(f"Generated {args.audience} {args.output} from {args.source}")
 
 
 if __name__ == "__main__":
