@@ -149,6 +149,11 @@ total_return = (
     (current_equity / start_equity) - 1
 ) * 100
 
+elapsed_years = max((df["Date"].max() - df["Date"].min()).days / 365.2425, 1 / 365.2425)
+annual_return = ((current_equity / start_equity) ** (1 / elapsed_years) - 1) * 100
+running_peak = df["EquityWithCosts"].cummax()
+max_drawdown = ((df["EquityWithCosts"] / running_peak) - 1).min() * 100
+
 start_date = df["Date"].min().strftime("%Y-%m-%d")
 last_date = df["Date"].max().strftime("%Y-%m-%d")
 
@@ -534,16 +539,6 @@ ${current_equity:,.0f}
 </html>
 """
 
-Path("data/performance_summary.json").write_text(
-    json.dumps({
-        "current_equity": f"${current_equity:,.0f}",
-        "total_return": f"{total_return:.1f}%",
-        "start_date": str(start_date),
-        "last_update": str(last_date),
-    }, indent=2) + "\n",
-    encoding="utf-8",
-)
-
 Path("performance-details.html").write_text(
     f"""<!doctype html>
 <html lang="en">
@@ -580,3 +575,22 @@ elif not args.performance_only:
     download_closed_trades()
     download_open_positions()
     download_orders()
+
+closed_trades = pd.read_csv("data/extreme_os.csv")
+trade_pl = pd.to_numeric(closed_trades.get("ProfitLoss"), errors="coerce").dropna()
+number_of_trades = int(len(trade_pl))
+win_trades_pct = (trade_pl.gt(0).mean() * 100) if number_of_trades else 0.0
+
+Path("data/performance_summary.json").write_text(
+    json.dumps({
+        "current_equity": f"${current_equity:,.0f}",
+        "total_return": f"{total_return:.1f}%",
+        "annual_return": f"{annual_return:.1f}%",
+        "max_drawdown": f"{max_drawdown:.1f}%",
+        "number_of_trades": f"{number_of_trades:,}",
+        "win_trades_pct": f"{win_trades_pct:.1f}%",
+        "start_date": str(start_date),
+        "last_update": str(last_date),
+    }, indent=2) + "\n",
+    encoding="utf-8",
+)
