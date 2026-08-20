@@ -10,7 +10,7 @@ $momoSpRoot = "C:\junk\stocks\MomoSp\pit_version"
 $momoSpUpdate = Join-Path $momoSpRoot "update_v2a_live.py"
 $momoSpOutput = Join-Path $momoSpRoot "output_pit_r1000_5b_latest"
 $momoSpAlert = Join-Path $momoSpRoot "output_pit_v2a_live\latest_signal.json"
-$webRoot = "C:\junk\stocks\Web"
+$webRoot = Split-Path -Parent $PSScriptRoot
 $momoSpGenerator = Join-Path $webRoot "generate_momentum_stocks_page.py"
 $python = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
 $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
@@ -75,7 +75,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $inflationRoot "output\$name") -Destination (Join-Path $assetRoot $name) -Force
     }
 
-    & $git -c "safe.directory=C:/junk/stocks/Web" -C $webRoot diff --quiet -- inflation-compass
+    & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot diff --quiet -- inflation-compass
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Momentum ETF2 is current; no site assets changed."
     }
@@ -99,15 +99,15 @@ try {
     }
     finally { Pop-Location }
 
-    & $git -c "safe.directory=C:/junk/stocks/Web" -C $webRoot diff --quiet -- inflation-compass momentum-stocks.html
+    & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot diff --quiet -- inflation-compass momentum-stocks.html
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Momentum ETF2 and Momentum SP are current; no site changes to publish."
     }
     elseif ($LASTEXITCODE -eq 1 -and -not $NoPublish) {
-        & $git -c "safe.directory=C:/junk/stocks/Web" -C $webRoot add -- inflation-compass momentum-stocks.html
-        & $git -c "safe.directory=C:/junk/stocks/Web" -C $webRoot commit -m "Refresh Momentum ETF2 and Momentum Stocks results"
+        & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot add -- inflation-compass momentum-stocks.html
+        & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot commit -m "Refresh Momentum ETF2 and Momentum Stocks results"
         if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2/Momentum SP commit failed." }
-        & $git -c "safe.directory=C:/junk/stocks/Web" -C $webRoot push origin HEAD:main
+        & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot push origin HEAD:main
         if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2/Momentum SP publish failed." }
         Write-Host "Momentum ETF2 and Momentum SP published; Vercel production deployment triggered."
     }

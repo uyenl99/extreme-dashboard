@@ -1,13 +1,23 @@
 $ErrorActionPreference = "Stop"
 
 $taskName = "Extreme Dashboard - Sequential Strategy Updates"
-$updateScript = "C:\junk\stocks\Web\scripts\update_all_strategies_sequentially.ps1"
+$git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
+$automationCheckout = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\sequential-dashboard"
+$updateScript = Join-Path $automationCheckout "scripts\update_all_strategies_sequentially.ps1"
 $retiredTasks = @(
     "Extreme Dashboard - Mean Reversion 5x5 Backtest",
     "Extreme Dashboard - Momentum Weekday Update",
     "Extreme Dashboard - Open Extreme OS Preview PR"
 )
 
+if (-not (Test-Path -LiteralPath (Join-Path $automationCheckout ".git"))) {
+    & $git clone "https://github.com/uyenl99/extreme-dashboard.git" $automationCheckout
+    if ($LASTEXITCODE -ne 0) { throw "Could not create the clean sequential automation checkout." }
+}
+& $git -C $automationCheckout fetch origin main
+if ($LASTEXITCODE -ne 0) { throw "Could not refresh the sequential automation checkout." }
+& $git -C $automationCheckout checkout -B main origin/main
+if ($LASTEXITCODE -ne 0) { throw "Could not synchronize the sequential automation checkout." }
 if (-not (Test-Path -LiteralPath $updateScript)) { throw "Update script not found: $updateScript" }
 
 $action = New-ScheduledTaskAction -Execute "powershell.exe" `
