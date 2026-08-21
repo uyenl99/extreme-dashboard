@@ -242,6 +242,68 @@ def read_optional_csv(path):
         return pd.DataFrame()
 
 
+def build_moo_order_tables(trades, total_equity):
+    data = trades.copy()
+    data["entry_date"] = pd.to_datetime(data["entry_date"], errors="coerce")
+    data["exit_date"] = pd.to_datetime(data["exit_date"], errors="coerce")
+    closed = data["status"].fillna("").astype(str).str.lower().eq("closed")
+    latest_dates = [data["entry_date"].max(), data.loc[closed, "exit_date"].max()]
+    latest_dates = [date for date in latest_dates if pd.notna(date)]
+    execution_date = max(latest_dates) if latest_dates else pd.Timestamp.today().normalize()
+    entries = data[data["entry_date"].eq(execution_date)]
+    exits = data[closed & data["exit_date"].eq(execution_date)]
+
+    order_rows = []
+    for row in exits.itertuples(index=False):
+        side = str(row.side).title()
+        order_rows.append(
+            f"<tr><td>Exit</td><td>{html.escape(str(row.ticker))}</td>"
+            f'<td><span class="side {side.lower()}">{side}</span></td>'
+            f"<td>${float(row.entry_notional):,.0f}</td><td>{float(row.shares):,.2f}</td>"
+            f"<td>${float(row.exit_price):,.2f}</td></tr>"
+        )
+    for row in entries.itertuples(index=False):
+        side = str(row.side).title()
+        action = "Buy" if side.lower() == "long" else "Sell Short"
+        order_rows.append(
+            f"<tr><td>{action}</td><td>{html.escape(str(row.ticker))}</td>"
+            f'<td><span class="side {side.lower()}">{side}</span></td>'
+            f"<td>${float(row.entry_notional):,.0f}</td><td>{float(row.shares):,.2f}</td>"
+            f"<td>${float(row.entry_price):,.2f}</td></tr>"
+        )
+    if not order_rows:
+        order_rows.append('<tr><td colspan="6" class="muted">None - no MOO orders on the latest execution date.</td></tr>')
+    orders = (
+        f'<p class="subtle">Latest execution date: {execution_date:%Y-%m-%d}. Signals use completed daily bars and orders fill at the next market open.</p>'
+        '<div class="table-wrap"><table><thead><tr><th>Action</th><th>Ticker</th>'
+        '<th>Direction</th><th>Position Value</th><th>Shares</th>'
+        f'<th>MOO Fill Price</th></tr></thead><tbody>{"".join(order_rows)}</tbody></table></div>'
+    )
+
+    position_rows = []
+    holdings = data[~closed].sort_values(["side", "entry_date", "ticker"])
+    for row in holdings.itertuples(index=False):
+        side = str(row.side).title()
+        position_value = abs(float(row.entry_notional))
+        weight = position_value / total_equity if total_equity else 0.0
+        position_rows.append(
+            f"<tr><td>{html.escape(str(row.ticker))}</td>"
+            f'<td><span class="side {side.lower()}">{side}</span></td>'
+            f"<td>{row.entry_date:%Y-%m-%d}</td><td>{float(row.shares):,.2f}</td>"
+            f"<td>${float(row.entry_price):,.2f}</td><td>${position_value:,.0f}</td>"
+            f"<td>{weight * 100:.2f}%</td></tr>"
+        )
+    if not position_rows:
+        position_rows.append('<tr><td colspan="7" class="muted">No open positions.</td></tr>')
+    positions = (
+        f'<p class="subtle">Total strategy equity: ${total_equity:,.0f}</p>'
+        '<div class="table-wrap"><table><thead><tr><th>Ticker</th><th>Direction</th>'
+        '<th>Entry Date</th><th>Shares</th><th>Entry Price</th><th>Entry Position Value</th>'
+        f'<th>Position Size (% Equity)</th></tr></thead><tbody>{"".join(position_rows)}</tbody></table></div>'
+    )
+    return orders, positions
+
+
 def build_portfolio_tables(alert_source, signal_date, total_equity):
     date_tag = signal_date.strftime("%Y%m%d")
     entries = read_optional_csv(alert_source / f"trade_entries_{date_tag}.csv")
@@ -364,19 +426,18 @@ def update_strategy_card(path, summary):
 def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, alert_source, audience="public"):
     generated_at = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M %p %Z")
     if audience == "member":
-        alert_table, portfolio_changes, latest_positions = build_alert_table(
-            daily_trades, alert_source, float(equity.iloc[-1]["equity"])
+        moo_orders, latest_positions = build_moo_order_tables(
+            trades, float(equity.iloc[-1]["equity"])
         )
         protected_sections = (
-            f'<section class="panel"><h2>Latest Alert</h2>{alert_table}</section>'
-            f'<section class="panel"><h2>Actionable Portfolio Changes</h2>{portfolio_changes}</section>'
-            f'<section class="panel"><h2>Latest Positions</h2>{latest_positions}</section>'
+            f'<section class="panel"><h2>Latest MOO Orders</h2>{moo_orders}</section>'
+            f'<section class="panel"><h2>Open Positions</h2>{latest_positions}</section>'
             f'<section class="panel"><h2>Latest 50 Trades</h2>{build_trade_table(trades)}</section>'
         )
     else:
         protected_sections = (
             '<section class="panel"><h2>Member Signals</h2>'
-            '<p class="subtle">Latest alerts, actionable portfolio changes, current positions, and recent trades are available to members.</p>'
+            '<p class="subtle">Latest MOO orders, current positions, and recent trades are available to members.</p>'
             '<p><a href="subscribe.html">View membership options</a></p></section>'
         )
     chart_html = build_chart(equity, benchmarks)
@@ -413,7 +474,7 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
 <body>
 <nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Members</a></div></nav>
 <main class="container">
-<section class="hero"><div class="eyebrow">Backtested long/short strategy</div><h1>Mean Reversion</h1><p>Systematic equity strategy seeking short-term price dislocations and subsequent reversion while managing long and short exposure.</p><p class="subtle">Backtest period: {summary.start_date} through {summary.end_date} · Starting equity: ${equity.iloc[0]['equity']:,.0f}</p><p class="subtle">Dashboard updated: {generated_at}</p></section>
+<section class="hero"><div class="eyebrow">Next-day MOO long/short strategy</div><h1>Mean Reversion</h1><p>Systematic equity strategy seeking short-term price dislocations and subsequent reversion while managing long and short exposure. Signals use completed daily bars and simulated entries and exits fill at the next market open.</p><p class="subtle">Backtest period: {summary.start_date} through {summary.end_date} · Starting equity: ${equity.iloc[0]['equity']:,.0f}</p><p class="subtle">Dashboard updated: {generated_at}</p></section>
 <section class="metrics">{metric_html}</section>
 {protected_sections if audience == "member" else ""}
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Select SPY, QQQ, or VOO in the legend to add benchmark comparisons.</p><div class="chart">{chart_html}</div></section>
@@ -435,9 +496,8 @@ def main():
     )
     if args.audience == "public":
         forbidden = (
-            "<h2>Latest Alert</h2>",
-            "<h2>Actionable Portfolio Changes</h2>",
-            "<h2>Latest Positions</h2>",
+            "<h2>Latest MOO Orders</h2>",
+            "<h2>Open Positions</h2>",
             "<h2>Latest 50 Trades</h2>",
         )
         leaked = [item for item in forbidden if item in page]

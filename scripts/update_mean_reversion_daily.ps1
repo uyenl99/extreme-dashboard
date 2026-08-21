@@ -1,6 +1,4 @@
 param(
-    [ValidateSet("Alerts", "Backtest")]
-    [string]$Mode = "Alerts",
     [switch]$NoPublish,
     [string]$TargetCheckout = ""
 )
@@ -8,8 +6,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $revMurphyRoot = "C:\junk\stocks\RevMurphy"
-$backtestOutput = Join-Path $revMurphyRoot "output_long_short_5x5"
-$alertOutput = Join-Path $revMurphyRoot "output_live_alerts_5x5"
+$backtestOutput = Join-Path $revMurphyRoot "output_long_short_5x5_next_open"
 $automationRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
 $checkout = if ($TargetCheckout) { $TargetCheckout } else { Join-Path $automationRoot "extreme-dashboard" }
 $logDirectory = Join-Path $automationRoot "logs"
@@ -18,7 +15,7 @@ $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\
 $gh = "C:\Program Files\GitHub CLI\gh.exe"
 $previewBranch = "automation/mean-reversion-daily-preview"
 $today = Get-Date -Format "yyyy-MM-dd"
-$modeTag = $Mode.ToLowerInvariant()
+$modeTag = "moo-backtest"
 $Publish = -not $NoPublish
 $log = Join-Path $logDirectory "mean-reversion-$modeTag-$today.log"
 $commandLog = Join-Path $logDirectory "mean-reversion-$modeTag-$today-commands.log"
@@ -65,22 +62,16 @@ try {
 
     Push-Location $revMurphyRoot
     try {
-        if ($Mode -eq "Alerts") {
-            & $python "live_alerts_optimized.py" --minute-workers 4 --mode "long_short" --date $today --output-dir $alertOutput --portfolio-trades (Join-Path $backtestOutput "trades.csv") --refresh --cutoff "15:30" --max-tickers 0 --long-positions 5 --short-positions 5 2>&1 | Tee-Object -FilePath $commandLog -Append
-            if ($LASTEXITCODE -ne 0) { throw "Mean Reversion live-alert refresh failed." }
-        }
-        else {
-            & $python "main_long_short.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0 --long-positions 5 --short-positions 5 2>&1 | Tee-Object -FilePath $commandLog -Append
-            if ($LASTEXITCODE -ne 0) { throw "Mean Reversion 5x5 backtest refresh failed." }
-        }
+        & $python "main_long_short_next_open.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0 --long-positions 5 --short-positions 5 2>&1 | Tee-Object -FilePath $commandLog -Append
+        if ($LASTEXITCODE -ne 0) { throw "Mean Reversion next-day MOO 5x5 backtest refresh failed." }
     }
     finally { Pop-Location }
 
     Push-Location $checkout
     try {
-        & $python "generate_mean_reversion_page.py" --source $backtestOutput --alert-source $alertOutput --output "mean-reversion.html" --audience public 2>&1 | Tee-Object -FilePath $commandLog -Append
+        & $python "generate_mean_reversion_page.py" --source $backtestOutput --output "mean-reversion.html" --audience public 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion public page generation failed." }
-        & $python "generate_mean_reversion_page.py" --source $backtestOutput --alert-source $alertOutput --output $privateMeanReversionPage --audience member 2>&1 | Tee-Object -FilePath $commandLog -Append
+        & $python "generate_mean_reversion_page.py" --source $backtestOutput --output $privateMeanReversionPage --audience member 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion member page generation failed." }
         Write-Output "Private Mean Reversion member page: $privateMeanReversionPage"
 
@@ -98,7 +89,7 @@ try {
 
         & $git config user.name "Extreme Dashboard Automation"
         & $git config user.email "uyenl99@users.noreply.github.com"
-        & $git commit -m "Update Mean Reversion $modeTag $today"
+        & $git commit -m "Update Mean Reversion MOO backtest $today"
         if ($LASTEXITCODE -ne 0) { throw "Automated commit failed." }
 
         $unexpectedChanges = & $git status --porcelain
