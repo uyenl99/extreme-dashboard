@@ -69,8 +69,8 @@ try {
         & $git -C $webRoot checkout -B $previewBranch "origin/$previewBranch"
         if ($LASTEXITCODE -ne 0) { throw "Could not check out the shared preview branch." }
     }
-    Invoke-Stage "Mean Reversion 5x5 backtest" {
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $meanReversionUpdate -Mode Backtest -NoPublish -TargetCheckout $webRoot
+    Invoke-Stage "Mean Reversion 5x5 next-day MOO backtest" {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $meanReversionUpdate -NoPublish -TargetCheckout $webRoot
     }
     Invoke-Stage "Momentum ETF1, ETF2, and SP" {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $momentumUpdate -NoPublish
@@ -93,7 +93,7 @@ try {
 
     $prUrl = $null
     for ($attempt = 1; $attempt -le 12 -and -not $prUrl; $attempt++) {
-        $created = & $gh pr create --repo $repo --draft --base main --head $previewBranch --title "Daily strategy batch preview" --body "All five daily jobs completed: Collective2, Mean Reversion 5x5 backtest, Momentum ETF1, Momentum ETF2, and Momentum SP. Review the Vercel preview before merging." 2>&1
+        $created = & $gh pr create --repo $repo --draft --base main --head $previewBranch --title "Daily strategy batch preview" --body "All five daily jobs completed: Collective2, Mean Reversion 5x5 next-day MOO backtest, Momentum ETF1, Momentum ETF2, and Momentum SP. Review the Vercel preview before merging." 2>&1
         if ($LASTEXITCODE -eq 0) { $prUrl = "$created".Trim() } else { Start-Sleep -Seconds 10 }
     }
     if (-not $prUrl) { throw "All jobs finished, but the shared PR could not be created." }
