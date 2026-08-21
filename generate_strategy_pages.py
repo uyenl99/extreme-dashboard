@@ -437,6 +437,8 @@ def generate_public_page(
 <div class="performance-stat"><div class="performance-label">Win Trades %</div><div class="performance-value">{summary.get('win_trades_pct', 'N/A')}</div></div>
 </div>
 
+<iframe class="performance-details" src="performance-details.html" title="Extreme OS monthly returns and equity curve" loading="lazy"></iframe>
+
 </div>
 """
 
