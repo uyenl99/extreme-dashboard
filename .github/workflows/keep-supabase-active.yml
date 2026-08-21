@@ -1,0 +1,34 @@
+name: Keep Supabase Active
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run every three days, well inside Supabase's seven-day inactivity window.
+    - cron: "17 16 */3 * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-supabase-active
+  cancel-in-progress: true
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Make a read-only Supabase database API request
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          test -n "$SUPABASE_URL" || { echo "Missing SUPABASE_URL repository secret."; exit 1; }
+          test -n "$SUPABASE_ANON_KEY" || { echo "Missing SUPABASE_ANON_KEY repository secret."; exit 1; }
+          curl --fail-with-body --silent --show-error \
+            --retry 3 \
+            --retry-all-errors \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/" \
+            > /dev/null
