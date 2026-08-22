@@ -11,6 +11,7 @@ $momoSpUpdate = Join-Path $momoSpRoot "update_v2a_live.py"
 $momoSpOutput = Join-Path $momoSpRoot "output_pit_r1000_5b_latest"
 $momoSpAlert = Join-Path $momoSpRoot "output_pit_v2a_live\latest_signal.json"
 $webRoot = Split-Path -Parent $PSScriptRoot
+$momoSpPreview = Join-Path $webRoot "generate_momentum_stocks_preview.py"
 $momoSpGenerator = Join-Path $webRoot "generate_momentum_stocks_page.py"
 $momentumEtf2Generator = Join-Path $webRoot "generate_momentum_etf2_page.py"
 $python = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
@@ -33,6 +34,7 @@ try {
         $git,
         (Join-Path $inflationRoot "inflation_compass.py"),
         $momoSpUpdate,
+        $momoSpPreview,
         $momoSpGenerator,
         $momentumEtf2Generator
     )) {
@@ -72,6 +74,9 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2 refresh failed." }
     }
     finally { Pop-Location }
+
+    & $python $momoSpPreview --strategy-root $momoSpRoot
+    if ($LASTEXITCODE -ne 0) { throw "Momentum SP preview signal failed." }
 
     & $python $momentumEtf2Generator `
         --source (Join-Path $inflationRoot "output") `

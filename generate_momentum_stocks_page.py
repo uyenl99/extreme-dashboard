@@ -58,13 +58,23 @@ def load_alert(path):
         raise FileNotFoundError(f"Missing MOMO-SP v2a alert file: {path}")
     signal = json.loads(path.read_text(encoding="utf-8"))
     holdings = signal.get("holdings") or [signal.get("defensive_holding")]
-    return {
+    alert = {
         "Signal": signal.get("signal_date", "—"),
         "Regime": signal.get("regime", "—"),
         "Holdings": ", ".join(item for item in holdings if item),
         "Execution": signal.get("execution_date", "—"),
         "VIX 30d MA": f'{signal["vix_30d_average"]:.2f}',
         "SPY 10d RV": f'{signal["spy_10d_realized_vol"]:.2f}',
+    }
+    if signal.get("preliminary"):
+        alert["Status"] = f'Preliminary through {signal.get("latest_price_date", "—")}'
+    current = signal.get("current_allocation") or {}
+    current_holdings = current.get("holdings") or []
+    return alert, {
+        "Signal": current.get("signal_date", "—"),
+        "Regime": current.get("regime", "—"),
+        "Holdings": ", ".join(item for item in current_holdings if item),
+        "Execution": current.get("execution_date", "—"),
     }
 
 
@@ -85,7 +95,7 @@ def load_results(source, alert_source):
         parse_dates=["entry_date", "signal_date", "exit_date"],
     )
     monthly = pd.read_csv(source / "monthly_return_table.csv")
-    alert = load_alert(alert_source)
+    alert, current = load_alert(alert_source)
 
     for frame, column, label in (
         (daily, "date", "daily_equity"),
@@ -94,7 +104,7 @@ def load_results(source, alert_source):
         if frame[column].isna().any() or not frame[column].is_monotonic_increasing:
             raise ValueError(f"{label}.csv dates must be valid and sorted")
 
-    return summary.iloc[0], daily, allocations, monthly, alert
+    return summary.iloc[0], daily, allocations, monthly, alert, current
 
 
 def build_chart(daily):
@@ -163,7 +173,7 @@ def build_allocation_table(allocations, limit=50):
     )
 
 
-def render_page(summary, daily, allocations, monthly, alert, audience="public"):
+def render_page(summary, daily, allocations, monthly, alert, current, audience="public"):
     total_return = summary.final_equity / INITIAL_EQUITY - 1
     sharpe = summary.sharpe_0rf
     max_drawdown = summary.daily_max_drawdown
@@ -185,7 +195,11 @@ def render_page(summary, daily, allocations, monthly, alert, audience="public"):
     chart_html = build_chart(daily)
     if audience == "member":
         protected_sections = (
-            f'<section class="panel"><h2>Latest Alert</h2>{build_alert_table(alert)}</section>'
+            f'<section class="panel"><h2>Current Month Holdings</h2>{build_alert_table(current)}</section>'
+            '<section class="panel"><h2>Latest Alert</h2>'
+            f'<p class="subtle">{html.escape(alert.get("Status", "Preliminary"))}. '
+            'The current-month signal may change before execution.</p>'
+            f'{build_alert_table(alert)}</section>'
             f'<section class="panel"><h2>Recent Monthly Allocations</h2>{build_allocation_table(allocations)}</section>'
         )
     else:
@@ -222,12 +236,12 @@ def render_page(summary, daily, allocations, monthly, alert, audience="public"):
 
 def main():
     args = parse_args()
-    summary, daily, allocations, monthly, alert = load_results(
+    summary, daily, allocations, monthly, alert, current = load_results(
         args.source, args.alert_source
     )
-    page = render_page(summary, daily, allocations, monthly, alert, args.audience)
+    page = render_page(summary, daily, allocations, monthly, alert, current, args.audience)
     if args.audience == "public":
-        forbidden = ("<h2>Latest Alert</h2>", "<h2>Recent Monthly Allocations</h2>")
+        forbidden = ("<h2>Current Month Holdings</h2>", "<h2>Latest Alert</h2>", "<h2>Recent Monthly Allocations</h2>")
         leaked = [item for item in forbidden if item in page]
         if leaked:
             raise RuntimeError(f"Public Momentum Stocks page contains member-only content: {leaked}")
