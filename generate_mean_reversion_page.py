@@ -242,7 +242,7 @@ def read_optional_csv(path):
         return pd.DataFrame()
 
 
-def build_moo_order_tables(trades, total_equity):
+def build_moo_order_tables(trades, total_equity, results_through):
     data = trades.copy()
     data["entry_date"] = pd.to_datetime(data["entry_date"], errors="coerce")
     data["exit_date"] = pd.to_datetime(data["exit_date"], errors="coerce")
@@ -274,7 +274,7 @@ def build_moo_order_tables(trades, total_equity):
     if not order_rows:
         order_rows.append('<tr><td colspan="6" class="muted">None - no MOO orders on the latest execution date.</td></tr>')
     orders = (
-        f'<p class="subtle">Latest execution date: {execution_date:%Y-%m-%d}. Signals use completed daily bars and orders fill at the next market open.</p>'
+        f'<p class="subtle">Results through: {results_through:%Y-%m-%d} · Latest order execution date: {execution_date:%Y-%m-%d}. Signals use completed daily bars and orders fill at the next market open.</p>'
         '<div class="table-wrap"><table><thead><tr><th>Action</th><th>Ticker</th>'
         '<th>Direction</th><th>Position Value</th><th>Shares</th>'
         f'<th>MOO Fill Price</th></tr></thead><tbody>{"".join(order_rows)}</tbody></table></div>'
@@ -427,7 +427,7 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
     generated_at = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M %p %Z")
     if audience == "member":
         moo_orders, latest_positions = build_moo_order_tables(
-            trades, float(equity.iloc[-1]["equity"])
+            trades, float(equity.iloc[-1]["equity"]), equity.iloc[-1]["date"]
         )
         protected_sections = (
             f'<section class="panel"><h2>Latest MOO Orders</h2>{moo_orders}</section>'

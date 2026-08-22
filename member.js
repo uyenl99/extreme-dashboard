@@ -68,12 +68,14 @@
     show("strategy-directory", !showDetail);
     show("strategy-detail", showDetail);
     show("extreme-detail", strategy === "extreme-os");
-    show("generated-detail", showDetail && strategy !== "extreme-os");
     if (strategy === "extreme-os") render(data);
     if (showDetail && strategy !== "extreme-os") {
       const response = await api(`/api/member-page?strategy=${encodeURIComponent(strategy)}`);
       if (!response.ok) throw new Error("Member strategy page is unavailable.");
-      $("member-strategy-frame").srcdoc = await response.text();
+      const html = await response.text();
+      document.open();
+      document.write(html);
+      document.close();
     }
   }
 
