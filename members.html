@@ -49,20 +49,21 @@
       <div class="directory-heading"><div><span class="eyebrow">Member strategies</span><h2>Choose a strategy</h2><p>Open a strategy to see its latest signal, current holdings, and trading history.</p></div><div class="as-of-card"><span>Current date</span><strong id="current-date">—</strong></div></div>
       <div class="strategy-cards">
         <a class="strategy-card featured" href="members.html?strategy=extreme-os"><span class="card-status"><i></i> Live strategy</span><h3>Extreme OS</h3><p>Current alerts and positions from Collective2, plus the complete closed-trade history.</p><span class="card-link">Open full strategy →</span></a>
-        <a class="strategy-card" href="momentum.html"><span class="card-status">Monthly rotation</span><h3>Momentum ETF1</h3><p>Latest allocation alert, current ETF holdings, and the complete monthly allocation record.</p><span class="card-link">Open full strategy →</span></a>
-        <a class="strategy-card" href="momentum2.html"><span class="card-status">Monthly rotation</span><h3>Momentum ETF2</h3><p>Current allocation and regime, signal details, and historical allocation changes.</p><span class="card-link">Open full strategy →</span></a>
-        <a class="strategy-card" href="momentum-stocks.html"><span class="card-status">Monthly rotation</span><h3>Momentum Stocks</h3><p>Latest stock alert, current portfolio holdings, and historical monthly allocations.</p><span class="card-link">Open full strategy →</span></a>
-        <a class="strategy-card" href="mean-reversion.html"><span class="card-status">Daily signals</span><h3>Mean Reversion</h3><p>Latest MOO orders, open long and short positions, and detailed trade history.</p><span class="card-link">Open full strategy →</span></a>
+        <a class="strategy-card" href="members.html?strategy=momentum"><span class="card-status">Monthly rotation</span><h3>Momentum ETF1</h3><p>Latest allocation alert, current ETF holdings, and the complete monthly allocation record.</p><span class="card-link">Open full strategy →</span></a>
+        <a class="strategy-card" href="members.html?strategy=momentum2"><span class="card-status">Monthly rotation</span><h3>Momentum ETF2</h3><p>Current allocation and regime, signal details, and historical allocation changes.</p><span class="card-link">Open full strategy →</span></a>
+        <a class="strategy-card" href="members.html?strategy=momentum-stocks"><span class="card-status">Monthly rotation</span><h3>Momentum Stocks</h3><p>Latest stock alert, current portfolio holdings, and historical monthly allocations.</p><span class="card-link">Open full strategy →</span></a>
+        <a class="strategy-card" href="members.html?strategy=mean-reversion"><span class="card-status">Daily signals</span><h3>Mean Reversion</h3><p>Latest MOO orders, open long and short positions, and detailed trade history.</p><span class="card-link">Open full strategy →</span></a>
       </div>
     </section>
     <section id="strategy-detail" hidden>
       <div class="detail-toolbar"><a class="back-link" href="members.html">← All member strategies</a><span id="detail-current-date"></span></div>
-      <div class="detail-title"><div><span class="eyebrow">Live member strategy</span><h2>Extreme OS</h2><p>Complete subscriber view with today’s alerts, current positions, and all historical trades.</p></div></div>
+      <div id="extreme-detail"><div class="detail-title"><div><span class="eyebrow">Live member strategy</span><h2>Extreme OS</h2><p>Complete subscriber view with today’s alerts, current positions, and all historical trades.</p></div></div>
       <div class="status-row"><div><span class="live-dot"></span>Live member data</div><div id="updated-at"></div></div>
       <div class="metrics"><article><span>Open positions</span><strong id="position-count">—</strong></article><article><span>Today’s alerts</span><strong id="alert-count">—</strong></article><article><span>Historical trades</span><strong id="trade-count">—</strong></article></div>
       <section class="panel"><h2>Today’s alerts</h2><div id="alerts-table" class="table-wrap"></div></section>
       <section class="panel"><h2>Current positions</h2><div id="positions-table" class="table-wrap"></div></section>
-      <section class="panel"><h2>Complete historical trades</h2><div id="trades-table" class="table-wrap"></div></section>
+      <section class="panel"><h2>Complete historical trades</h2><div id="trades-table" class="table-wrap"></div></section></div>
+      <div id="generated-detail" hidden><iframe id="member-strategy-frame" title="Member strategy details" style="display:block;width:100%;min-height:1800px;border:0;border-radius:14px;background:#fff"></iframe></div>
     </section>
   </section>
   <section id="loading" class="panel"><p>Checking member access…</p></section>
