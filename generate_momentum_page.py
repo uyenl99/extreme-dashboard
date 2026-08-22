@@ -5,6 +5,8 @@ from pathlib import Path
 import pandas as pd
 import plotly.graph_objects as go
 
+from strategy_faq import FAQ_CSS, render_faq
+
 
 REQUIRED_FILES = (
     "summary.csv",
@@ -259,12 +261,12 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None, audie
 <title>Momentum ETFs Backtest - Extreme Trading Inc.</title>
 <style>
 *{{box-sizing:border-box}} body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}} nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}} nav a{{color:white;text-decoration:none;margin-left:20px}} .container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}} .hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}} .eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}} h1{{margin:8px 0 10px}} h2{{margin-top:0}} .subtle,.muted{{color:#94a3b8}} .metrics{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:22px 0}} .metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}} .metric-label{{color:#94a3b8;font-size:13px}} .metric-value{{font-size:24px;font-weight:700;margin-top:6px}} .chart{{overflow:hidden}} .table-wrap{{overflow-x:auto}} table{{width:100%;border-collapse:collapse;background:#111827}} th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:12px;white-space:nowrap}} th{{background:#1f2937;color:white}} th:first-child,td:first-child{{text-align:left}} .positive{{color:#22c55e;font-weight:600}} .negative{{color:#f87171;font-weight:600}} .compact{{max-width:420px}} .regime{{font-weight:700}} .risk-on{{color:#60a5fa}} .risk-off{{color:#f59e0b}} .disclaimer{{font-size:13px;line-height:1.6;color:#94a3b8}} footer{{text-align:center;padding:30px;color:#94a3b8}} @media(max-width:800px){{nav{{align-items:flex-start;padding:16px;gap:12px}}nav div:last-child{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}}nav a{{margin-left:8px;font-size:12px}}.metrics{{grid-template-columns:repeat(2,1fr)}}.container{{padding:20px 10px}}}} @media(max-width:480px){{.metrics{{grid-template-columns:1fr}}}}
-</style>
+{FAQ_CSS}</style>
 </head>
 <body>
 <nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a></div></nav>
 <main class="container">
-<section class="hero"><div class="eyebrow">Backtested ETF rotation strategy</div><h1>Momentum ETFs</h1><p>Dual-momentum rotation into the three strongest ETFs using 12-month momentum with a one-month skip and a volatility-based risk-off filter. Risk-off allocations move to SHY.</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: ${daily.iloc[0]["Equity"]:,.0f}</p></section>
+<section class="hero"><div class="eyebrow">Backtested ETF rotation strategy</div><h1>Momentum ETFs</h1><p>Dual-momentum rotation into the three strongest ETFs using 12-month momentum with a one-month skip and a volatility-based risk-off filter. Risk-off allocations move to SHY.</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: ${daily.iloc[0]["Equity"]:,.0f}</p>{render_faq("momentum", audience)}</section>
 <section class="metrics">{metric_html}</section>
 {member_sections if audience == "member" else ""}
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Dual Momentum compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
