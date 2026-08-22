@@ -155,3 +155,8 @@ try {
     Write-Host "Momentum ETF1, Momentum ETF2, and Momentum SP refreshed."
 }
 finally { Stop-Transcript }
+
+# Native commands such as `git diff --quiet` use exit code 1 to mean
+# "changes found." That result is handled above, but PowerShell otherwise
+# returns the stale native exit code to the parent sequential scheduler.
+exit 0
