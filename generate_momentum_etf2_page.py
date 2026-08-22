@@ -38,11 +38,55 @@ def table(frame, percent_columns=()):
     return f'<div class="table-wrap"><table><thead><tr>{headers}</tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
 
 
+def allocation_history(monthly_backtest, limit=50):
+    data = monthly_backtest.copy()
+    data.index = pd.PeriodIndex(data.index.astype(str), freq="M")
+    display = pd.DataFrame(index=data.index)
+    display["Month"] = data.index.astype(str)
+    display["Holdings"] = data["held"]
+    display["Regime"] = data["signal_regime"].shift(1).str.replace("_", " ").str.title()
+    display["Return"] = data["strategy_return"]
+    display["SPY"] = data["spy_return"]
+    return display.sort_index(ascending=False).head(limit).reset_index(drop=True)
+
+
+def current_month_panel(monthly_backtest, daily):
+    latest_day = pd.to_datetime(daily.index).max()
+    current_period = latest_day.to_period("M")
+    row = monthly_backtest.loc[str(current_period)]
+    holding = str(row["held"])
+    regime = str(monthly_backtest["signal_regime"].shift(1).loc[str(current_period)])
+    month_return = float(row["strategy_return"])
+    return_class = "positive" if month_return > 0 else "negative" if month_return < 0 else "muted"
+    return (
+        '<section class="panel" id="current-month"><h2>Current Partial Month</h2>'
+        f'<p class="subtle">Mark-to-market through {latest_day:%Y-%m-%d}; this is an incomplete-month estimate.</p>'
+        '<div class="metrics">'
+        f'<div class="metric"><div class="metric-label">Current Month Return</div><div class="metric-value {return_class}">{pct(month_return)}</div></div>'
+        f'<div class="metric"><div class="metric-label">Holding</div><div class="metric-value positive">{html.escape(holding)}</div></div>'
+        f'<div class="metric"><div class="metric-label">Regime</div><div class="metric-value">{html.escape(regime.upper())}</div></div>'
+        f'<div class="metric"><div class="metric-label">Effective Month</div><div class="metric-value">{current_period}</div></div>'
+        '</div></section>'
+    )
+
+
+def latest_alert_table(alert):
+    frame = pd.DataFrame([{
+        "Signal": alert["signal_month_end"],
+        "Regime": str(alert["regime"]).replace("_", " ").upper(),
+        "Holding": alert["next_holding"],
+        "Execution": f'{alert["effective_month"]} open',
+        "Changed": "Yes" if alert["allocation_changed"] else "No",
+    }])
+    return table(frame)
+
+
 def render(source, audience, chart_src):
     summary = pd.read_csv(source / "summary.csv", index_col=0)
     monthly = pd.read_csv(source / "monthly_pnl_by_year.csv").sort_values("Year", ascending=False)
+    monthly_backtest = pd.read_csv(source / "monthly_backtest.csv", index_col=0)
+    daily = pd.read_csv(source / "daily_drawdown.csv", index_col=0, parse_dates=True)
     alert = json.loads((source / "latest_alert.json").read_text(encoding="utf-8"))
-    trades = pd.read_csv(source / "last_50_trades.csv")
     strategy = summary.iloc[:, 0]
     spy = summary.iloc[:, 1]
     metrics = (
@@ -58,14 +102,14 @@ def render(source, audience, chart_src):
         for label, value in metrics
     )
     if audience == "member":
+        allocations = allocation_history(monthly_backtest)
         protected = (
-            '<section class="panel"><h2>Current Allocation</h2><div class="metrics">'
-            f'<div class="metric"><div class="metric-label">Holding</div><div class="metric-value positive">{html.escape(str(alert["next_holding"]))}</div></div>'
-            f'<div class="metric"><div class="metric-label">Regime</div><div class="metric-value">{html.escape(str(alert["regime"]).upper())}</div></div>'
-            f'<div class="metric"><div class="metric-label">Effective Month</div><div class="metric-value">{html.escape(str(alert["effective_month"]))}</div></div>'
-            '</div></section>'
-            '<section class="panel"><h2>Recent Allocations</h2>'
-            + table(trades, ("Month Return", "SPY Return"))
+            current_month_panel(monthly_backtest, daily)
+            + '<section class="panel"><h2>Latest Alert</h2>'
+            + latest_alert_table(alert)
+            + '</section>'
+            + '<section class="panel"><h2>Recent Monthly Allocations</h2>'
+            + table(allocations, ("Return", "SPY"))
             + '</section>'
         )
     else:
@@ -82,7 +126,7 @@ def render(source, audience, chart_src):
 <section class="panel"><h2>Monthly Returns</h2>{table(monthly, tuple(monthly.columns[1:]))}</section>
 </main><footer>&copy; 2026 Extreme Trading Inc.</footer></body></html>"""
     if audience == "public":
-        forbidden = ("<h2>Current Allocation</h2>", "<h2>Recent Allocations</h2>")
+        forbidden = ("id=\"current-month\"", "<h2>Latest Alert</h2>", "<h2>Recent Monthly Allocations</h2>")
         leaked = [item for item in forbidden if item and item in page]
         if leaked:
             raise RuntimeError(f"Public Momentum ETF2 page contains member-only content: {leaked}")

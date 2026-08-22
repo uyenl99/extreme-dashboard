@@ -16,17 +16,15 @@ $momentumEtf2Generator = Join-Path $webRoot "generate_momentum_etf2_page.py"
 $python = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
 $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
 $logRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\logs"
-$privateMemberRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\member-pages"
-$privateMomentumPage = Join-Path $privateMemberRoot "momentum-members.html"
-$privateMomentumEtf2Page = Join-Path $privateMemberRoot "momentum2-members.html"
-$privateMomentumStocksPage = Join-Path $privateMemberRoot "momentum-stocks-members.html"
-$privateAssetRoot = Join-Path $privateMemberRoot "assets"
+$privateMemberRoot = Join-Path $webRoot "api\_member-content"
+$privateMomentumPage = Join-Path $privateMemberRoot "momentum.html"
+$privateMomentumEtf2Page = Join-Path $privateMemberRoot "momentum2.html"
+$privateMomentumStocksPage = Join-Path $privateMemberRoot "momentum-stocks.html"
 $today = Get-Date -Format "yyyy-MM-dd"
 $log = Join-Path $logRoot "momentum-weekday-$today.log"
 
 New-Item -ItemType Directory -Force $logRoot | Out-Null
 New-Item -ItemType Directory -Force $privateMemberRoot | Out-Null
-New-Item -ItemType Directory -Force $privateAssetRoot | Out-Null
 Start-Transcript -Path $log -Append
 try {
     foreach ($path in @(
@@ -81,13 +79,11 @@ try {
         --audience public `
         --chart-src "inflation-compass/wealth.png"
     if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2 public page generation failed." }
-    Copy-Item -LiteralPath (Join-Path $inflationRoot "output\wealth.png") `
-        -Destination (Join-Path $privateAssetRoot "momentum-etf2-wealth.png") -Force
     & $python $momentumEtf2Generator `
         --source (Join-Path $inflationRoot "output") `
         --output $privateMomentumEtf2Page `
         --audience member `
-        --chart-src "assets/momentum-etf2-wealth.png"
+        --chart-src "inflation-compass/wealth.png"
     if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2 member page generation failed." }
     Write-Host "Private Momentum ETF2 member page: $privateMomentumEtf2Page"
 
@@ -135,12 +131,12 @@ try {
     }
     finally { Pop-Location }
 
-    & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot diff --quiet -- inflation-compass momentum2.html momentum-stocks.html
+    & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot diff --quiet -- inflation-compass momentum2.html momentum-stocks.html api/_member-content
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Momentum ETF2 and Momentum SP are current; no site changes to publish."
     }
     elseif ($LASTEXITCODE -eq 1 -and -not $NoPublish) {
-        & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot add -- inflation-compass momentum2.html momentum-stocks.html
+        & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot add -- inflation-compass momentum2.html momentum-stocks.html api/_member-content
         & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot commit -m "Refresh Momentum ETF2 and Momentum Stocks results"
         if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2/Momentum SP commit failed." }
         & $git -c "safe.directory=$($webRoot.Replace('\', '/'))" -C $webRoot push origin HEAD:main

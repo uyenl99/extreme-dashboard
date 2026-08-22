@@ -9,8 +9,9 @@ The Windows scheduled task **Extreme Dashboard - Momentum Weekday Update** runs 
 1. Runs `C:\junk\stocks\DualMom\update_momo5_daily.ps1` to refresh Momentum ETF1, regenerate `momentum.html`, commit changed results, and push `main`.
 2. Installs the pinned runtime requirements for `C:\junk\stocks\inflationcompass` when needed.
 3. Runs `inflation_compass.py` to refresh Momentum ETF2 from Yahoo and FRED.
-4. Copies the summary, current alert, wealth chart, monthly P&L, and last 50 allocation changes into `inflation-compass/`.
-5. Commits only changed Momentum ETF2 assets and pushes `main`, triggering Vercel production deployment.
+4. Regenerates the public and protected member pages, including the current partial month, latest alert, and every recent monthly allocation.
+5. Copies public summary, wealth chart, and monthly P&L assets into `inflation-compass/`.
+6. Commits the changed strategy pages and assets and pushes `main`, triggering Vercel production deployment.
 
 Logs are written to `%LOCALAPPDATA%\ExtremeDashboardAutomation\logs\momentum-weekday-YYYY-MM-DD.log`.
 
