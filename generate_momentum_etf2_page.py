@@ -1,6 +1,5 @@
 import argparse
 import html
-import json
 from pathlib import Path
 
 import pandas as pd
@@ -70,13 +69,20 @@ def current_month_panel(monthly_backtest, daily):
     )
 
 
-def latest_alert_table(alert):
+def latest_alert_table(monthly_backtest, daily):
+    latest_day = pd.to_datetime(daily.index).max()
+    signals = monthly_backtest.copy()
+    signals.index = pd.PeriodIndex(signals.index.astype(str), freq="M")
+    signal_month = latest_day.to_period("M")
+    row = signals.loc[signal_month]
+    previous_holding = signals["signal_holding"].shift(1).loc[signal_month]
     frame = pd.DataFrame([{
-        "Signal": alert["signal_month_end"],
-        "Regime": str(alert["regime"]).replace("_", " ").upper(),
-        "Holding": alert["next_holding"],
-        "Execution": f'{alert["effective_month"]} open',
-        "Changed": "Yes" if alert["allocation_changed"] else "No",
+        "Signal": str(signal_month),
+        "Regime": str(row["signal_regime"]).replace("_", " ").upper(),
+        "Holding": row["signal_holding"],
+        "Execution": f"{signal_month + 1} open",
+        "Changed": "Yes" if row["signal_holding"] != previous_holding else "No",
+        "Status": f"Preliminary through {latest_day:%Y-%m-%d}",
     }])
     return table(frame)
 
@@ -86,7 +92,6 @@ def render(source, audience, chart_src):
     monthly = pd.read_csv(source / "monthly_pnl_by_year.csv").sort_values("Year", ascending=False)
     monthly_backtest = pd.read_csv(source / "monthly_backtest.csv", index_col=0)
     daily = pd.read_csv(source / "daily_drawdown.csv", index_col=0, parse_dates=True)
-    alert = json.loads((source / "latest_alert.json").read_text(encoding="utf-8"))
     strategy = summary.iloc[:, 0]
     spy = summary.iloc[:, 1]
     metrics = (
@@ -106,7 +111,8 @@ def render(source, audience, chart_src):
         protected = (
             current_month_panel(monthly_backtest, daily)
             + '<section class="panel"><h2>Latest Alert</h2>'
-            + latest_alert_table(alert)
+            + '<p class="subtle">The current-month signal is preliminary until month end and may change before execution.</p>'
+            + latest_alert_table(monthly_backtest, daily)
             + '</section>'
             + '<section class="panel"><h2>Recent Monthly Allocations</h2>'
             + table(allocations, ("Return", "SPY"))
