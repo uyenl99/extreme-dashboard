@@ -1,3 +1,4 @@
 {
-  "outputDirectory": "."
+  "outputDirectory": ".",
+  "functions": { "api/member-page.js": { "includeFiles": "api/_member-content/**" } }
 }

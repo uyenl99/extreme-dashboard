@@ -59,14 +59,22 @@
     $("trades-table").innerHTML = table([{key:"closedAt",label:"Closed",render:date},{key:"symbol",label:"Symbol"},{key:"side",label:"Side",render:(v)=>String(v)==="1"?"Long":String(v)==="2"?"Short":escapeHtml(v)},{key:"quantity",label:"Quantity"},{key:"openPrice",label:"Open",render:money},{key:"closePrice",label:"Close",render:money},{key:"profitLoss",label:"P/L",render:(v)=>`<span class="${Number(v)>=0?"positive":"negative"}">${money(v)}</span>`}], data.trades);
   }
 
-  function renderMemberView(data) {
+  async function renderMemberView(data) {
     const today = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
     $("current-date").textContent = today;
     $("detail-current-date").textContent = `Current date: ${today}`;
-    const showDetail = new URLSearchParams(location.search).get("strategy") === "extreme-os";
+    const strategy = new URLSearchParams(location.search).get("strategy") || "";
+    const showDetail = Boolean(strategy);
     show("strategy-directory", !showDetail);
     show("strategy-detail", showDetail);
-    if (showDetail) render(data);
+    show("extreme-detail", strategy === "extreme-os");
+    show("generated-detail", showDetail && strategy !== "extreme-os");
+    if (strategy === "extreme-os") render(data);
+    if (showDetail && strategy !== "extreme-os") {
+      const response = await api(`/api/member-page?strategy=${encodeURIComponent(strategy)}`);
+      if (!response.ok) throw new Error("Member strategy page is unavailable.");
+      $("member-strategy-frame").srcdoc = await response.text();
+    }
   }
 
   async function loadDashboard() {
@@ -84,7 +92,7 @@
       return;
     }
     if (!response.ok) { show("auth-panel"); $("auth-message").textContent = "Member data is temporarily unavailable."; return; }
-    const data = await response.json(); renderMemberView(data); show("dashboard");
+    const data = await response.json(); await renderMemberView(data); show("dashboard");
   }
 
   $("login-form").addEventListener("submit", async (event) => {

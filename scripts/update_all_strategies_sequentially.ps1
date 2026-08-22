@@ -76,7 +76,22 @@ try {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $momentumUpdate -NoPublish
     }
 
-    & $git -C $webRoot add -- mean-reversion.html index.html momentum.html momentum2.html inflation-compass momentum-stocks.html
+    $generatedMemberRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\member-pages"
+    $memberContentRoot = Join-Path $webRoot "api\_member-content"
+    New-Item -ItemType Directory -Force $memberContentRoot | Out-Null
+    $memberPages = @{
+        "mean-reversion-members.html" = "mean-reversion.html"
+        "momentum-members.html" = "momentum.html"
+        "momentum2-members.html" = "momentum2.html"
+        "momentum-stocks-members.html" = "momentum-stocks.html"
+    }
+    foreach ($sourceName in $memberPages.Keys) {
+        $sourcePath = Join-Path $generatedMemberRoot $sourceName
+        if (-not (Test-Path -LiteralPath $sourcePath)) { throw "Generated member page not found: $sourcePath" }
+        Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $memberContentRoot $memberPages[$sourceName]) -Force
+    }
+
+    & $git -C $webRoot add -- mean-reversion.html index.html momentum.html momentum2.html inflation-compass momentum-stocks.html api/_member-content
     & $git -C $webRoot diff --cached --quiet
     if ($LASTEXITCODE -eq 1) {
         & $git -C $webRoot config user.name "Extreme Dashboard Automation"
