@@ -3,6 +3,8 @@ import json
 import pandas as pd
 from pathlib import Path
 
+from strategy_faq import FAQ_CSS, render_faq
+
 PUBLIC_DELAY_HOURS = 96
 PUBLIC_TRADE_LIMIT = 50
 
@@ -347,6 +349,8 @@ nav a {
 }
 """
 
+CSS += FAQ_CSS
+
 
 def page_template(title, body):
 
@@ -472,6 +476,8 @@ Current positions are sourced from Collective2 and updated daily.
 Trades are sourced from Collective2 and updated daily. Public trade details are shown after a 96-hour delay.
 </p>
 
+{render_faq("extreme-os", "public")}
+
 </div>
 
 {performance_html}
@@ -509,6 +515,8 @@ def generate_strategy_member_page(
 <div class="card">
 
 <h1>{title}</h1>
+
+{render_faq("extreme-os", "member")}
 
 </div>
 
