@@ -59,6 +59,16 @@
     $("trades-table").innerHTML = table([{key:"closedAt",label:"Closed",render:date},{key:"symbol",label:"Symbol"},{key:"side",label:"Side",render:(v)=>String(v)==="1"?"Long":String(v)==="2"?"Short":escapeHtml(v)},{key:"quantity",label:"Quantity"},{key:"openPrice",label:"Open",render:money},{key:"closePrice",label:"Close",render:money},{key:"profitLoss",label:"P/L",render:(v)=>`<span class="${Number(v)>=0?"positive":"negative"}">${money(v)}</span>`}], data.trades);
   }
 
+  function renderMemberView(data) {
+    const today = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+    $("current-date").textContent = today;
+    $("detail-current-date").textContent = `Current date: ${today}`;
+    const showDetail = new URLSearchParams(location.search).get("strategy") === "extreme-os";
+    show("strategy-directory", !showDetail);
+    show("strategy-detail", showDetail);
+    if (showDetail) render(data);
+  }
+
   async function loadDashboard() {
     show("loading"); show("auth-panel", false); show("activate-panel", false); show("password-panel", false); show("dashboard", false); show("account-actions", false);
     if (!state.session) { show("loading", false); show("auth-panel"); return; }
@@ -74,7 +84,7 @@
       return;
     }
     if (!response.ok) { show("auth-panel"); $("auth-message").textContent = "Member data is temporarily unavailable."; return; }
-    render(await response.json()); show("dashboard");
+    const data = await response.json(); renderMemberView(data); show("dashboard");
   }
 
   $("login-form").addEventListener("submit", async (event) => {
