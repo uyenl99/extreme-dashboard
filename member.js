@@ -86,7 +86,19 @@
     const userResponse = await authRequest("user", {}, "GET");
     if (!userResponse.ok) { saveSession(null); show("loading", false); show("auth-panel"); return; }
     const user = await userResponse.json(); $("member-email").textContent = user.email;
-    const response = await api("/api/member-data"); show("loading", false); show("account-actions");
+    const strategy = new URLSearchParams(location.search).get("strategy") || "";
+
+    // The directory only needs an access check. Live Collective2 data is fetched
+    // only when the member actually opens Extreme OS; other protected pages
+    // perform their access check in /api/member-page.
+    if (strategy && strategy !== "extreme-os") {
+      await renderMemberView(null);
+      show("loading", false); show("account-actions"); show("dashboard");
+      return;
+    }
+
+    const response = await api(strategy === "extreme-os" ? "/api/member-data" : "/api/member-access");
+    show("loading", false); show("account-actions");
     if (response.status === 401) { saveSession(null); show("account-actions", false); show("auth-panel"); return; }
     if (response.status === 403) {
       saveSession(null); show("account-actions", false); show("auth-panel");
@@ -94,7 +106,7 @@
       return;
     }
     if (!response.ok) { show("auth-panel"); $("auth-message").textContent = "Member data is temporarily unavailable."; return; }
-    const data = await response.json(); await renderMemberView(data); show("dashboard");
+    const data = await response.json(); await renderMemberView(strategy === "extreme-os" ? data : null); show("dashboard");
   }
 
   $("login-form").addEventListener("submit", async (event) => {
