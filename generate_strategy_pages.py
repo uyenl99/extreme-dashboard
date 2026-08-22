@@ -376,7 +376,7 @@ def page_template(title, body):
 
 <div>
 <a href="index.html">Home</a>
-<a href="members.html">Members</a>
+<a href="members.html">Login</a>
 </div>
 
 </nav>
