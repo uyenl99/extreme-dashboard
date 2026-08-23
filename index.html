@@ -9,9 +9,9 @@
 
 body{
     margin:0;
-    font-family:Arial,sans-serif;
-    background:#f8fafc;
-    color:#222;
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    background:#f1f5f9;
+    color:#172033;
 }
 
 nav{
@@ -41,38 +41,111 @@ nav a{
 }
 
 .section{
-    max-width:1200px;
+    max-width:1240px;
     margin:auto;
     padding:50px 30px;
 }
 
 .cards{
-    display:flex;
-    flex-wrap:wrap;
-    gap:25px;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:24px;
 }
 
 .card{
-    flex:1;
-    min-width:280px;
+    --accent:#2563eb;
+    --accent-soft:#eff6ff;
+    position:relative;
+    overflow:hidden;
     background:white;
-    padding:30px;
-    border-radius:12px;
-    box-shadow:0 2px 10px rgba(0,0,0,.1);
+    padding:30px 30px 28px;
+    border:1px solid #dbe3ef;
+    border-radius:20px;
+    box-shadow:0 12px 35px rgba(15,23,42,.07);
+    transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;
+}
+
+.card:before{
+    content:"";
+    position:absolute;
+    inset:0 0 auto;
+    height:5px;
+    background:var(--accent);
+}
+
+.card:hover{
+    transform:translateY(-4px);
+    border-color:color-mix(in srgb,var(--accent) 42%,#dbe3ef);
+    box-shadow:0 20px 45px rgba(15,23,42,.12);
 }
 
 .card h2{
-    margin-top:0;
+    margin:10px 0 12px;
+    font-size:1.65rem;
+    letter-spacing:-.02em;
+}
+
+.card>p{
+    color:#64748b;
+    line-height:1.65;
+}
+
+.card.blue{--accent:#2563eb;--accent-soft:#eff6ff}
+.card.violet{--accent:#7c3aed;--accent-soft:#f5f3ff}
+.card.cyan{--accent:#0891b2;--accent-soft:#ecfeff}
+.card.orange{--accent:#ea580c;--accent-soft:#fff7ed}
+.card.green{--accent:#16a34a;--accent-soft:#f0fdf4}
+.card.slate{--accent:#475569;--accent-soft:#f8fafc}
+
+.card-kicker{
+    color:var(--accent);
+    font-size:.75rem;
+    font-weight:800;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+}
+
+.card-stats{
+    display:flex;
+    flex-wrap:wrap;
+    gap:9px;
+    margin:22px 0 24px;
+}
+
+.card-stats span{
+    padding:8px 11px;
+    border-radius:999px;
+    background:var(--accent-soft);
+    color:var(--accent);
+    font-size:.83rem;
+    font-weight:750;
+    line-height:1.2;
+}
+
+.card-stats .positive{background:#f0fdf4;color:#15803d}
+.card-stats .negative{background:#fef2f2;color:#dc2626}
+.card-stats .neutral{background:#f8fafc;color:#475569}
+
+@media(max-width:760px){
+    nav{padding:18px 20px;align-items:flex-start;gap:18px}
+    nav div:last-child{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px}
+    nav a{margin-left:8px;font-size:.82rem}
+    .hero{padding:60px 24px}
+    .hero h1{font-size:clamp(2.3rem,12vw,3.4rem)}
+    .section{padding:36px 18px}
+    .cards{grid-template-columns:1fr}
+    .card{padding:26px 24px}
 }
 
 .btn{
     display:inline-block;
     padding:12px 20px;
-    background:#2563eb;
+    background:var(--accent,#2563eb);
     color:white;
     text-decoration:none;
-    border-radius:6px;
+    border-radius:9px;
     font-weight:bold;
+    box-shadow:0 7px 18px color-mix(in srgb,var(--accent,#2563eb) 22%,transparent);
 }
 
 .coming-soon{
@@ -137,7 +210,9 @@ track record of historical performance.
 
 <div class="cards">
 
-<div class="card">
+<div class="card blue">
+
+<span class="card-kicker">Flagship strategy</span>
 
 <h2>Extreme OS</h2>
 
@@ -147,10 +222,10 @@ high-probability stock opportunities using
 systematic analysis and disciplined risk management.
 </p>
 
-<p>
-✓ Active Strategy<br>
-✓ Historical Track Record<br>
-✓ Member Trade Alerts
+<p class="card-stats">
+<span>Active Strategy</span>
+<span>Historical Track Record</span>
+<span>Member Trade Alerts</span>
 </p>
 
 <a class="btn" href="extreme-os.html">
@@ -159,7 +234,9 @@ Learn More
 
 </div>
 
-<div class="card">
+<div class="card violet">
+
+<span class="card-kicker">Monthly ETF rotation</span>
 
 <h2>Momentum ETF1</h2>
 
@@ -169,10 +246,10 @@ strongest assets while using a volatility
 filter to shift into a defensive allocation.
 </p>
 
-<p>
-✓ 26.23% Backtest CAGR<br>
-✓ 1.30 Sharpe Ratio<br>
-✓ -17.74% Maximum Drawdown
+<p class="card-stats">
+<span class="positive">25.25% Backtest CAGR</span>
+<span class="positive">1.22 Sharpe Ratio</span>
+<span class="negative">-18.30% Maximum Drawdown</span>
 </p>
 
 <a class="btn" href="momentum.html">
@@ -181,7 +258,9 @@ View Backtest Results
 
 </div>
 
-<div class="card">
+<div class="card cyan">
+
+<span class="card-kicker">Macro regime rotation</span>
 
 <h2>Momentum ETF2</h2>
 
@@ -191,10 +270,10 @@ utilities, consumer staples, and intermediate Treasuries
 using market growth and inflation expectations.
 </p>
 
-<p>
-&#10003; 22.64% Backtest CAGR<br>
-&#10003; 1.31 Sharpe Ratio<br>
-&#10003; -17.46% Monthly Maximum Drawdown
+<p class="card-stats">
+<span class="positive">22.46% Backtest CAGR</span>
+<span class="positive">1.31 Sharpe Ratio</span>
+<span class="negative">-23.69% Maximum Drawdown</span>
 </p>
 
 <a class="btn" href="momentum2.html">
@@ -203,7 +282,9 @@ View Backtest Results
 
 </div>
 
-<div class="card">
+<div class="card orange">
+
+<span class="card-kicker">Monthly stock rotation</span>
 
 <h2>Momentum Stocks</h2>
 
@@ -213,10 +294,10 @@ a point-in-time Russell 1000 universe and
 a volatility-based risk filter.
 </p>
 
-<p>
-âœ“ 44.90% Backtest CAGR<br>
-âœ“ 1.39 Sharpe Ratio<br>
-âœ“ -37.02% Maximum Drawdown
+<p class="card-stats">
+<span class="positive">46.50% Backtest CAGR</span>
+<span class="positive">1.34 Sharpe Ratio</span>
+<span class="negative">-38.33% Maximum Drawdown</span>
 </p>
 
 <a class="btn" href="momentum-stocks.html">
@@ -225,7 +306,9 @@ View Backtest Results
 
 </div>
 
-<div class="card">
+<div class="card green">
+
+<span class="card-kicker">Daily long / short</span>
 
 <h2>Mean Reversion</h2>
 
@@ -235,10 +318,10 @@ short-term price dislocations and subsequent
 mean-reversion opportunities.
 </p>
 
-<p>
-✓ 30.93% Backtest CAGR<br>
-✓ 1.66 Sharpe Ratio<br>
-✓ -21.78% Maximum Drawdown
+<p class="card-stats">
+<span class="positive">30.93% Backtest CAGR</span>
+<span class="positive">1.66 Sharpe Ratio</span>
+<span class="negative">-21.78% Maximum Drawdown</span>
 </p>
 
 <a class="btn" href="mean-reversion.html">
@@ -247,7 +330,9 @@ View Backtest Results
 
 </div>
 
-<div class="card">
+<div class="card slate">
+
+<span class="card-kicker">Subscriber access</span>
 
 <h2>Members Dashboard Preview</h2>
 
@@ -257,10 +342,10 @@ trade alerts, and the information available
 to subscribers.
 </p>
 
-<p>
-✓ Current Picks<br>
-✓ Open Positions<br>
-✓ Trade Alerts
+<p class="card-stats">
+<span>Current Picks</span>
+<span>Open Positions</span>
+<span>Trade Alerts</span>
 </p>
 
 <a class="btn" href="members.html">
