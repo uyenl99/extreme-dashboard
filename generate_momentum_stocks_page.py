@@ -7,6 +7,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from strategy_faq import FAQ_CSS, render_faq
+from metric_style import metric_class
 
 from generate_momentum_page import (
     build_alert_table,
@@ -191,7 +192,7 @@ def render_page(summary, daily, allocations, monthly, alert, current, audience="
     )
     metric_html = "".join(
         f'<div class="metric"><div class="metric-label">{label}</div>'
-        f'<div class="metric-value">{value}</div></div>'
+        f'<div class="metric-value {metric_class(value)}">{value}</div></div>'
         for label, value in metrics
     )
     chart_html = build_chart(daily)
