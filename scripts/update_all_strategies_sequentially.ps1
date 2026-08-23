@@ -108,10 +108,16 @@ try {
 
     $prUrl = $null
     for ($attempt = 1; $attempt -le 12 -and -not $prUrl; $attempt++) {
-        $created = & $gh pr create --repo $repo --draft --base main --head $previewBranch --title "Daily strategy batch preview" --body "All five daily jobs completed: Collective2, Mean Reversion 5x5 next-day MOO backtest, Momentum ETF1, Momentum ETF2, and Momentum SP. Review the Vercel preview before merging." 2>&1
+        $created = & $gh pr create --repo $repo --draft --base main --head $previewBranch --title "Daily strategy batch update" --body "All five daily jobs completed: Collective2, Mean Reversion 5x5 next-day MOO backtest, Momentum ETF1, Momentum ETF2, and Momentum SP. This PR is published automatically only after the Vercel preview check passes." 2>&1
         if ($LASTEXITCODE -eq 0) { $prUrl = "$created".Trim() } else { Start-Sleep -Seconds 10 }
     }
     if (-not $prUrl) { throw "All jobs finished, but the shared PR could not be created." }
-    Write-Host "All five updates completed. Shared preview PR: $prUrl"
+    & $gh pr ready $prUrl --repo $repo
+    if ($LASTEXITCODE -ne 0) { throw "Could not mark the daily update PR ready: $prUrl" }
+    & $gh pr checks $prUrl --repo $repo --watch --interval 10 --fail-fast
+    if ($LASTEXITCODE -ne 0) { throw "Daily update preview checks failed; production was not changed: $prUrl" }
+    & $gh pr merge $prUrl --repo $repo --squash --delete-branch
+    if ($LASTEXITCODE -ne 0) { throw "Daily update passed preview checks but could not be merged: $prUrl" }
+    Write-Host "All five updates completed, passed Vercel preview checks, and were published: $prUrl"
 }
 finally { Stop-Transcript }
