@@ -483,8 +483,6 @@ nav a {{
 
 <div>
 <a href="index.html">Home</a>
-<a href="performance.html">Performance</a>
-<a href="strategies.html">Strategies</a>
 <a href="subscribe.html">Subscribe</a>
 <a href="members.html">Login</a>
 <a href="about.html">About</a>
