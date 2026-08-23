@@ -188,7 +188,7 @@ def render_page(summary, daily, allocations, monthly, alert):
 </style>
 </head>
 <body>
-<nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Members</a></div></nav>
+<nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a></div></nav>
 <main class="container">
 <section class="hero"><div class="eyebrow">Backtested stock rotation strategy</div><h1>Momentum Stocks</h1><p>Monthly equal-weight rotation into the ten strongest stocks from a point-in-time Russell 1000 universe, filtered for market capitalization. A VIX-versus-SPY realized-volatility filter moves the portfolio into defensive assets during risk-off periods.</p><p class="subtle">Backtest period: {summary.start} through {summary.end} · Starting equity: ${INITIAL_EQUITY:,.0f}</p></section>
 <section class="metrics">{metric_html}</section>

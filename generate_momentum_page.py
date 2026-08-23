@@ -244,7 +244,7 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None):
 </style>
 </head>
 <body>
-<nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Members</a></div></nav>
+<nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a></div></nav>
 <main class="container">
 <section class="hero"><div class="eyebrow">Backtested ETF rotation strategy</div><h1>Momentum ETFs</h1><p>Dual-momentum rotation into the three strongest ETFs using 12-month momentum with a one-month skip and a volatility-based risk-off filter. Risk-off allocations move to SHY.</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: ${daily.iloc[0]["Equity"]:,.0f}</p></section>
 <section class="metrics">{metric_html}</section>

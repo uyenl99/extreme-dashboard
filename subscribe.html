@@ -75,6 +75,7 @@ nav a{
 button.btn{border:0;cursor:pointer;font:inherit}
 button.btn:disabled{opacity:.65;cursor:wait}
 .notice{max-width:1200px;margin:24px auto 0;padding:0 30px;color:#b91c1c}
+.agreement{margin:24px 0 18px;padding:16px;background:#f8fafc;border:1px solid #dbe3ee;border-radius:8px;font-size:14px;line-height:1.5}.agreement label{display:flex;gap:10px;align-items:flex-start}.agreement input{margin-top:4px}.agreement a,.legal-note a{color:#1d4ed8}.legal-note{font-size:14px;color:#475569;line-height:1.6}
 
 footer{
     text-align:center;
@@ -92,15 +93,16 @@ footer{
 
     <div>
         <a href="index.html">Home</a>
+        <a href="subscribe.html">Subscribe</a>
+        <a href="members.html">Login</a>
         <a href="about.html">About</a>
         <a href="contact.html">Contact</a>
-        <a href="subscribe.html">Subscribe</a>
     </div>
 </nav>
 
 <div class="hero">
     <h1>Extreme Trading Membership</h1>
-    <p>Complete payment, then create your member password.</p>
+    <p>A fixed-price subscription to impersonal, model-generated research and signals.</p>
 </div>
 
 <div class="section">
@@ -116,10 +118,12 @@ $100/mo
 </div>
 
 <p>
-Full member access to strategy updates, performance, live alerts, current positions, and trade history.
+All members receive the same model signals, strategy updates, performance information, model positions, and historical records. The service is not personalized and does not access or trade your brokerage account.
 </p>
 
-<button class="btn checkout-button" type="button">Subscribe for $100/month</button>
+<div class="agreement"><label><input id="legal-agreement" type="checkbox"><span>I agree to the <a href="terms.html" target="_blank">Terms of Use</a>, <a href="risk-disclosure.html" target="_blank">Risk Disclosure</a>, <a href="hypothetical-performance.html" target="_blank">Hypothetical Performance Disclosure</a>, and <a href="refund-cancellation.html" target="_blank">Refund and Cancellation Policy</a>. I understand trading can cause substantial loss and that Extreme Trading Inc. does not provide personalized advice.</span></label></div>
+<button class="btn checkout-button" type="button" disabled>Subscribe for $100/month</button>
+<p class="legal-note">The subscription fee is fixed and is not based on your assets, transactions, profits, or performance. We do not ask for your portfolio, finances, objectives, or risk tolerance. <a href="privacy.html">Privacy Policy</a></p>
 
 </div>
 
@@ -144,15 +148,19 @@ document.querySelectorAll(".checkout-button").forEach((button) => button.addEven
     const response = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: "{}"
+        body: JSON.stringify({ acceptedTerms: legalAgreement.checked })
     });
     const payload = await response.json();
     if (payload.url) location.href = payload.url;
     else {
         alert(payload.error || "Unable to start checkout.");
-        button.disabled = false;
+        button.disabled = !legalAgreement.checked;
     }
 }));
+const legalAgreement = document.getElementById("legal-agreement");
+legalAgreement.addEventListener("change", () => {
+    document.querySelectorAll(".checkout-button").forEach((button) => button.disabled = !legalAgreement.checked);
+});
 </script>
 
 </body>

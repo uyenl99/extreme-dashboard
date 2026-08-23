@@ -25,20 +25,14 @@ def parse_args():
     parser.add_argument(
         "--source",
         type=Path,
-        default=Path("../RevMurphy/output_long_short_live"),
-        help="Directory containing the live RevMurphy output CSV files.",
+        default=Path("../RevMurphy/output_long_short_5x5_next_open"),
+        help="Directory containing the RevMurphy next-day MOO output CSV files.",
     )
     parser.add_argument(
         "--output",
         type=Path,
         default=Path("mean-reversion.html"),
         help="HTML file to generate.",
-    )
-    parser.add_argument(
-        "--alert-source",
-        type=Path,
-        default=Path("../RevMurphy/output_live_alerts"),
-        help="Directory containing dated Mean Reversion live-alert CSV files.",
     )
     parser.add_argument(
         "--strategies-page",
@@ -150,79 +144,6 @@ def build_monthly_table(monthly):
     return f'<div class="table-wrap"><table><thead><tr><th>Year</th>{head}</tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
 
 
-def load_live_alert(daily_trades, alert_source):
-    entry_files = sorted(alert_source.glob("entry_alerts_*.csv"))
-    if not entry_files:
-        raise FileNotFoundError(f"No Mean Reversion entry alerts found in {alert_source}")
-    entry_path = entry_files[-1]
-    exit_path = alert_source / entry_path.name.replace("entry_alerts_", "exit_alerts_")
-    if not exit_path.is_file():
-        raise FileNotFoundError(f"Missing matching Mean Reversion exit alerts: {exit_path}")
-
-    entries = pd.read_csv(entry_path)
-    exits = pd.read_csv(exit_path)
-    signal_date = pd.to_datetime(entries["date"].iloc[0])
-    if "side" in entries.columns:
-        sides = entries["side"].fillna("").astype(str).str.lower()
-        long_entries = entries.loc[sides == "long", "ticker"].dropna().astype(str).tolist()
-        short_entries = entries.loc[sides == "short", "ticker"].dropna().astype(str).tolist()
-    else:
-        long_entries = entries["ticker"].dropna().astype(str).tolist()
-        short_entries = []
-    entry_sides = {ticker: "Long" for ticker in long_entries}
-    entry_sides.update({ticker: "Short" for ticker in short_entries})
-
-    date_tag = entry_path.stem.replace("entry_alerts_", "")
-    holdings_path = alert_source / f"portfolio_holdings_{date_tag}.csv"
-    portfolio_exits_path = alert_source / f"portfolio_exit_alerts_{date_tag}.csv"
-    if holdings_path.is_file():
-        holdings = pd.read_csv(holdings_path)
-        held_positions = [
-            (str(row.ticker), str(row.side).title())
-            for row in holdings.dropna(subset=["ticker"]).itertuples(index=False)
-        ]
-    else:
-        latest = daily_trades.sort_values("date").iloc[-1]
-        held_with_sides = str(latest.get("current_tickers_held", "")).split(",")
-        held_positions = []
-        for item in held_with_sides:
-            if not item:
-                continue
-            parts = item.split(":", 1)
-            held_positions.append(
-                (parts[-1], parts[0].title() if len(parts) == 2 else "Unknown")
-            )
-    portfolio_exits = pd.read_csv(portfolio_exits_path) if portfolio_exits_path.is_file() else exits
-    exit_sides = {
-        str(row.ticker): str(getattr(row, "side", "Unknown")).title()
-        for row in portfolio_exits.dropna(subset=["ticker"]).itertuples(index=False)
-    }
-    exit_positions = [
-        (ticker, exit_sides.get(ticker, side))
-        for ticker, side in held_positions
-        if ticker in exit_sides
-    ]
-    projected = [
-        (ticker, side) for ticker, side in held_positions if ticker not in exit_sides
-    ]
-    trade_entries_path = alert_source / f"trade_entries_{date_tag}.csv"
-    if trade_entries_path.is_file():
-        trade_entries = pd.read_csv(trade_entries_path)
-        projected_entries = [
-            (str(row.ticker), str(row.side).title())
-            for row in trade_entries.dropna(subset=["ticker"]).itertuples(index=False)
-        ]
-    else:
-        projected_entries = [(ticker, side) for ticker, side in entry_sides.items()]
-    projected_tickers = {ticker for ticker, _ in projected}
-    projected.extend(
-        (ticker, side)
-        for ticker, side in projected_entries
-        if ticker not in projected_tickers
-    )
-    return signal_date, long_entries, short_entries, exit_positions, projected
-
-
 def format_positions(positions):
     return ", ".join(f"{ticker} ({side})" for ticker, side in positions)
 
@@ -236,81 +157,76 @@ def read_optional_csv(path):
         return pd.DataFrame()
 
 
-def build_portfolio_tables(alert_source, signal_date, total_equity):
-    date_tag = signal_date.strftime("%Y%m%d")
-    entries = read_optional_csv(alert_source / f"trade_entries_{date_tag}.csv")
-    exits = read_optional_csv(alert_source / f"portfolio_exit_alerts_{date_tag}.csv")
-    holdings = read_optional_csv(alert_source / f"portfolio_holdings_{date_tag}.csv")
+def build_moo_order_tables(trades, total_equity):
+    data = trades.copy()
+    data["entry_date"] = pd.to_datetime(data["entry_date"], errors="coerce")
+    data["exit_date"] = pd.to_datetime(data["exit_date"], errors="coerce")
+    latest_entry = data["entry_date"].max()
+    latest_exit = data.loc[data["status"].astype(str).str.lower().eq("closed"), "exit_date"].max()
+    latest_dates = [date for date in (latest_entry, latest_exit) if pd.notna(date)]
+    execution_date = max(latest_dates) if latest_dates else pd.NaT
+    if pd.isna(execution_date):
+        execution_date = pd.Timestamp.today().normalize()
 
+    entries = data[data["entry_date"].eq(execution_date)].copy()
+    exits = data[
+        data["status"].astype(str).str.lower().eq("closed")
+        & data["exit_date"].eq(execution_date)
+    ].copy()
     change_rows = []
     for row in exits.itertuples(index=False):
         side = str(row.side).title()
+        exit_price = float(row.exit_price) if pd.notna(row.exit_price) else 0.0
         change_rows.append(
             f"<tr><td>Exit</td><td>{html.escape(str(row.ticker))}</td>"
             f'<td><span class="side {side.lower()}">{side}</span></td>'
-            f"<td>Close position</td><td>—</td><td>${float(row.close):,.2f}</td></tr>"
+            f"<td>${float(row.entry_notional):,.0f}</td><td>{float(row.shares):,.2f}</td>"
+            f"<td>${exit_price:,.2f}</td></tr>"
         )
     for row in entries.itertuples(index=False):
         side = str(row.side).title()
-        target_value = total_equity / 5 if side.lower() == "long" else total_equity * 0.20 / 5
-        price = float(row.close)
-        estimated_shares = target_value / price if price else 0.0
+        target_value = float(row.entry_notional)
+        price = float(row.entry_price)
         action = "Buy" if side.lower() == "long" else "Sell Short"
         change_rows.append(
             f"<tr><td>{action}</td><td>{html.escape(str(row.ticker))}</td>"
             f'<td><span class="side {side.lower()}">{side}</span></td>'
-            f"<td>${target_value:,.0f}</td><td>{estimated_shares:,.2f}</td>"
+            f"<td>${target_value:,.0f}</td><td>{float(row.shares):,.2f}</td>"
             f"<td>${price:,.2f}</td></tr>"
         )
     if not change_rows:
-        change_rows.append('<tr><td colspan="6" class="muted">None — no portfolio changes today.</td></tr>')
+        change_rows.append('<tr><td colspan="6" class="muted">None - no MOO orders on the latest execution date.</td></tr>')
     changes = (
+        f'<p class="subtle">Latest execution date: {execution_date:%Y-%m-%d}. Orders shown are generated by the completed daily-bar backtest and filled at the next market open.</p>'
         '<div class="table-wrap"><table><thead><tr><th>Action</th><th>Ticker</th>'
-        '<th>Direction</th><th>Target Position Value</th><th>Estimated Shares</th>'
-        f'<th>Alert Price</th></tr></thead><tbody>{"".join(change_rows)}</tbody></table></div>'
+        '<th>Direction</th><th>Position Value</th><th>Shares</th>'
+        f'<th>MOO Fill Price</th></tr></thead><tbody>{"".join(change_rows)}</tbody></table></div>'
     )
 
     position_rows = []
+    holdings = data[data["status"].astype(str).str.lower().eq("open")].copy()
+    holdings = holdings.sort_values(["side", "entry_date", "ticker"])
     for row in holdings.itertuples(index=False):
         side = str(row.side).title()
         shares = float(row.shares)
-        price = float(row.close)
-        position_value = abs(shares * price)
+        price = float(row.entry_price)
+        position_value = abs(float(row.entry_notional))
         weight = position_value / total_equity if total_equity else 0.0
         position_rows.append(
             f"<tr><td>{html.escape(str(row.ticker))}</td>"
             f'<td><span class="side {side.lower()}">{side}</span></td>'
-            f"<td>{shares:,.2f}</td><td>${price:,.2f}</td>"
+            f"<td>{row.entry_date:%Y-%m-%d}</td><td>{shares:,.2f}</td><td>${price:,.2f}</td>"
             f"<td>${position_value:,.0f}</td><td>{weight * 100:.2f}%</td></tr>"
         )
     if not position_rows:
-        position_rows.append('<tr><td colspan="6" class="muted">No open positions.</td></tr>')
+        position_rows.append('<tr><td colspan="7" class="muted">No open positions.</td></tr>')
     positions = (
         f'<p class="subtle">Total strategy equity: ${total_equity:,.0f}</p>'
         '<div class="table-wrap"><table><thead><tr><th>Ticker</th><th>Direction</th>'
-        '<th>Shares</th><th>Current Price</th><th>Current Position Value</th>'
+        '<th>Entry Date</th><th>Shares</th><th>Entry Price</th><th>Entry Position Value</th>'
         f'<th>Position Size (% Equity)</th></tr></thead><tbody>{"".join(position_rows)}</tbody></table></div>'
     )
     return changes, positions
-
-
-def build_alert_table(daily_trades, alert_source, total_equity):
-    signal_date, long_entries, short_entries, exit_positions, projected = load_live_alert(
-        daily_trades, alert_source
-    )
-    longs = html.escape(format_positions((ticker, "Long") for ticker in long_entries) or "—")
-    shorts = html.escape(format_positions((ticker, "Short") for ticker in short_entries) or "—")
-    exits = html.escape(format_positions(exit_positions) or "—")
-    holdings = html.escape(format_positions(projected) or "—")
-    alerts = (
-        '<div class="table-wrap"><table><thead><tr><th>Signal Date</th>'
-        '<th>Long Entry Alerts</th><th>Short Entry Alerts</th><th>Exit Alerts</th>'
-        '<th>Projected Holdings</th></tr></thead>'
-        f'<tbody><tr><td>{signal_date:%Y-%m-%d}</td><td>{longs}</td><td>{shorts}</td>'
-        f'<td>{exits}</td><td>{holdings}</td></tr></tbody></table></div>'
-    )
-    changes, positions = build_portfolio_tables(alert_source, signal_date, total_equity)
-    return alerts, changes, positions
 
 
 def build_trade_table(trades, limit=50):
@@ -355,11 +271,9 @@ def update_strategy_card(path, summary):
     path.write_text(text[:start] + card + text[end:], encoding="utf-8")
 
 
-def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, alert_source):
+def render_page(summary, equity, benchmarks, monthly, trades, daily_trades):
     generated_at = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M %p %Z")
-    alert_table, portfolio_changes, latest_positions = build_alert_table(
-        daily_trades, alert_source, float(equity.iloc[-1]["equity"])
-    )
+    moo_orders, latest_positions = build_moo_order_tables(trades, float(equity.iloc[-1]["equity"]))
     chart_html = build_chart(equity, benchmarks)
     spy = benchmarks[["date", "SPY_equity"]].dropna()
     spy_years = (spy["date"].iloc[-1] - spy["date"].iloc[0]).days / 365.25
@@ -392,13 +306,12 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
 </style>
 </head>
 <body>
-<nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Members</a></div></nav>
+<nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a></div></nav>
 <main class="container">
-<section class="hero"><div class="eyebrow">Backtested long/short strategy</div><h1>Mean Reversion</h1><p>Systematic equity strategy seeking short-term price dislocations and subsequent reversion while managing long and short exposure.</p><p class="subtle">Backtest period: {summary.start_date} through {summary.end_date} · Starting equity: ${equity.iloc[0]['equity']:,.0f}</p><p class="subtle">Dashboard updated: {generated_at}</p></section>
+<section class="hero"><div class="eyebrow">Next-day MOO long/short strategy</div><h1>Mean Reversion</h1><p>Systematic equity strategy seeking short-term price dislocations and subsequent reversion while managing long and short exposure. Signals are calculated from completed daily bars and simulated entries/exits are filled at the next market open.</p><p class="subtle">Backtest period: {summary.start_date} through {summary.end_date} · Starting equity: ${equity.iloc[0]['equity']:,.0f}</p><p class="subtle">Dashboard updated: {generated_at}</p></section>
 <section class="metrics">{metric_html}</section>
-<section class="panel"><h2>Latest Alert</h2>{alert_table}</section>
-<section class="panel"><h2>Actionable Portfolio Changes</h2>{portfolio_changes}</section>
-<section class="panel"><h2>Latest Positions</h2>{latest_positions}</section>
+<section class="panel"><h2>Latest MOO Orders</h2>{moo_orders}</section>
+<section class="panel"><h2>Open Positions</h2>{latest_positions}</section>
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Select SPY, QQQ, or VOO in the legend to add benchmark comparisons.</p><div class="chart">{chart_html}</div></section>
 <section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly)}</section>
 <section class="panel"><h2>Latest 50 Trades</h2>{build_trade_table(trades)}</section>
@@ -415,7 +328,6 @@ def main():
     args.output.write_text(
         render_page(
             summary, equity, benchmarks, monthly, trades, daily_trades,
-            args.alert_source,
         ),
         encoding="utf-8",
     )
