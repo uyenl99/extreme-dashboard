@@ -53,8 +53,8 @@ nav a{
 }
 
 .card{
-    --accent:#2563eb;
-    --accent-soft:#eff6ff;
+    --accent:#1e3a5f;
+    --accent-soft:#f1f5f9;
     position:relative;
     overflow:hidden;
     background:white;
@@ -69,13 +69,13 @@ nav a{
     content:"";
     position:absolute;
     inset:0 0 auto;
-    height:5px;
+    height:3px;
     background:var(--accent);
 }
 
 .card:hover{
     transform:translateY(-4px);
-    border-color:color-mix(in srgb,var(--accent) 42%,#dbe3ef);
+    border-color:#94a3b8;
     box-shadow:0 20px 45px rgba(15,23,42,.12);
 }
 
@@ -90,15 +90,8 @@ nav a{
     line-height:1.65;
 }
 
-.card.blue{--accent:#2563eb;--accent-soft:#eff6ff}
-.card.violet{--accent:#7c3aed;--accent-soft:#f5f3ff}
-.card.cyan{--accent:#0891b2;--accent-soft:#ecfeff}
-.card.orange{--accent:#ea580c;--accent-soft:#fff7ed}
-.card.green{--accent:#16a34a;--accent-soft:#f0fdf4}
-.card.slate{--accent:#475569;--accent-soft:#f8fafc}
-
 .card-kicker{
-    color:var(--accent);
+    color:#64748b;
     font-size:.75rem;
     font-weight:800;
     letter-spacing:.12em;
@@ -116,14 +109,14 @@ nav a{
     padding:8px 11px;
     border-radius:999px;
     background:var(--accent-soft);
-    color:var(--accent);
+    color:#334155;
     font-size:.83rem;
     font-weight:750;
     line-height:1.2;
 }
 
-.card-stats .positive{background:#f0fdf4;color:#15803d}
-.card-stats .negative{background:#fef2f2;color:#dc2626}
+.card-stats .positive{background:var(--accent-soft);color:#15803d}
+.card-stats .negative{background:var(--accent-soft);color:#dc2626}
 .card-stats .neutral{background:#f8fafc;color:#475569}
 
 @media(max-width:760px){
@@ -210,7 +203,7 @@ track record of historical performance.
 
 <div class="cards">
 
-<div class="card blue">
+<div class="card">
 
 <span class="card-kicker">Flagship strategy</span>
 
@@ -234,7 +227,7 @@ Learn More
 
 </div>
 
-<div class="card violet">
+<div class="card">
 
 <span class="card-kicker">Monthly ETF rotation</span>
 
@@ -258,7 +251,7 @@ View Backtest Results
 
 </div>
 
-<div class="card cyan">
+<div class="card">
 
 <span class="card-kicker">Macro regime rotation</span>
 
@@ -282,7 +275,7 @@ View Backtest Results
 
 </div>
 
-<div class="card orange">
+<div class="card">
 
 <span class="card-kicker">Monthly stock rotation</span>
 
@@ -306,7 +299,7 @@ View Backtest Results
 
 </div>
 
-<div class="card green">
+<div class="card">
 
 <span class="card-kicker">Daily long / short</span>
 
@@ -330,7 +323,7 @@ View Backtest Results
 
 </div>
 
-<div class="card slate">
+<div class="card">
 
 <span class="card-kicker">Subscriber access</span>
 
