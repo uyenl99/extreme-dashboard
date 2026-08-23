@@ -20,8 +20,12 @@ if ($LASTEXITCODE -ne 0) { throw "Could not refresh the sequential automation ch
 if ($LASTEXITCODE -ne 0) { throw "Could not synchronize the sequential automation checkout." }
 if (-not (Test-Path -LiteralPath $updateScript)) { throw "Update script not found: $updateScript" }
 
+$bootstrap = @"
+`$ErrorActionPreference='Stop'; & '$git' -C '$automationCheckout' fetch origin main; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & '$git' -C '$automationCheckout' checkout -B main origin/main; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & powershell.exe -NoProfile -ExecutionPolicy Bypass -File '$updateScript'; exit `$LASTEXITCODE
+"@.Trim()
+$encodedBootstrap = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($bootstrap))
 $action = New-ScheduledTaskAction -Execute "powershell.exe" `
-    -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$updateScript`""
+    -Argument "-NoProfile -ExecutionPolicy Bypass -EncodedCommand $encodedBootstrap"
 $trigger = New-ScheduledTaskTrigger -Weekly -WeeksInterval 1 `
     -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At "3:00 PM"
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries `
