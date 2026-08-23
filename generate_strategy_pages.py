@@ -4,6 +4,7 @@ import pandas as pd
 from pathlib import Path
 
 from strategy_faq import FAQ_CSS, render_faq
+from metric_style import metric_class
 
 PUBLIC_DELAY_HOURS = 96
 PUBLIC_TRADE_LIMIT = 50
@@ -321,6 +322,9 @@ nav a {
     font-weight:600;
 }
 
+.positive { color:#22c55e; }
+.negative { color:#f87171; }
+
 .performance-details {
     width:100%;
     height:1180px;
@@ -435,10 +439,10 @@ def generate_public_page(
 <h2>Verified Collective2 Performance</h2>
 
 <div class="performance-grid">
-<div class="performance-stat"><div class="performance-label">Annual Return</div><div class="performance-value">{summary.get('annual_return', 'N/A')}</div></div>
-<div class="performance-stat"><div class="performance-label">Max Drawdown</div><div class="performance-value">{summary.get('max_drawdown', 'N/A')}</div></div>
-<div class="performance-stat"><div class="performance-label">Number of Trades</div><div class="performance-value">{summary.get('number_of_trades', 'N/A')}</div></div>
-<div class="performance-stat"><div class="performance-label">Win Trades %</div><div class="performance-value">{summary.get('win_trades_pct', 'N/A')}</div></div>
+<div class="performance-stat"><div class="performance-label">Annual Return</div><div class="performance-value {metric_class(summary.get('annual_return', 'N/A'))}">{summary.get('annual_return', 'N/A')}</div></div>
+<div class="performance-stat"><div class="performance-label">Max Drawdown</div><div class="performance-value {metric_class(summary.get('max_drawdown', 'N/A'))}">{summary.get('max_drawdown', 'N/A')}</div></div>
+<div class="performance-stat"><div class="performance-label">Number of Trades</div><div class="performance-value {metric_class(summary.get('number_of_trades', 'N/A'))}">{summary.get('number_of_trades', 'N/A')}</div></div>
+<div class="performance-stat"><div class="performance-label">Win Trades %</div><div class="performance-value {metric_class(summary.get('win_trades_pct', 'N/A'))}">{summary.get('win_trades_pct', 'N/A')}</div></div>
 </div>
 
 <iframe class="performance-details" src="performance-details.html" title="Extreme OS monthly returns and equity curve" loading="lazy"></iframe>

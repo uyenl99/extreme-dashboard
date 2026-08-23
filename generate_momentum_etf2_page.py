@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from strategy_faq import FAQ_CSS, render_faq
+from metric_style import metric_class
 
 
 def parse_args():
@@ -105,7 +106,7 @@ def render(source, audience, chart_src):
         ("SPY Max Drawdown", pct(spy["Daily max drawdown"])),
     )
     metrics_html = "".join(
-        f'<div class="metric"><div class="metric-label">{label}</div><div class="metric-value">{value}</div></div>'
+        f'<div class="metric"><div class="metric-label">{label}</div><div class="metric-value {metric_class(value)}">{value}</div></div>'
         for label, value in metrics
     )
     if audience == "member":

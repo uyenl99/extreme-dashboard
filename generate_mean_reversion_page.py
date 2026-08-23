@@ -8,6 +8,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from strategy_faq import FAQ_CSS, render_faq
+from metric_style import metric_class
 
 
 REQUIRED_FILES = (
@@ -460,7 +461,7 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
         ("Average Trade", pct(summary.avg_trade_return)),
     )
     metric_html = "".join(
-        f'<div class="metric"><div class="metric-label">{label}</div><div class="metric-value">{value}</div></div>'
+        f'<div class="metric"><div class="metric-label">{label}</div><div class="metric-value {metric_class(value)}">{value}</div></div>'
         for label, value in metrics
     )
     return f"""<!DOCTYPE html>
