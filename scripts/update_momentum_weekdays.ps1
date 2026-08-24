@@ -54,8 +54,6 @@ try {
             $memberGeneratorCode = "import runpy,sys; sys.path.insert(0,r'$webRoot'); sys.path.insert(0,r'$plotlyDir'); sys.argv=['generate_momentum_page.py','--source',r'$dualMomRoot\output_momo5','--output',r'$privateMomentumPage','--audience','member']; runpy.run_path(r'$webRoot\generate_momentum_page.py',run_name='__main__')"
             & $python -c $memberGeneratorCode
             if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 member page generation failed." }
-            & $python "update_momentum_html_current.py" --source "output_momo5" --html $privateMomentumPage
-            if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 private current-holdings update failed." }
             Write-Host "Private Momentum ETF1 member page: $privateMomentumPage"
         }
         finally { Pop-Location }
