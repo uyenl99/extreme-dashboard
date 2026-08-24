@@ -10,6 +10,7 @@ $workflow = "update-performance.yml"
 $webRoot = Split-Path -Parent $PSScriptRoot
 $meanReversionUpdate = Join-Path $webRoot "scripts\update_mean_reversion_daily.ps1"
 $momentumUpdate = Join-Path $webRoot "scripts\update_momentum_weekdays.ps1"
+$publicationGuard = Join-Path $webRoot "scripts\test_daily_site_guard.ps1"
 $logRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\logs"
 $today = Get-Date -Format "yyyy-MM-dd"
 $log = Join-Path $logRoot "all-strategies-sequential-$today.log"
@@ -103,6 +104,16 @@ try {
 
     $leftovers = & $git -C $webRoot status --porcelain
     if ($leftovers) { throw "Unexpected files remain before publication: $($leftovers -join ', ')" }
+
+    # Rebase generated results onto the newest production site. Any overlap with
+    # a site edit stops the batch instead of allowing stale HTML to win.
+    & $git -C $webRoot fetch origin main
+    if ($LASTEXITCODE -ne 0) { throw "Could not refresh main before publication." }
+    & $git -C $webRoot rebase origin/main
+    if ($LASTEXITCODE -ne 0) { throw "Daily results conflict with newer site changes; production was not changed." }
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $publicationGuard -WebRoot $webRoot -BaseRef origin/main
+    if ($LASTEXITCODE -ne 0) { throw "Daily site publication guard failed; production was not changed." }
+
     & $git -C $webRoot push --force-with-lease -u origin $previewBranch
     if ($LASTEXITCODE -ne 0) { throw "Could not publish the completed batch branch." }
 
@@ -116,6 +127,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Could not mark the daily update PR ready: $prUrl" }
     & $gh pr checks $prUrl --repo $repo --watch --interval 10 --fail-fast
     if ($LASTEXITCODE -ne 0) { throw "Daily update preview checks failed; production was not changed: $prUrl" }
+    & $git -C $webRoot fetch origin main
+    if ($LASTEXITCODE -ne 0) { throw "Could not refresh main before merge." }
+    & $git -C $webRoot merge-base --is-ancestor origin/main HEAD
+    if ($LASTEXITCODE -ne 0) { throw "Main changed during preview checks. The daily batch must rerun its guard; production was not changed: $prUrl" }
     & $gh pr merge $prUrl --repo $repo --squash --delete-branch
     if ($LASTEXITCODE -ne 0) { throw "Daily update passed preview checks but could not be merged: $prUrl" }
     $mergeInfo = & $gh pr view $prUrl --repo $repo --json mergeCommit | ConvertFrom-Json
