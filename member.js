@@ -122,7 +122,11 @@
     event.preventDefault(); const button = event.submitter; button.disabled = true;
     const response = await authRequest("token?grant_type=password", { email: $("email").value, password: $("password").value });
     const payload = await response.json();
-    if (response.ok && adoptAuth(payload)) { $("auth-message").textContent = ""; await loadStrategiesHome(); }
+    if (response.ok && adoptAuth(payload)) {
+      $("auth-message").textContent = "";
+      location.replace("members.html");
+      return;
+    }
     else $("auth-message").textContent = payload.error_description || payload.msg || "Incorrect email or password.";
     button.disabled = false;
   });
