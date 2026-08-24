@@ -67,7 +67,6 @@
     const showDetail = Boolean(strategy);
     show("strategy-directory", !showDetail);
     show("strategy-detail", showDetail);
-    show("extreme-detail", strategy === "extreme-os");
     if (strategy === "extreme-os") render(data);
     if (showDetail && strategy !== "extreme-os") {
       const response = await api(`/api/member-page?strategy=${encodeURIComponent(strategy)}`);
