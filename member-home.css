@@ -18,7 +18,8 @@ main{max-width:none;margin:0;padding:0}
 .home-stats .positive{background:var(--accent-soft);color:#15803d}
 .home-stats .negative{background:var(--accent-soft);color:#dc2626}
 .home-btn{display:inline-block;padding:12px 20px;background:var(--accent,#2563eb);color:#fff;text-decoration:none;border-radius:9px;font-weight:700;box-shadow:0 7px 18px color-mix(in srgb,var(--accent,#2563eb) 22%,transparent)}
-.auth-panel,#password-panel,#activate-panel,#loading{width:min(700px,calc(100% - 48px));margin:48px auto}
+.auth-panel,#password-panel,#activate-panel{width:min(700px,calc(100% - 48px));margin:48px auto}
+.member-loading{display:grid;min-height:220px;place-items:center;color:#64748b}
 #strategy-detail{max-width:1180px;margin:0 auto;padding:48px 24px 80px}
 .member-disclosure{max-width:1180px;margin:0 auto 60px}
 @media(max-width:760px){nav{padding:18px 20px;align-items:flex-start;gap:18px}.nav-signout{margin-left:8px;font-size:.82rem}.home-hero{padding:60px 24px}.home-hero h1{font-size:clamp(2.3rem,12vw,3.4rem)}.home-section{padding:36px 18px}.home-cards{grid-template-columns:1fr}.home-card{padding:26px 24px}.home-date{justify-content:flex-start}.member-disclosure{margin:0 18px 36px}}
