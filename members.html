@@ -7,14 +7,15 @@
 <title>Trading Strategies — Extreme Trading Inc.</title>
 <link rel="stylesheet" href="member.css">
 <link rel="stylesheet" href="member-auth.css">
+<link rel="stylesheet" href="member-home.css?v=1">
 </head>
 <body>
-<nav><strong>Extreme Trading Inc.</strong><div><a id="member-home-link" href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a id="member-login-link" href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a><button id="nav-signout-button" class="nav-signout" type="button" hidden>Sign out</button></div></nav>
+<nav><strong>Extreme Trading Inc.</strong><div><a id="member-home-link" href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a id="member-login-link" href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a><button id="billing-button" class="nav-signout" type="button" hidden>Manage billing</button><button id="nav-signout-button" class="nav-signout" type="button" hidden>Sign out</button></div></nav>
+<section class="home-hero">
+  <h1>Trading Strategies</h1>
+  <p>Explore our systematic stock selection strategies and<br>track record of historical performance.</p>
+</section>
 <main>
-  <section class="hero">
-    <div><span class="eyebrow">Subscriber access</span><h1>Trading Strategies</h1><p>Systematic strategy research, current model signals, model positions, and historical results.</p></div>
-    <div id="account-actions" class="account-actions" hidden><span id="member-email"></span><button id="billing-button" class="button secondary">Manage billing</button></div>
-  </section>
 
   <section id="auth-panel" class="panel auth-panel">
     <h2>Subscriber sign in</h2>
@@ -45,14 +46,14 @@
   </section>
 
   <section id="strategies-home" hidden>
-    <section id="strategy-directory">
-      <div class="directory-heading"><div><span class="eyebrow">Strategies</span><h2>Explore the strategies</h2><p>Select a strategy to open its complete subscriber results, latest model signal, current model positions, and historical records.</p></div><div class="as-of-card"><span>Current date</span><strong id="current-date">—</strong></div></div>
-      <div class="strategy-cards">
-        <a class="strategy-card" href="members.html?strategy=extreme-os"><span class="card-status"><i></i> Flagship strategy</span><h3>Extreme OS</h3><p>Current model alerts and positions from Collective2, plus the complete closed-trade history.</p><span class="card-link">Open subscriber results →</span></a>
-        <a class="strategy-card" href="members.html?strategy=momentum"><span class="card-status">Monthly ETF rotation</span><h3>MoMoEtf1</h3><p>Latest model update, current ETF exposure, and the complete monthly performance record.</p><span class="card-link">Open subscriber results →</span></a>
-        <a class="strategy-card" href="members.html?strategy=momentum2"><span class="card-status">Monthly regime rotation</span><h3>MoMoEtf2</h3><p>Current model allocation and status, signal details, and historical allocation changes.</p><span class="card-link">Open subscriber results →</span></a>
-        <a class="strategy-card" href="members.html?strategy=momentum-stocks"><span class="card-status">Monthly stock rotation</span><h3>Momentum Stocks</h3><p>Latest model signal, current model holdings, and historical monthly allocations.</p><span class="card-link">Open subscriber results →</span></a>
-        <a class="strategy-card" href="members.html?strategy=mean-reversion"><span class="card-status">Daily long/short signals</span><h3>Mean Reversion</h3><p>Latest MOO model orders, open long and short positions, and detailed trade history.</p><span class="card-link">Open subscriber results →</span></a>
+    <section id="strategy-directory" class="home-section">
+      <div class="home-date"><span>Current date</span><strong id="current-date">—</strong></div>
+      <div class="home-cards">
+        <div class="home-card"><span class="home-kicker">Flagship strategy</span><h2>Extreme OS</h2><p>Our flagship strategy focused on identifying high-probability stock opportunities using systematic analysis and disciplined risk management.</p><p class="home-stats"><span>Active Strategy</span><span>Historical Track Record</span><span>Member Trade Alerts</span></p><a class="home-btn" href="members.html?strategy=extreme-os">Learn More</a></div>
+        <div class="home-card"><span class="home-kicker">Monthly ETF allocation</span><h2>MoMoEtf1</h2><p>Systematic ETF allocation model that adjusts monthly across major market exposures using proprietary trend and risk-management signals.</p><p class="home-stats"><span class="positive">25.25% Backtest CAGR</span><span class="positive">1.22 Sharpe Ratio</span><span class="negative">-18.30% Maximum Drawdown</span></p><a class="home-btn" href="members.html?strategy=momentum">View Backtest Results</a></div>
+        <div class="home-card"><span class="home-kicker">Tactical ETF allocation</span><h2>MoMoEtf2</h2><p>Tactical asset allocation model that adjusts monthly across major ETF exposures using proprietary market environment and risk-management signals.</p><p class="home-stats"><span class="positive">22.46% Backtest CAGR</span><span class="positive">1.31 Sharpe Ratio</span><span class="negative">-23.69% Maximum Drawdown</span></p><a class="home-btn" href="members.html?strategy=momentum2">View Backtest Results</a></div>
+        <div class="home-card"><span class="home-kicker">Monthly stock allocation</span><h2>MoMo Stocks</h2><p>Systematic stock allocation model that adjusts monthly across selected equity opportunities using proprietary trend and risk-management signals.</p><p class="home-stats"><span class="positive">46.50% Backtest CAGR</span><span class="positive">1.34 Sharpe Ratio</span><span class="negative">-38.33% Maximum Drawdown</span></p><a class="home-btn" href="members.html?strategy=momentum-stocks">View Backtest Results</a></div>
+        <div class="home-card"><span class="home-kicker">Daily long / short</span><h2>Mean Reversion</h2><p>Systematic long/short strategy targeting short-term price dislocations and subsequent mean-reversion opportunities.</p><p class="home-stats"><span class="positive">30.93% Backtest CAGR</span><span class="positive">1.66 Sharpe Ratio</span><span class="negative">-21.78% Maximum Drawdown</span></p><a class="home-btn" href="members.html?strategy=mean-reversion">View Backtest Results</a></div>
       </div>
     </section>
     <section id="strategy-detail" hidden>
@@ -64,10 +65,10 @@
       <section class="panel"><h2>Current positions</h2><div id="positions-table" class="table-wrap"></div></section>
       <section class="panel"><h2>Complete historical trades</h2><div id="trades-table" class="table-wrap"></div></section>
     </section>
-    <section class="panel"><p><strong>Important:</strong> This is general, model-generated research—not personalized advice. Extreme Trading Inc. does not consider your circumstances, access your brokerage account, or execute trades. You are solely responsible for all investment decisions. <a href="risk-disclosure.html">Read the Risk Disclosure</a>.</p></section>
+    <section class="panel member-disclosure"><p><strong>Important:</strong> This is general, model-generated research—not personalized advice. Extreme Trading Inc. does not consider your circumstances, access your brokerage account, or execute trades. You are solely responsible for all investment decisions. <a href="risk-disclosure.html">Read the Risk Disclosure</a>.</p></section>
   </section>
   <section id="loading" class="panel"><p>Checking member access…</p></section>
 </main>
-<script src="member.js?v=nav3" defer></script>
+<script src="member.js?v=home4" defer></script>
 </body>
 </html>

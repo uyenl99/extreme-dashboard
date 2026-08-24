@@ -14,6 +14,7 @@
 
   function showMemberNavigation(visible) {
     show("nav-signout-button", visible);
+    show("billing-button", visible);
     show("member-login-link", !visible);
     $("member-home-link").href = visible ? "members.html" : "index.html";
     $("member-home-link").textContent = "Home";
@@ -86,12 +87,12 @@
   }
 
   async function loadStrategiesHome() {
-    show("loading"); show("auth-panel", false); show("activate-panel", false); show("password-panel", false); show("strategies-home", false); show("account-actions", false);
+    show("loading"); show("auth-panel", false); show("activate-panel", false); show("password-panel", false); show("strategies-home", false); showMemberNavigation(false);
     if (!state.session) { show("loading", false); show("auth-panel"); return; }
     if (state.recovery) { show("loading", false); show("password-panel"); return; }
     const userResponse = await authRequest("user", {}, "GET");
     if (!userResponse.ok) { saveSession(null); show("loading", false); show("auth-panel"); return; }
-    const user = await userResponse.json(); $("member-email").textContent = user.email;
+    await userResponse.json();
     const strategy = new URLSearchParams(location.search).get("strategy") || "";
 
     // The directory only needs an access check. Live Collective2 data is fetched
@@ -100,15 +101,15 @@
     if (strategy && strategy !== "extreme-os") {
       showMemberNavigation(true);
       await renderMemberView(null);
-      show("loading", false); show("account-actions"); show("strategies-home");
+      show("loading", false); show("strategies-home");
       return;
     }
 
     const response = await api(strategy === "extreme-os" ? "/api/member-data" : "/api/member-access");
-    show("loading", false); show("account-actions");
-    if (response.status === 401) { saveSession(null); show("account-actions", false); show("auth-panel"); return; }
+    show("loading", false);
+    if (response.status === 401) { saveSession(null); showMemberNavigation(false); show("auth-panel"); return; }
     if (response.status === 403) {
-      saveSession(null); show("account-actions", false); show("auth-panel");
+      saveSession(null); showMemberNavigation(false); show("auth-panel");
       $("auth-message").textContent = "This email does not have an active subscription. Subscribe before signing in.";
       return;
     }
