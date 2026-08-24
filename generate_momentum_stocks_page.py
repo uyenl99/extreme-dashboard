@@ -27,7 +27,7 @@ INITIAL_EQUITY = 100_000.0
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Generate the public Momentum Stocks backtest page."
+        description="Generate the public MoMo Stocks backtest page."
     )
     parser.add_argument(
         "--source",
@@ -117,7 +117,7 @@ def build_chart(daily):
             x=daily["date"],
             y=daily["equity"],
             mode="lines",
-            name="Momentum Stocks",
+            name="MoMo Stocks",
             line=dict(color="#60a5fa", width=3),
         )
     )
@@ -216,7 +216,7 @@ def render_page(summary, daily, allocations, monthly, alert, current, audience="
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Momentum Stocks Backtest - Extreme Trading Inc.</title>
+<title>MoMo Stocks Backtest - Extreme Trading Inc.</title>
 <style>
 *{{box-sizing:border-box}} body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}} nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}} nav a{{color:white;text-decoration:none;margin-left:20px}} .container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}} .hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}} .eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}} h1{{margin:8px 0 10px}} h2{{margin-top:0}} .subtle,.muted{{color:#94a3b8}} .metrics{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:22px 0}} .metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}} .metric-label{{color:#94a3b8;font-size:13px}} .metric-value{{font-size:24px;font-weight:700;margin-top:6px}} .chart{{overflow:hidden}} .table-wrap{{overflow-x:auto}} table{{width:100%;border-collapse:collapse;background:#111827}} th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:12px;white-space:nowrap}} th{{background:#1f2937;color:white}} th:first-child,td:first-child{{text-align:left}} .positive{{color:#22c55e;font-weight:600}} .negative{{color:#f87171;font-weight:600}} .compact{{max-width:420px}} .regime{{font-weight:700}} .risk-on{{color:#60a5fa}} .risk-off{{color:#f59e0b}} .disclaimer{{font-size:13px;line-height:1.6;color:#94a3b8}} footer{{text-align:center;padding:30px;color:#94a3b8}} @media(max-width:800px){{nav{{align-items:flex-start;padding:16px;gap:12px}}nav div:last-child{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}}nav a{{margin-left:8px;font-size:12px}}.metrics{{grid-template-columns:repeat(2,1fr)}}.container{{padding:20px 10px}}}} @media(max-width:480px){{.metrics{{grid-template-columns:1fr}}}}
 {FAQ_CSS}</style>
@@ -224,10 +224,10 @@ def render_page(summary, daily, allocations, monthly, alert, current, audience="
 <body>
 <nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a></div></nav>
 <main class="container">
-<section class="hero"><div class="eyebrow">Backtested stock rotation strategy</div><h1>Momentum Stocks</h1><p>Monthly equal-weight rotation into the ten strongest stocks from a point-in-time Russell 1000 universe, filtered for market capitalization. A VIX-versus-SPY realized-volatility filter moves the portfolio into defensive assets during risk-off periods.</p><p class="subtle">Backtest period: {summary.start} through {summary.end} · Starting equity: ${INITIAL_EQUITY:,.0f}</p>{render_faq("momentum-stocks", audience)}</section>
+<section class="hero"><div class="eyebrow">Backtested stock allocation model</div><h1>MoMo Stocks</h1><p>Systematic stock allocation model that adjusts monthly across selected equity opportunities using proprietary trend, quality, and risk-management signals. Subscribers receive current model allocations and update alerts.</p><p class="subtle">Backtest period: {summary.start} through {summary.end} · Starting equity: ${INITIAL_EQUITY:,.0f}</p>{render_faq("momentum-stocks", audience)}</section>
 <section class="metrics">{metric_html}</section>
 {protected_sections if audience == "member" else ""}
-<section class="panel"><h2>Equity Curve</h2><p class="subtle">Momentum Stocks compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
+<section class="panel"><h2>Equity Curve</h2><p class="subtle">MoMo Stocks compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
 <section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly)}</section>
 {protected_sections if audience == "public" else ""}
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>

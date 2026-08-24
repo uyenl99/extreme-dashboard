@@ -51,10 +51,10 @@ FAQS = {
     },
     "momentum-stocks": {
         "public": [
-            ("What is Momentum Stocks?", "It is a monthly model that selects ten strong stocks from a point-in-time Russell 1000 universe and can move to defensive assets when its risk filter is active."),
-            ("Why use a point-in-time universe?", "It reduces survivorship bias by avoiding a universe made only from today's successful companies."),
-            ("What are the main risks?", "A concentrated stock portfolio can experience sharp losses, turnover, gaps, and liquidity or execution differences."),
-            ("What is available to members?", "Members see current holdings, the preliminary next-month alert, its execution date, and recent monthly allocations."),
+            ("What is MoMo Stocks?", "MoMo Stocks is a systematic stock allocation model. It adjusts monthly across selected equity opportunities using proprietary trend, quality, and risk-management signals."),
+            ("How often can holdings change?", "The model is designed around a monthly update process. It is not an intraday trading system, and an allocation can remain unchanged for multiple months."),
+            ("What are the main risks?", "A stock allocation model can experience sharp losses, turnover, price gaps, and liquidity or execution differences."),
+            ("What is available to members?", "Members receive current model allocation details, model alerts, and subscriber-only updates."),
         ],
         "member": [
             ("Are the latest alert stocks already held?", "Not necessarily. Current holdings are listed separately. The alert is for the stated future execution date and can change before the signal period closes."),
