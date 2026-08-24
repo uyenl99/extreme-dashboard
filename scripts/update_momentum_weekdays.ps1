@@ -41,6 +41,9 @@ try {
         if (-not (Test-Path -LiteralPath $path)) { throw "Required path not found: $path" }
     }
 
+    # Generators import shared site modules and Plotly from the bundled package directory.
+    $env:PYTHONPATH = "$webRoot;$plotlyDir"
+
     if ($NoPublish) {
         Push-Location $dualMomRoot
         try {
