@@ -9,11 +9,11 @@
 <link rel="stylesheet" href="member-auth.css">
 </head>
 <body>
-<nav><strong>Extreme Trading Inc.</strong><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a></div></nav>
+<nav><strong>Extreme Trading Inc.</strong><div><a id="member-home-link" href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a id="member-login-link" href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a><button id="nav-signout-button" class="nav-signout" type="button" hidden>Sign out</button></div></nav>
 <main>
   <section class="hero">
     <div><span class="eyebrow">Subscriber access</span><h1>Trading Strategies</h1><p>Systematic strategy research, current model signals, model positions, and historical results.</p></div>
-    <div id="account-actions" class="account-actions" hidden><span id="member-email"></span><button id="billing-button" class="button secondary">Manage billing</button><button id="signout-button" class="text-button">Sign out</button></div>
+    <div id="account-actions" class="account-actions" hidden><span id="member-email"></span><button id="billing-button" class="button secondary">Manage billing</button></div>
   </section>
 
   <section id="auth-panel" class="panel auth-panel">
@@ -68,6 +68,6 @@
   </section>
   <section id="loading" class="panel"><p>Checking member access…</p></section>
 </main>
-<script src="member.js?v=2ae8832" defer></script>
+<script src="member.js?v=nav2" defer></script>
 </body>
 </html>

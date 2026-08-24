@@ -12,6 +12,13 @@
     else localStorage.removeItem("eti_member_session");
   }
 
+  function showMemberNavigation(visible) {
+    show("nav-signout-button", visible);
+    show("member-login-link", !visible);
+    $("member-home-link").href = visible ? "members.html" : "index.html";
+    $("member-home-link").textContent = visible ? "Strategies" : "Home";
+  }
+
   function readCallback() {
     const hash = new URLSearchParams(location.hash.slice(1));
     if (!hash.get("access_token")) return;
@@ -91,6 +98,7 @@
     // only when the member actually opens Extreme OS; other protected pages
     // perform their access check in /api/member-page.
     if (strategy && strategy !== "extreme-os") {
+      showMemberNavigation(true);
       await renderMemberView(null);
       show("loading", false); show("account-actions"); show("strategies-home");
       return;
@@ -105,6 +113,7 @@
       return;
     }
     if (!response.ok) { show("auth-panel"); $("auth-message").textContent = "Member data is temporarily unavailable."; return; }
+    showMemberNavigation(true);
     const data = await response.json(); await renderMemberView(strategy === "extreme-os" ? data : null); show("strategies-home");
   }
 
@@ -142,7 +151,7 @@
   });
 
   $("billing-button").addEventListener("click", async () => { const response = await api("/api/create-portal-session", { method: "POST", body: "{}" }); const body = await response.json(); if (body.url) location.href = body.url; else alert(body.error || "Unable to open billing."); });
-  $("signout-button").addEventListener("click", () => { saveSession(null); location.reload(); });
+  $("nav-signout-button").addEventListener("click", () => { saveSession(null); location.href = "members.html"; });
 
   (async () => {
     state.config = await fetch("/api/public-config").then((r) => r.json()); readCallback();
