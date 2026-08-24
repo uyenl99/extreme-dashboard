@@ -73,9 +73,6 @@
     $("detail-current-date").textContent = `Current date: ${today}`;
     const strategy = new URLSearchParams(location.search).get("strategy") || "";
     const showDetail = Boolean(strategy);
-    show("strategy-directory", !showDetail);
-    show("strategy-detail", showDetail);
-    if (strategy === "extreme-os") render(data);
     if (showDetail && strategy !== "extreme-os") {
       const response = await api(`/api/member-page?strategy=${encodeURIComponent(strategy)}`);
       if (!response.ok) throw new Error("Member strategy page is unavailable.");
@@ -85,6 +82,9 @@
       document.close();
       return true;
     }
+    show("strategy-directory", !showDetail);
+    show("strategy-detail", showDetail);
+    if (strategy === "extreme-os") render(data);
     return false;
   }
 
