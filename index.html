@@ -4,15 +4,6 @@
 <head>
 <meta charset="utf-8">
 <title>Home - Extreme Trading Inc.</title>
-<script>
-try {
-    const memberSession = JSON.parse(localStorage.getItem("eti_member_session"));
-    if (memberSession?.access_token && memberSession?.refresh_token) {
-        location.replace("members.html");
-    }
-} catch {}
-</script>
-
 <style>
 
 body{
