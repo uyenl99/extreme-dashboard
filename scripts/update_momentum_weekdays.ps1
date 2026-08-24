@@ -48,10 +48,10 @@ try {
             if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 data refresh failed." }
             & $python "momo5.py"
             if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 backtest failed." }
-            $publicGeneratorCode = "import runpy,sys; sys.path.insert(0,r'$plotlyDir'); sys.argv=['generate_momentum_page.py','--source',r'$dualMomRoot\output_momo5','--output',r'$webRoot\momentum.html','--audience','public']; runpy.run_path(r'$webRoot\generate_momentum_page.py',run_name='__main__')"
+            $publicGeneratorCode = "import runpy,sys; sys.path.insert(0,r'$webRoot'); sys.path.insert(0,r'$plotlyDir'); sys.argv=['generate_momentum_page.py','--source',r'$dualMomRoot\output_momo5','--output',r'$webRoot\momentum.html','--audience','public']; runpy.run_path(r'$webRoot\generate_momentum_page.py',run_name='__main__')"
             & $python -c $publicGeneratorCode
             if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 public page generation failed." }
-            $memberGeneratorCode = "import runpy,sys; sys.path.insert(0,r'$plotlyDir'); sys.argv=['generate_momentum_page.py','--source',r'$dualMomRoot\output_momo5','--output',r'$privateMomentumPage','--audience','member']; runpy.run_path(r'$webRoot\generate_momentum_page.py',run_name='__main__')"
+            $memberGeneratorCode = "import runpy,sys; sys.path.insert(0,r'$webRoot'); sys.path.insert(0,r'$plotlyDir'); sys.argv=['generate_momentum_page.py','--source',r'$dualMomRoot\output_momo5','--output',r'$privateMomentumPage','--audience','member']; runpy.run_path(r'$webRoot\generate_momentum_page.py',run_name='__main__')"
             & $python -c $memberGeneratorCode
             if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 member page generation failed." }
             & $python "update_momentum_html_current.py" --source "output_momo5" --html $privateMomentumPage
