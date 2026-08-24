@@ -16,12 +16,12 @@ if (-not (Test-Path -LiteralPath (Join-Path $automationCheckout ".git"))) {
 }
 & $git -C $automationCheckout fetch origin main
 if ($LASTEXITCODE -ne 0) { throw "Could not refresh the sequential automation checkout." }
-& $git -C $automationCheckout checkout -B main origin/main
+& $git -C $automationCheckout checkout -f -B main origin/main
 if ($LASTEXITCODE -ne 0) { throw "Could not synchronize the sequential automation checkout." }
 if (-not (Test-Path -LiteralPath $updateScript)) { throw "Update script not found: $updateScript" }
 
 $bootstrap = @"
-`$ErrorActionPreference='Stop'; & '$git' -C '$automationCheckout' fetch origin main; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & '$git' -C '$automationCheckout' checkout -B main origin/main; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & powershell.exe -NoProfile -ExecutionPolicy Bypass -File '$updateScript'; exit `$LASTEXITCODE
+`$ErrorActionPreference='Stop'; & '$git' -C '$automationCheckout' fetch origin main; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & '$git' -C '$automationCheckout' checkout -f -B main origin/main; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & powershell.exe -NoProfile -ExecutionPolicy Bypass -File '$updateScript'; exit `$LASTEXITCODE
 "@.Trim()
 $encodedBootstrap = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($bootstrap))
 $action = New-ScheduledTaskAction -Execute "powershell.exe" `

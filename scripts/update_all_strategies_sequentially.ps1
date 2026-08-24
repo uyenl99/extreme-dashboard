@@ -118,6 +118,21 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Daily update preview checks failed; production was not changed: $prUrl" }
     & $gh pr merge $prUrl --repo $repo --squash --delete-branch
     if ($LASTEXITCODE -ne 0) { throw "Daily update passed preview checks but could not be merged: $prUrl" }
-    Write-Host "All five updates completed, passed Vercel preview checks, and were published: $prUrl"
+    $mergeInfo = & $gh pr view $prUrl --repo $repo --json mergeCommit | ConvertFrom-Json
+    $mergeSha = $mergeInfo.mergeCommit.oid
+    if (-not $mergeSha) { throw "Daily update merged, but its production commit could not be identified: $prUrl" }
+    $pagesPublished = $false
+    for ($attempt = 1; $attempt -le 60 -and -not $pagesPublished; $attempt++) {
+        $pagesBuild = & $gh api "repos/$repo/pages/builds/latest" | ConvertFrom-Json
+        if ($pagesBuild.commit -eq $mergeSha -and $pagesBuild.status -eq "built") {
+            $pagesPublished = $true
+        }
+        elseif ($pagesBuild.commit -eq $mergeSha -and $pagesBuild.status -eq "errored") {
+            throw "GitHub Pages failed to publish daily update commit $mergeSha."
+        }
+        else { Start-Sleep -Seconds 10 }
+    }
+    if (-not $pagesPublished) { throw "Timed out waiting for GitHub Pages to publish daily update commit $mergeSha." }
+    Write-Host "All five updates completed and were published to https://uyenl99.github.io/extreme-dashboard/index.html ($mergeSha)."
 }
 finally { Stop-Transcript }
