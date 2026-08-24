@@ -16,7 +16,7 @@
     show("nav-signout-button", visible);
     show("member-login-link", !visible);
     $("member-home-link").href = visible ? "members.html" : "index.html";
-    $("member-home-link").textContent = visible ? "Strategies" : "Home";
+    $("member-home-link").textContent = "Home";
   }
 
   function readCallback() {
