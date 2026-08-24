@@ -20,10 +20,10 @@ FAQS = {
     },
     "momentum": {
         "public": [
-            ("What is Momentum ETF1?", "It is a monthly dual-momentum model that ranks ETFs and holds the three strongest qualifying assets, with SHY used by its risk-off filter."),
-            ("How often can holdings change?", "The model evaluates monthly. It is not an intraday trading system, and an allocation can remain unchanged for multiple months."),
+            ("What is MoMoEtf1?", "MoMoEtf1 is a systematic ETF allocation model. It adjusts monthly across major market exposures using proprietary trend and risk-management signals."),
+            ("How often can holdings change?", "The model is designed around a monthly update process. It is not an intraday trading system, and an allocation can remain unchanged for multiple months."),
             ("Are the charts live account results?", "No. They are simulated backtest results and may omit real-world costs, taxes, slippage, and execution differences."),
-            ("What is available to members?", "Members see the current holding month, the latest preliminary signal, its intended execution month, and recent allocations."),
+            ("What is available to members?", "Members receive current model allocation details, model alerts, and subscriber-only updates."),
         ],
         "member": [
             ("What is the difference between current holdings and the latest alert?", "Current holdings are the allocation already in effect. The latest alert is the preliminary next-month allocation and can change until the signal period closes."),
