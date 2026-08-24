@@ -34,10 +34,10 @@ FAQS = {
     },
     "momentum2": {
         "public": [
-            ("What is Momentum ETF2?", "Also called Inflation Compass, it is a monthly regime model that rotates among XLE, XLK, XLU, or a defensive XLP/IEF blend."),
-            ("What do the four regimes mean?", "Reflation, Goldilocks, Stagflation, and Slowdown are descriptive model states based on growth and inflation conditions—not market predictions."),
-            ("Why can one allocation last several months?", "The holding changes only when the regime selects a different allocation. Low turnover is normal for this model."),
-            ("Can the strategy lose money or trail SPY?", "Yes. It is concentrated and can lose money or underperform its benchmark for extended periods."),
+            ("What is MoMoEtf2?", "MoMoEtf2 is a tactical ETF allocation model. It adjusts monthly across major market exposures using proprietary market-environment and risk-management signals."),
+            ("How often can holdings change?", "The model is designed around a monthly update process. It is not an intraday trading system, and an allocation can remain unchanged for multiple months."),
+            ("Are the charts live account results?", "No. They are simulated backtest results and may omit real-world costs, taxes, slippage, and execution differences."),
+            ("What is available to members?", "Members receive current model allocation details, model alerts, and subscriber-only updates."),
         ],
         "member": [
             ("What does current allocation mean?", "It is the model holding for the effective month displayed on the page."),

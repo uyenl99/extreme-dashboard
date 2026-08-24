@@ -1,5 +1,6 @@
 import argparse
 import html
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -21,6 +22,10 @@ def pct(value):
     return f"{float(value) * 100:.2f}%"
 
 
+def currency(value):
+    return f"${float(value):,.0f}"
+
+
 def table(frame, percent_columns=()):
     headers = "".join(f"<th>{html.escape(str(column))}</th>" for column in frame.columns)
     rows = []
@@ -38,6 +43,84 @@ def table(frame, percent_columns=()):
             cells.append(f'<td class="{css}">{text}</td>')
         rows.append(f"<tr>{''.join(cells)}</tr>")
     return f'<div class="table-wrap"><table><thead><tr>{headers}</tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
+
+
+def build_chart(daily, start_equity=100000.0):
+    dates = [pd.Timestamp(value).isoformat() for value in daily.index]
+    strategy = [round(float(value) * start_equity, 2) for value in daily["strategy_wealth"]]
+    spy = [round(float(value) * start_equity, 2) for value in daily["spy_wealth"]]
+    traces = [
+        {
+            "x": dates,
+            "y": strategy,
+            "mode": "lines",
+            "name": "MoMoEtf2",
+            "line": {"color": "#60a5fa", "width": 3},
+            "type": "scatter",
+        },
+        {
+            "x": dates,
+            "y": spy,
+            "mode": "lines",
+            "name": "SPY",
+            "line": {"color": "#94a3b8", "width": 1.7},
+            "type": "scatter",
+        },
+    ]
+    layout = {
+        "template": "plotly_dark",
+        "height": 520,
+        "margin": {"l": 55, "r": 25, "t": 25, "b": 45},
+        "paper_bgcolor": "#111827",
+        "plot_bgcolor": "#111827",
+        "hovermode": "x unified",
+        "legend": {"orientation": "h", "y": 1.08, "x": 0},
+        "yaxis": {
+            "title": {"text": "Equity ($)"},
+            "tickprefix": "$",
+            "tickformat": ",.0f",
+            "gridcolor": "#273449",
+        },
+        "xaxis": {"gridcolor": "#273449"},
+    }
+    return (
+        '<div style="height:520px; width:100%;">'
+        '<script>window.PlotlyConfig = {MathJaxConfig: "local"};</script>'
+        '<script charset="utf-8" src="https://cdn.plot.ly/plotly-3.7.0.min.js" '
+        'integrity="sha256-jvTGqxNp8AGWEcvNLVuKr+8j5dGe9Yw51LQkmDH+IYA=" crossorigin="anonymous"></script>'
+        '<div id="momoetf2-equity-chart" class="plotly-graph-div" style="height:100%; width:100%;"></div>'
+        "<script>window.PLOTLYENV=window.PLOTLYENV || {};"
+        'if (document.getElementById("momoetf2-equity-chart")) {'
+        'Plotly.newPlot("momoetf2-equity-chart",'
+        f"{json.dumps(traces, separators=(',', ':'))},"
+        f"{json.dumps(layout, separators=(',', ':'))},"
+        '{"responsive":true});}</script></div>'
+    )
+
+
+def build_monthly_table(monthly):
+    month_names = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ]
+    headers = "".join(f"<th>{name}</th>" for name in month_names + ["Year Return"])
+    rows = []
+    for item in monthly.sort_values("Year", ascending=False).itertuples(index=False):
+        values = [getattr(item, name) for name in month_names]
+        values.append(getattr(item, "_13"))
+        cells = []
+        for value in values:
+            if pd.isna(value) or value == "":
+                cells.append('<td class="muted">—</td>')
+            else:
+                number = float(value)
+                css = "positive" if number > 0 else "negative" if number < 0 else "muted"
+                cells.append(f'<td class="{css}">{number * 100:.1f}%</td>')
+        rows.append(f"<tr><th>{int(item.Year)}</th>{''.join(cells)}</tr>")
+    return (
+        '<div class="table-wrap"><table><thead><tr><th>Year</th>'
+        f'{headers}</tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
+    )
 
 
 def allocation_history(monthly_backtest, limit=50):
@@ -92,18 +175,25 @@ def latest_alert_table(monthly_backtest, daily):
 
 def render(source, audience, chart_src):
     summary = pd.read_csv(source / "summary.csv", index_col=0)
-    monthly = pd.read_csv(source / "monthly_pnl_by_year.csv").sort_values("Year", ascending=False)
+    monthly = pd.read_csv(source / "monthly_pnl_by_year.csv")
     monthly_backtest = pd.read_csv(source / "monthly_backtest.csv", index_col=0)
     daily = pd.read_csv(source / "daily_drawdown.csv", index_col=0, parse_dates=True)
     strategy = summary.iloc[:, 0]
     spy = summary.iloc[:, 1]
+    start_equity = 100000.0
+    start_date = pd.to_datetime(daily.index).min().strftime("%Y-%m-%d")
+    end_date = pd.to_datetime(daily.index).max().strftime("%Y-%m-%d")
+    active_months = int(monthly[["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]].count(axis=1).sum())
+    final_equity = float(strategy["Growth of $1"]) * start_equity
     metrics = (
         ("Strategy CAGR", pct(strategy["CAGR"])),
         ("Strategy Max Drawdown", pct(strategy["Daily max drawdown"])),
+        ("Total Return", pct(float(strategy["Growth of $1"]) - 1)),
         ("Sharpe Ratio", f'{float(strategy["Sharpe"]):.2f}'),
-        ("Growth of $1", f'${float(strategy["Growth of $1"]):.2f}'),
         ("SPY CAGR", pct(spy["CAGR"])),
         ("SPY Max Drawdown", pct(spy["Daily max drawdown"])),
+        ("Final Equity", currency(final_equity)),
+        ("Active Months", f"{active_months:,}"),
     )
     metrics_html = "".join(
         f'<div class="metric"><div class="metric-label">{label}</div><div class="metric-value {metric_class(value)}">{value}</div></div>'
@@ -123,16 +213,18 @@ def render(source, audience, chart_src):
         )
     else:
         protected = (
-            '<section class="panel"><h2>Member Signals</h2><p class="subtle">Current allocation and recent allocation changes are available to members.</p>'
+            '<section class="panel"><h2>Member Signals</h2><p class="subtle">Current allocation details, latest alerts, and recent model updates are available to members.</p>'
             '<p><a href="subscribe.html">View membership options</a></p></section>'
         )
-    page = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Momentum ETF2 - Extreme Trading Inc.</title>
-<style>*{{box-sizing:border-box}}body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}}nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}}nav a{{color:white;text-decoration:none;margin-left:20px}}a{{color:#60a5fa}}.container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}}.hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}}.eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}}h1{{margin:8px 0 10px}}h2{{margin-top:0}}.subtle,.muted{{color:#94a3b8}}.metrics{{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:14px;margin:22px 0}}.metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}}.metric-label{{color:#94a3b8;font-size:13px}}.metric-value{{font-size:24px;font-weight:700;margin-top:6px}}.positive{{color:#22c55e}}.negative{{color:#f87171}}.table-wrap{{overflow-x:auto}}table{{width:100%;border-collapse:collapse}}th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:12px;white-space:nowrap}}th{{background:#1f2937}}th:first-child,td:first-child{{text-align:left}}.chart img{{width:100%;display:block;border-radius:8px}}footer{{text-align:center;padding:30px;color:#94a3b8}}{FAQ_CSS}</style></head><body>
+    chart_html = build_chart(daily, start_equity)
+    page = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MoMoEtf2 Backtest - Extreme Trading Inc.</title>
+<style>*{{box-sizing:border-box}}body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}}nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}}nav a{{color:white;text-decoration:none;margin-left:20px}}a{{color:#60a5fa}}.container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}}.hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}}.eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}}h1{{margin:8px 0 10px}}h2{{margin-top:0}}.subtle,.muted{{color:#94a3b8}}.metrics{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:22px 0}}.metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}}.metric-label{{color:#94a3b8;font-size:13px}}.metric-value{{font-size:24px;font-weight:700;margin-top:6px}}.chart{{overflow:hidden}}.positive{{color:#22c55e}}.negative{{color:#f87171}}.table-wrap{{overflow-x:auto}}table{{width:100%;border-collapse:collapse;background:#111827}}th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:12px;white-space:nowrap}}th{{background:#1f2937;color:white}}th:first-child,td:first-child{{text-align:left}}footer{{text-align:center;padding:30px;color:#94a3b8}}@media(max-width:800px){{nav{{align-items:flex-start;padding:16px;gap:12px}}nav div:last-child{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}}nav a{{margin-left:8px;font-size:12px}}.metrics{{grid-template-columns:repeat(2,1fr)}}.container{{padding:20px 10px}}}}@media(max-width:480px){{.metrics{{grid-template-columns:1fr}}}}{FAQ_CSS}</style></head><body>
 <nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a></div></nav><main class="container">
-<section class="hero"><div class="eyebrow">Market regime ETF rotation</div><h1>Momentum ETF2</h1><p>Inflation Compass rotates monthly among XLE, XLK, XLU, or a 50/50 XLP/IEF allocation according to market growth and inflation expectations.</p>{render_faq("momentum2", audience)}</section>
-<section class="metrics">{metrics_html}</section>{protected}
-<section class="panel chart"><h2>Equity Curve</h2><img src="{html.escape(chart_src)}" alt="Inflation Compass equity curve"></section>
-<section class="panel"><h2>Monthly Returns</h2>{table(monthly, tuple(monthly.columns[1:]))}</section>
+<section class="hero"><div class="eyebrow">Backtested tactical ETF allocation model</div><h1>MoMoEtf2</h1><p>Tactical asset allocation model that adjusts monthly across major market exposures using proprietary market-environment and risk-management signals. Subscribers receive current model allocations and update alerts.</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: {currency(start_equity)}</p>{render_faq("momentum2", audience)}</section>
+<section class="metrics">{metrics_html}</section>
+<section class="panel"><h2>Equity Curve</h2><p class="subtle">MoMoEtf2 compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
+<section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly)}</section>
+{protected}
 </main><footer>&copy; 2026 Extreme Trading Inc.</footer></body></html>"""
     if audience == "public":
         forbidden = ("id=\"current-month\"", "<h2>Latest Alert</h2>", "<h2>Recent Monthly Allocations</h2>")
