@@ -83,7 +83,9 @@
       document.open();
       document.write(html);
       document.close();
+      return true;
     }
+    return false;
   }
 
   async function loadStrategiesHome() {
@@ -100,7 +102,8 @@
     // perform their access check in /api/member-page.
     if (strategy && strategy !== "extreme-os") {
       showMemberNavigation(true);
-      await renderMemberView(null);
+      const documentReplaced = await renderMemberView(null);
+      if (documentReplaced) return;
       show("loading", false); show("strategies-home");
       return;
     }
@@ -115,8 +118,46 @@
     }
     if (!response.ok) { show("auth-panel"); $("auth-message").textContent = "Member data is temporarily unavailable."; return; }
     showMemberNavigation(true);
-    const data = await response.json(); await renderMemberView(strategy === "extreme-os" ? data : null); show("strategies-home");
+    const data = await response.json();
+    const documentReplaced = await renderMemberView(strategy === "extreme-os" ? data : null);
+    if (!documentReplaced) show("strategies-home");
   }
+
+  async function openMemberStrategy(strategy) {
+    const destination = new URL("members.html", location.href);
+    destination.searchParams.set("strategy", strategy);
+    history.pushState(null, "", destination.pathname + destination.search);
+    show("strategies-home", false);
+    show("loading");
+    try {
+      let data = null;
+      if (strategy === "extreme-os") {
+        const response = await api("/api/member-data");
+        if (!response.ok) throw new Error("Member strategy data is unavailable.");
+        data = await response.json();
+      }
+      const documentReplaced = await renderMemberView(data);
+      if (documentReplaced) return;
+      show("loading", false);
+      show("strategies-home");
+      window.scrollTo({ top: 0, behavior: "auto" });
+    } catch (error) {
+      history.replaceState(null, "", "members.html");
+      show("loading", false);
+      show("strategies-home");
+      show("strategy-directory");
+      show("strategy-detail", false);
+      alert(error.message || "Member strategy page is temporarily unavailable.");
+    }
+  }
+
+  document.querySelectorAll(".home-btn[href*='strategy=']").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      const strategy = new URL(link.href, location.href).searchParams.get("strategy");
+      if (strategy) openMemberStrategy(strategy);
+    });
+  });
 
   $("login-form").addEventListener("submit", async (event) => {
     event.preventDefault(); const button = event.submitter; button.disabled = true;
