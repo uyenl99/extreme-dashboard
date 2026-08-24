@@ -127,8 +127,6 @@
     const destination = new URL("members.html", location.href);
     destination.searchParams.set("strategy", strategy);
     history.pushState(null, "", destination.pathname + destination.search);
-    show("strategies-home", false);
-    show("loading");
     try {
       let data = null;
       if (strategy === "extreme-os") {
@@ -138,12 +136,10 @@
       }
       const documentReplaced = await renderMemberView(data);
       if (documentReplaced) return;
-      show("loading", false);
       show("strategies-home");
       window.scrollTo({ top: 0, behavior: "auto" });
     } catch (error) {
       history.replaceState(null, "", "members.html");
-      show("loading", false);
       show("strategies-home");
       show("strategy-directory");
       show("strategy-detail", false);
