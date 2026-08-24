@@ -79,8 +79,8 @@
     }
   }
 
-  async function loadDashboard() {
-    show("loading"); show("auth-panel", false); show("activate-panel", false); show("password-panel", false); show("dashboard", false); show("account-actions", false);
+  async function loadStrategiesHome() {
+    show("loading"); show("auth-panel", false); show("activate-panel", false); show("password-panel", false); show("strategies-home", false); show("account-actions", false);
     if (!state.session) { show("loading", false); show("auth-panel"); return; }
     if (state.recovery) { show("loading", false); show("password-panel"); return; }
     const userResponse = await authRequest("user", {}, "GET");
@@ -93,7 +93,7 @@
     // perform their access check in /api/member-page.
     if (strategy && strategy !== "extreme-os") {
       await renderMemberView(null);
-      show("loading", false); show("account-actions"); show("dashboard");
+      show("loading", false); show("account-actions"); show("strategies-home");
       return;
     }
 
@@ -106,14 +106,14 @@
       return;
     }
     if (!response.ok) { show("auth-panel"); $("auth-message").textContent = "Member data is temporarily unavailable."; return; }
-    const data = await response.json(); await renderMemberView(strategy === "extreme-os" ? data : null); show("dashboard");
+    const data = await response.json(); await renderMemberView(strategy === "extreme-os" ? data : null); show("strategies-home");
   }
 
   $("login-form").addEventListener("submit", async (event) => {
     event.preventDefault(); const button = event.submitter; button.disabled = true;
     const response = await authRequest("token?grant_type=password", { email: $("email").value, password: $("password").value });
     const payload = await response.json();
-    if (response.ok && adoptAuth(payload)) { $("auth-message").textContent = ""; await loadDashboard(); }
+    if (response.ok && adoptAuth(payload)) { $("auth-message").textContent = ""; await loadStrategiesHome(); }
     else $("auth-message").textContent = payload.error_description || payload.msg || "Incorrect email or password.";
     button.disabled = false;
   });
@@ -124,7 +124,7 @@
     const button = event.submitter; button.disabled = true;
     const confirmationUrl = `${location.origin}/members.html`;
     const response = await authRequest(`signup?redirect_to=${encodeURIComponent(confirmationUrl)}`, { email: state.checkoutEmail, password: $("activate-password").value }); const payload = await response.json();
-    if (response.ok && adoptAuth(payload)) await loadDashboard();
+    if (response.ok && adoptAuth(payload)) await loadStrategiesHome();
     else if (response.ok) $("activate-message").textContent = "Check your email to confirm your account, then sign in.";
     else $("activate-message").textContent = payload.msg || payload.error_description || "Unable to create account.";
     button.disabled = false;
@@ -138,7 +138,7 @@
 
   $("password-form").addEventListener("submit", async (event) => {
     event.preventDefault(); const response = await authRequest("user", { password: $("new-password").value }, "PUT");
-    if (response.ok) { state.recovery = false; $("password-message").textContent = "Password updated."; await loadDashboard(); }
+    if (response.ok) { state.recovery = false; $("password-message").textContent = "Password updated."; await loadStrategiesHome(); }
     else $("password-message").textContent = "Unable to update the password.";
   });
 
@@ -159,6 +159,6 @@
       }
       $("auth-message").textContent = "We could not verify that subscription. Please contact support if you completed payment.";
     }
-    await loadDashboard();
+    await loadStrategiesHome();
   })().catch(() => { show("loading", false); show("auth-panel"); $("auth-message").textContent = "Member sign-in is temporarily unavailable."; });
 })();
