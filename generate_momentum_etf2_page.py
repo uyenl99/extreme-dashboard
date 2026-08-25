@@ -125,7 +125,7 @@ def build_monthly_table(monthly, daily):
     )
 
 
-def allocation_history(monthly_backtest, limit=50):
+def allocation_history(monthly_backtest, limit=20):
     data = monthly_backtest.copy()
     data.index = pd.PeriodIndex(data.index.astype(str), freq="M")
     display = pd.DataFrame(index=data.index)
@@ -209,27 +209,33 @@ def render(source, audience, chart_src):
             + '<p class="subtle">The current-month signal is preliminary until month end and may change before execution.</p>'
             + latest_alert_table(monthly_backtest, daily)
             + '</section>'
-            + '<section class="panel"><h2>Recent Monthly Allocations</h2>'
+            + '<section class="panel"><h2>Latest 20 Historical Trades</h2>'
             + table(allocations, ("Return", "SPY"))
             + '</section>'
         )
+        before_results = protected
+        after_results = ""
     else:
         protected = (
             '<section class="panel"><h2>Member Signals</h2><p class="subtle">Current allocation details, latest alerts, and recent model updates are available to members.</p>'
             '<p><a href="subscribe.html">View membership options</a></p></section>'
         )
+        before_results = ""
+        after_results = protected
     chart_html = build_chart(daily, start_equity)
     page = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MoMoEtf2 Backtest - Extreme Trading Inc.</title>
-<style>*{{box-sizing:border-box}}body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}}nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}}nav a{{color:white;text-decoration:none;margin-left:20px}}a{{color:#60a5fa}}.container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}}.hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}}.eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}}h1{{margin:8px 0 10px}}h2{{margin-top:0}}.subtle,.muted{{color:#94a3b8}}.metrics{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:22px 0}}.metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}}.metric-label{{color:#94a3b8;font-size:13px}}.metric-value{{font-size:24px;font-weight:700;margin-top:6px}}.chart{{overflow:hidden}}.positive{{color:#22c55e}}.negative{{color:#f87171}}.table-wrap{{overflow-x:auto}}table{{width:100%;border-collapse:collapse;background:#111827}}th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:12px;white-space:nowrap}}th{{background:#1f2937;color:white}}th:first-child,td:first-child{{text-align:left}}footer{{text-align:center;padding:30px;color:#94a3b8}}@media(max-width:800px){{nav{{align-items:flex-start;padding:16px;gap:12px}}nav div:last-child{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}}nav a{{margin-left:8px;font-size:12px}}.metrics{{grid-template-columns:repeat(2,1fr)}}.container{{padding:20px 10px}}}}@media(max-width:480px){{.metrics{{grid-template-columns:1fr}}}}{FAQ_CSS}</style></head><body>
+<style>*{{box-sizing:border-box}}body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}}nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}}nav a{{color:white;text-decoration:none;margin-left:20px}}a{{color:#60a5fa}}.container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}}.hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}}.eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}}h1{{margin:8px 0 10px}}h2{{margin-top:0}}.subtle,.muted{{color:#94a3b8}}.metrics{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:22px 0}}.metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}}.metric-label{{color:#94a3b8;font-size:13px}}.metric-value{{font-size:24px;font-weight:700;margin-top:6px}}.chart{{overflow:hidden}}.positive{{color:#22c55e}}.negative{{color:#f87171}}.table-wrap{{overflow-x:auto}}table{{width:100%;border-collapse:collapse;background:#111827}}th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:12px;white-space:nowrap}}th{{background:#1f2937;color:white}}th:first-child,td:first-child{{text-align:left}}.disclaimer{{font-size:13px;line-height:1.6;color:#94a3b8}}footer{{text-align:center;padding:30px;color:#94a3b8}}@media(max-width:800px){{nav{{align-items:flex-start;padding:16px;gap:12px}}nav div:last-child{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}}nav a{{margin-left:8px;font-size:12px}}.metrics{{grid-template-columns:repeat(2,1fr)}}.container{{padding:20px 10px}}}}@media(max-width:480px){{.metrics{{grid-template-columns:1fr}}}}{FAQ_CSS}</style></head><body>
 <nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a></div></nav><main class="container">
 <section class="hero"><div class="eyebrow">Backtested tactical ETF allocation model</div><h1>MoMoEtf2</h1><p>Tactical asset allocation model that adjusts monthly across major market exposures using proprietary market-environment and risk-management signals. Subscribers receive current model allocations and update alerts.</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: {currency(start_equity)}</p>{render_faq("momentum2", audience)}</section>
 <section class="metrics">{metrics_html}</section>
+{before_results}
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">MoMoEtf2 compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
 <section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly, daily)}</section>
-{protected}
+{after_results}
+<section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
 </main><footer>&copy; 2026 Extreme Trading Inc.</footer></body></html>"""
     if audience == "public":
-        forbidden = ("id=\"current-month\"", "<h2>Latest Alert</h2>", "<h2>Recent Monthly Allocations</h2>")
+        forbidden = ("id=\"current-month\"", "<h2>Latest Alert</h2>", "<h2>Latest 20 Historical Trades</h2>")
         leaked = [item for item in forbidden if item and item in page]
         if leaked:
             raise RuntimeError(f"Public Momentum ETF2 page contains member-only content: {leaked}")

@@ -33,6 +33,20 @@ function Assert-Contains([string]$Path, [string[]]$RequiredText) {
     }
 }
 
+function Assert-SectionRowCount([string]$Path, [string]$Heading, [int]$ExpectedRows) {
+    $content = Get-Content -LiteralPath (Join-Path $WebRoot $Path) -Raw
+    $start = $content.IndexOf("<h2>$Heading</h2>")
+    $end = if ($start -ge 0) { $content.IndexOf('</section>', $start) } else { -1 }
+    if ($start -lt 0 -or $end -lt 0) {
+        throw "Daily publication guard failed: $Path is missing section: $Heading"
+    }
+    $section = $content.Substring($start, $end - $start)
+    $rows = ([regex]::Matches($section, '<tr>')).Count - 1
+    if ($rows -ne $ExpectedRows) {
+        throw "Daily publication guard failed: $Path section '$Heading' has $rows rows; expected $ExpectedRows."
+    }
+}
+
 $allowedPaths = @(
     '^api/_member-content/(extreme-os|mean-reversion|momentum|momentum2|momentum-stocks)\.html$',
     '^data/performance_summary\.json$',
@@ -84,7 +98,10 @@ Assert-Contains "members.html" @(
     'members.html?strategy=momentum2',
     'members.html?strategy=momentum-stocks',
     'members.html?strategy=mean-reversion',
-    'id="nav-signout-button"'
+    'id="nav-signout-button"',
+    'id="loading" class="member-loading" aria-live="polite" hidden',
+    '<a href="risk-disclosure.html">Risk Disclosure</a>',
+    '<a href="hypothetical-performance.html">Hypothetical Performance Disclosure</a>'
 )
 Assert-Contains "member.js" @(
     'location.replace("members.html")',
@@ -105,5 +122,23 @@ Assert-Contains "index.html" @(
     '<h2>MoMo Stocks</h2>',
     '<h2>Mean Reversion</h2>'
 )
+foreach ($memberPage in @(
+    "api/_member-content/momentum.html",
+    "api/_member-content/momentum2.html",
+    "api/_member-content/momentum-stocks.html"
+)) {
+    Assert-Contains $memberPage @(
+        'metric-value positive',
+        'metric-value negative'
+    )
+}
+Assert-Contains "api/_member-content/momentum.html" @('<h2>Current Partial Month</h2>')
+foreach ($memberPage in @(
+    "api/_member-content/momentum.html",
+    "api/_member-content/momentum2.html",
+    "api/_member-content/momentum-stocks.html"
+)) {
+    Assert-SectionRowCount $memberPage "Latest 20 Historical Trades" 20
+}
 
 Write-Host "Daily publication guard passed. Only approved strategy results changed; site and member UI are protected."

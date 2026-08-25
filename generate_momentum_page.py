@@ -201,7 +201,7 @@ def build_monthly_table(monthly, partial=None, daily=None):
     )
 
 
-def build_allocation_table(allocations, limit=50):
+def build_allocation_table(allocations, limit=20):
     rows = []
     recent = allocations.sort_values("date", ascending=False).head(limit)
     for item in recent.itertuples(index=False):
@@ -221,6 +221,25 @@ def build_allocation_table(allocations, limit=50):
         '<div class="table-wrap"><table><thead><tr><th>Month</th>'
         "<th>Holdings</th><th>Regime</th><th>Return</th><th>SPY</th>"
         f'<th>Realized Vol</th><th>VIX MA</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
+    )
+
+
+def current_partial_month_panel(partial):
+    if partial is None:
+        return ""
+    risk_off = str(partial.get("risk_off", "")).strip().lower() in ("true", "1", "yes")
+    regime = "Risk Off" if risk_off else "Risk On"
+    return_value = float(partial["partial_return"])
+    return_class = "positive" if return_value > 0 else "negative" if return_value < 0 else "muted"
+    return (
+        '<section class="panel" id="current-month"><h2>Current Partial Month</h2>'
+        f'<p class="subtle">Mark-to-market through {html.escape(str(partial["latest_day"]))}; this is an incomplete-month estimate.</p>'
+        '<div class="metrics">'
+        f'<div class="metric"><div class="metric-label">Current Month Return</div><div class="metric-value {return_class}">{pct(return_value)}</div></div>'
+        f'<div class="metric"><div class="metric-label">Holdings</div><div class="metric-value positive">{html.escape(str(partial["holdings"]))}</div></div>'
+        f'<div class="metric"><div class="metric-label">Regime</div><div class="metric-value">{regime}</div></div>'
+        f'<div class="metric"><div class="metric-label">Entry Day</div><div class="metric-value">{html.escape(str(partial["entry_day"]))}</div></div>'
+        '</div></section>'
     )
 
 
@@ -247,8 +266,9 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None, audie
     member_sections = ""
     if audience == "member":
         member_sections = (
-            f'<section class="panel"><h2>Latest Alert</h2>{build_alert_table(alert)}</section>'
-            f'<section class="panel"><h2>Recent Monthly Allocations</h2>{build_allocation_table(allocations)}</section>'
+            current_partial_month_panel(partial)
+            + f'<section class="panel"><h2>Latest Alert</h2>{build_alert_table(alert)}</section>'
+            f'<section class="panel"><h2>Latest 20 Historical Trades</h2>{build_allocation_table(allocations)}</section>'
         )
     else:
         member_sections = (
@@ -285,7 +305,7 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None, audie
 def validate_public_page(page):
     forbidden = (
         "<h2>Latest Alert</h2>",
-        "<h2>Recent Monthly Allocations</h2>",
+        "<h2>Latest 20 Historical Trades</h2>",
         "<h2>Current Partial Month</h2>",
         'id="current-month"',
         "Entry</th><th>Latest</th><th>Return",
