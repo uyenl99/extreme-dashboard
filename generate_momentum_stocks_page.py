@@ -228,7 +228,7 @@ def render_page(summary, daily, allocations, monthly, alert, current, audience="
 <section class="metrics">{metric_html}</section>
 {protected_sections if audience == "member" else ""}
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">MoMo Stocks compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
-<section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly)}</section>
+<section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly, daily=daily.rename(columns={"date": "Date", "spy_equity": "SPY_Equity"}))}</section>
 {protected_sections if audience == "public" else ""}
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
 </main>

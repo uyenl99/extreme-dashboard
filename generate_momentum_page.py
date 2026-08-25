@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 
 from strategy_faq import FAQ_CSS, render_faq
 from metric_style import metric_class
+from strategy_benchmark import yearly_returns_by_year
 
 
 REQUIRED_FILES = (
@@ -157,12 +158,12 @@ def build_chart(daily):
     )
 
 
-def build_monthly_table(monthly, partial=None):
+def build_monthly_table(monthly, partial=None, daily=None):
     month_names = [
         "Jan", "Feb", "Mar", "Apr", "May", "Jun",
         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ]
-    headers = "".join(f"<th>{name}</th>" for name in month_names + ["Year Return"])
+    headers = "".join(f"<th>{name}</th>" for name in month_names + ["Year Return", "SPY Year"])
     display = monthly.copy()
     partial_year = partial_month = None
     if partial is not None:
@@ -175,11 +176,12 @@ def build_monthly_table(monthly, partial=None):
         completed = display.loc[display["Year"].astype(int) == partial_year, month_names].iloc[0].dropna()
         display.loc[display["Year"].astype(int) == partial_year, "Year Return"] = (1.0 + completed).prod() - 1.0
 
+    spy_year = yearly_returns_by_year(daily["Date"], daily["SPY_Equity"]) if daily is not None else pd.Series(dtype="float64")
     rows = []
     for item in display.sort_values("Year", ascending=False).itertuples(index=False):
         cells = []
         values = [getattr(item, name) for name in month_names]
-        values.append(getattr(item, "_13"))
+        values.extend((getattr(item, "_13"), spy_year.get(int(item.Year))))
         for index, value in enumerate(values):
             if pd.isna(value):
                 cells.append('<td class="muted">—</td>')
@@ -271,7 +273,7 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None, audie
 <section class="metrics">{metric_html}</section>
 {member_sections if audience == "member" else ""}
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">MoMoEtf1 compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
-<section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly, partial)}</section>
+<section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly, partial, daily)}</section>
 {member_sections if audience == "public" else ""}
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
 </main>
