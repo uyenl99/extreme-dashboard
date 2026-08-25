@@ -29,6 +29,5 @@ jobs:
             --retry 3 \
             --retry-all-errors \
             --header "apikey: $SUPABASE_ANON_KEY" \
-            --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
             "$SUPABASE_URL/rest/v1/" \
             > /dev/null
