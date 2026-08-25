@@ -7,7 +7,7 @@ from strategy_faq import FAQ_CSS, render_faq
 from metric_style import metric_class
 
 PUBLIC_DELAY_HOURS = 96
-PUBLIC_TRADE_LIMIT = 50
+RECENT_TRADE_LIMIT = 20
 
 
 # ============================================================
@@ -121,21 +121,13 @@ def build_open_positions_table():
     
         return "<p>No open positions.</p>"
     print(open_df.columns.tolist())
-    table = open_df[
-        [
-            "OpenedDate",
-            "Symbol",
-            "Quantity",
-            "AvgPx",
-        ]
-    ].copy()
-    
-    table.columns = [
-        "Open Time",
-        "Symbol",
-        "Qty",
-        "Entry",
-    ]    
+    table = open_df[["OpenedDate", "Symbol", "Quantity", "AvgPx"]].copy()
+    quantity = pd.to_numeric(table["Quantity"], errors="coerce").fillna(0)
+    price = pd.to_numeric(table["AvgPx"], errors="coerce").fillna(0)
+    table.insert(2, "Direction", quantity.apply(lambda value: "Long" if value >= 0 else "Short"))
+    table["Quantity"] = quantity.abs()
+    table["Position Value"] = quantity.abs() * price
+    table.columns = ["Open Time", "Symbol", "Direction", "Qty", "Entry", "Position Value"]
     return table.to_html(
         index=False,
         classes="trade-table",
@@ -165,7 +157,7 @@ def build_open_orders_table():
         )
     return orders_html
 
-def build_recent_closed_table(df, limit=50):
+def build_recent_closed_table(df, limit=RECENT_TRADE_LIMIT):
     closed_df = df[
         df["Closed Time ET"].notna()
     ].copy()
@@ -215,6 +207,38 @@ def build_recent_closed_table(df, limit=50):
     )
 
 
+def build_todays_trades_table(df):
+    closed = df[df["Closed Time ET"].notna()].copy()
+    today = pd.Timestamp.now(tz="UTC").tz_localize(None).normalize()
+    todays_trades = closed[closed["Closed Time ET"].dt.normalize().eq(today)]
+    rows = []
+    for _, trade in todays_trades.sort_values("Closed Time ET", ascending=False).iterrows():
+        rows.append({
+            "Time": trade["Closed Time ET"], "Action": "Close", "Symbol": trade["Symbol"],
+            "Direction": trade["OpenSide"], "Qty": abs(float(trade["Qty Open"])),
+            "Price": float(trade["Avg Price Close"]), "P/L": trade["Trade P/L"],
+        })
+    try:
+        open_df = pd.read_csv("data/extreme_os_open.csv")
+    except (FileNotFoundError, pd.errors.EmptyDataError):
+        open_df = pd.DataFrame()
+    if not open_df.empty:
+        opened = pd.to_datetime(open_df["OpenedDate"], errors="coerce", utc=True).dt.tz_localize(None)
+        new_positions = open_df[opened.dt.normalize().eq(today)].copy()
+        for index, position in new_positions.iterrows():
+            quantity = float(position["Quantity"])
+            rows.append({
+                "Time": opened.loc[index], "Action": "Open", "Symbol": position["Symbol"],
+                "Direction": "Long" if quantity >= 0 else "Short", "Qty": abs(quantity),
+                "Price": float(position["AvgPx"]), "P/L": None,
+            })
+    if not rows:
+        return '<p class="subtle">No trades today.</p>'
+    return pd.DataFrame(rows).sort_values("Time", ascending=False).to_html(
+        index=False, classes="trade-table", index_names=False, na_rep="—"
+    )
+
+
 
 # ============================================================
 # HTML TEMPLATE
@@ -256,6 +280,42 @@ nav a {
     padding:20px;
     margin-bottom:20px;
 }
+
+.hero,
+.panel {
+    background:#111827;
+    border:1px solid #374151;
+    border-radius:12px;
+    padding:26px;
+    margin-bottom:22px;
+}
+
+.eyebrow {
+    color:#60a5fa;
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.subtle { color:#94a3b8; }
+
+.metrics {
+    display:grid;
+    grid-template-columns:repeat(4,minmax(160px,1fr));
+    gap:14px;
+    margin:22px 0;
+}
+
+.metric {
+    background:#111827;
+    border:1px solid #374151;
+    border-radius:10px;
+    padding:18px;
+}
+
+.metric-label { color:#94a3b8;font-size:13px; }
+.metric-value { font-size:24px;font-weight:700;margin-top:6px; }
 
 .trade-table {
     width:100%;
@@ -335,6 +395,7 @@ nav a {
 
 @media (max-width:760px) {
     .performance-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 
 .view-link {
@@ -405,6 +466,20 @@ def page_template(title, body):
 # PUBLIC STRATEGY PAGE
 # ============================================================
 
+def build_performance_metrics(summary):
+    metrics = (
+        ("Annual Return", summary.get("annual_return", "N/A")),
+        ("Max Drawdown", summary.get("max_drawdown", "N/A")),
+        ("Number of Trades", summary.get("number_of_trades", "N/A")),
+        ("Win Trades %", summary.get("win_trades_pct", "N/A")),
+    )
+    cards = "".join(
+        f'<div class="metric"><div class="metric-label">{label}</div>'
+        f'<div class="metric-value {metric_class(value)}">{value}</div></div>'
+        for label, value in metrics
+    )
+    return f'<section><h2>Verified Collective2 Performance</h2><div class="metrics">{cards}</div></section>'
+
 def generate_public_page(
         csv_file,
         output_file,
@@ -425,7 +500,7 @@ def generate_public_page(
     df = df.sort_values(
         "Closed Time ET",
         ascending=False
-    ).head(PUBLIC_TRADE_LIMIT)
+    ).head(RECENT_TRADE_LIMIT)
 
     stats = strategy_stats(df)
 
@@ -433,26 +508,11 @@ def generate_public_page(
     performance_html = ""
     if output_file == "extreme-os.html" and summary_path.exists():
         summary = json.loads(summary_path.read_text(encoding="utf-8"))
-        performance_html = f"""
-<div class="card">
-
-<h2>Verified Collective2 Performance</h2>
-
-<div class="performance-grid">
-<div class="performance-stat"><div class="performance-label">Annual Return</div><div class="performance-value {metric_class(summary.get('annual_return', 'N/A'))}">{summary.get('annual_return', 'N/A')}</div></div>
-<div class="performance-stat"><div class="performance-label">Max Drawdown</div><div class="performance-value {metric_class(summary.get('max_drawdown', 'N/A'))}">{summary.get('max_drawdown', 'N/A')}</div></div>
-<div class="performance-stat"><div class="performance-label">Number of Trades</div><div class="performance-value {metric_class(summary.get('number_of_trades', 'N/A'))}">{summary.get('number_of_trades', 'N/A')}</div></div>
-<div class="performance-stat"><div class="performance-label">Win Trades %</div><div class="performance-value {metric_class(summary.get('win_trades_pct', 'N/A'))}">{summary.get('win_trades_pct', 'N/A')}</div></div>
-</div>
-
-<iframe class="performance-details" src="performance-details.html" title="Extreme OS monthly returns and equity curve" loading="lazy"></iframe>
-
-</div>
-"""
+        performance_html = build_performance_metrics(summary)
 
     table_html = build_recent_closed_table(
         df,
-        PUBLIC_TRADE_LIMIT
+        RECENT_TRADE_LIMIT
     )
 
     current_positions_html = ""
@@ -490,11 +550,15 @@ Trades are sourced from Collective2 and updated daily. Public trade details are 
 
 <div class="card">
 
-<h2>Historical Trades</h2>
+<h2>Latest 20 Trades</h2>
 
 {table_html}
 
 </div>
+
+<section class="panel">
+<iframe class="performance-details" src="/performance-details.html" title="Extreme OS equity curve and monthly returns" loading="lazy"></iframe>
+</section>
 """
 
     Path(output_file).write_text(
@@ -515,46 +579,47 @@ def generate_strategy_member_page(
         output_file,
         csv_link):
 
-    body = f"""
-<div class="card">
+    summary = json.loads(Path("data/performance_summary.json").read_text(encoding="utf-8"))
 
+    body = f"""
+<section class="hero">
+<div class="eyebrow">Verified Collective2 strategy</div>
 <h1>{title}</h1>
+<p>Systematic live strategy with performance and trading activity sourced from Collective2.</p>
 
 {render_faq("extreme-os", "member")}
+</section>
 
-</div>
+{build_performance_metrics(summary)}
 
-<div class="card">
+<section class="panel">
 
-<h2>Current Open Positions</h2>
+<h2>Today's Trades</h2>
+
+{build_todays_trades_table(df)}
+
+</section>
+
+<section class="panel">
+
+<h2>Open Positions</h2>
 
 {build_open_positions_table()}
 
-</div>
+</section>
 
-<div class="card">
+<section class="panel">
 
-<h2>Today's Orders</h2>
+<h2>Latest 20 Trades</h2>
 
-{build_open_orders_table()}
+{build_recent_closed_table(df, RECENT_TRADE_LIMIT)}
 
-</div>
+</section>
 
-<div class="card">
+<section class="panel">
+<iframe class="performance-details" src="/performance-details.html" title="Extreme OS equity curve and monthly returns" loading="lazy"></iframe>
+</section>
 
-<h2>Recent Closed Trades</h2>
-
-{build_recent_closed_table(df)}
-
-</div>
-
-<div class="card">
-
-<a href="{csv_link}">
-Download CSV History
-</a>
-
-</div>
 """
 
     Path(output_file).write_text(
@@ -692,6 +757,12 @@ if args.extreme_os_only:
         "Extreme OS Historical Trades",
         show_current_positions=False
     )
+    generate_strategy_member_page(
+        os_df,
+        "Extreme OS",
+        "api/_member-content/extreme-os.html",
+        "#",
+    )
     print("Done.")
     raise SystemExit(0)
 
@@ -717,8 +788,11 @@ generate_public_page(
     show_current_positions=False
 )
 
-# Member pages are intentionally not generated from CSV data. Live member
-# data is returned only by the authenticated /api/member-data endpoint.
-print("Skipped protected member pages.")
+generate_strategy_member_page(
+    os_df,
+    "Extreme OS",
+    "api/_member-content/extreme-os.html",
+    "#",
+)
 
 print("Done.")

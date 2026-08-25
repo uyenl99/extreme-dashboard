@@ -10,7 +10,7 @@ python generate_mean_reversion_page.py `
   --alert-source ../RevMurphy/output_live_alerts
 ```
 
-This writes `mean-reversion.html` with the latest alert and latest 50 trades,
+This writes `mean-reversion.html` with the latest alert and latest 20 trades,
 including entry and exit prices. The page clearly identifies the results as a
 simulated backtest and does not import the large `all_signals.csv` file.
 

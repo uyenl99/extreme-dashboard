@@ -73,7 +73,7 @@
     $("detail-current-date").textContent = `Current date: ${today}`;
     const strategy = new URLSearchParams(location.search).get("strategy") || "";
     const showDetail = Boolean(strategy);
-    if (showDetail && strategy !== "extreme-os") {
+    if (showDetail) {
       const response = await api(`/api/member-page?strategy=${encodeURIComponent(strategy)}`);
       if (!response.ok) throw new Error("Member strategy page is unavailable.");
       const html = await response.text();
@@ -84,7 +84,6 @@
     }
     show("strategy-directory", !showDetail);
     show("strategy-detail", showDetail);
-    if (strategy === "extreme-os") render(data);
     return false;
   }
 
@@ -97,10 +96,8 @@
     await userResponse.json();
     const strategy = new URLSearchParams(location.search).get("strategy") || "";
 
-    // The directory only needs an access check. Live Collective2 data is fetched
-    // only when the member actually opens Extreme OS; other protected pages
-    // perform their access check in /api/member-page.
-    if (strategy && strategy !== "extreme-os") {
+    // Protected strategy pages perform their access check in /api/member-page.
+    if (strategy) {
       showMemberNavigation(true);
       const documentReplaced = await renderMemberView(null);
       if (documentReplaced) return;
@@ -108,7 +105,7 @@
       return;
     }
 
-    const response = await api(strategy === "extreme-os" ? "/api/member-data" : "/api/member-access");
+    const response = await api("/api/member-access");
     show("loading", false);
     if (response.status === 401) { saveSession(null); showMemberNavigation(false); show("auth-panel"); return; }
     if (response.status === 403) {
@@ -118,8 +115,8 @@
     }
     if (!response.ok) { show("auth-panel"); $("auth-message").textContent = "Member data is temporarily unavailable."; return; }
     showMemberNavigation(true);
-    const data = await response.json();
-    const documentReplaced = await renderMemberView(strategy === "extreme-os" ? data : null);
+    await response.json();
+    const documentReplaced = await renderMemberView(null);
     if (!documentReplaced) show("strategies-home");
   }
 
@@ -128,13 +125,7 @@
     destination.searchParams.set("strategy", strategy);
     history.pushState(null, "", destination.pathname + destination.search);
     try {
-      let data = null;
-      if (strategy === "extreme-os") {
-        const response = await api("/api/member-data");
-        if (!response.ok) throw new Error("Member strategy data is unavailable.");
-        data = await response.json();
-      }
-      const documentReplaced = await renderMemberView(data);
+      const documentReplaced = await renderMemberView(null);
       if (documentReplaced) return;
       show("strategies-home");
       window.scrollTo({ top: 0, behavior: "auto" });

@@ -384,7 +384,7 @@ def build_alert_table(daily_trades, alert_source, total_equity):
     return alerts, changes, positions
 
 
-def build_trade_table(trades, limit=50):
+def build_trade_table(trades, limit=20):
     recent = trades.copy()
     recent["entry_date"] = pd.to_datetime(recent["entry_date"], errors="coerce")
     recent["exit_date"] = pd.to_datetime(recent["exit_date"], errors="coerce")
@@ -435,7 +435,7 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
         protected_sections = (
             f'<section class="panel"><h2>Latest MOO Orders</h2>{moo_orders}</section>'
             f'<section class="panel"><h2>Open Positions</h2>{latest_positions}</section>'
-            f'<section class="panel"><h2>Latest 50 Trades</h2>{build_trade_table(trades)}</section>'
+            f'<section class="panel"><h2>Latest 20 Trades</h2>{build_trade_table(trades)}</section>'
         )
     else:
         protected_sections = (
@@ -501,7 +501,7 @@ def main():
         forbidden = (
             "<h2>Latest MOO Orders</h2>",
             "<h2>Open Positions</h2>",
-            "<h2>Latest 50 Trades</h2>",
+            "<h2>Latest 20 Trades</h2>",
         )
         leaked = [item for item in forbidden if item in page]
         if leaked:

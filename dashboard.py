@@ -554,10 +554,10 @@ td:first-child,th:first-child{{text-align:center}}
 </style>
 </head>
 <body>
-<h2>Monthly Returns (%)</h2>
-{table_html}
 <h2>Equity Curve</h2>
 {chart_html}
+<h2>Monthly Returns (%)</h2>
+{table_html}
 </body>
 </html>
 """,
