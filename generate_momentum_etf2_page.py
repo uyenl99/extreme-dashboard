@@ -7,6 +7,7 @@ import pandas as pd
 
 from strategy_faq import FAQ_CSS, render_faq
 from metric_style import metric_class
+from strategy_benchmark import yearly_returns_by_year
 
 
 def parse_args():
@@ -98,16 +99,17 @@ def build_chart(daily, start_equity=100000.0):
     )
 
 
-def build_monthly_table(monthly):
+def build_monthly_table(monthly, daily):
     month_names = [
         "Jan", "Feb", "Mar", "Apr", "May", "Jun",
         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ]
-    headers = "".join(f"<th>{name}</th>" for name in month_names + ["Year Return"])
+    headers = "".join(f"<th>{name}</th>" for name in month_names + ["Year Return", "SPY Year"])
+    spy_year = yearly_returns_by_year(daily.index, daily["spy_wealth"])
     rows = []
     for item in monthly.sort_values("Year", ascending=False).itertuples(index=False):
         values = [getattr(item, name) for name in month_names]
-        values.append(getattr(item, "_13"))
+        values.extend((getattr(item, "_13"), spy_year.get(int(item.Year))))
         cells = []
         for value in values:
             if pd.isna(value) or value == "":
@@ -223,7 +225,7 @@ def render(source, audience, chart_src):
 <section class="hero"><div class="eyebrow">Backtested tactical ETF allocation model</div><h1>MoMoEtf2</h1><p>Tactical asset allocation model that adjusts monthly across major market exposures using proprietary market-environment and risk-management signals. Subscribers receive current model allocations and update alerts.</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: {currency(start_equity)}</p>{render_faq("momentum2", audience)}</section>
 <section class="metrics">{metrics_html}</section>
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">MoMoEtf2 compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
-<section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly)}</section>
+<section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly, daily)}</section>
 {protected}
 </main><footer>&copy; 2026 Extreme Trading Inc.</footer></body></html>"""
     if audience == "public":

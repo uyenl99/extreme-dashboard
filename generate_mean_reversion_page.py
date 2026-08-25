@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 
 from strategy_faq import FAQ_CSS, render_faq
 from metric_style import metric_class
+from strategy_benchmark import yearly_returns_by_year
 
 
 REQUIRED_FILES = (
@@ -134,7 +135,7 @@ def build_chart(equity, benchmarks):
     )
 
 
-def build_monthly_table(monthly):
+def build_monthly_table(monthly, benchmarks):
     data = monthly.copy()
     data["year"] = data["month"].astype(str).str[:4].astype(int)
     data["month_number"] = data["month"].astype(str).str[5:7].astype(int)
@@ -143,8 +144,10 @@ def build_monthly_table(monthly):
         lambda row: ((1 + row.dropna()).prod() - 1), axis=1
     )
     labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    columns = list(range(1, 13)) + ["YTD"]
-    head = "".join(f"<th>{label}</th>" for label in labels + ["YTD"])
+    spy_year = yearly_returns_by_year(benchmarks["date"], benchmarks["SPY_equity"])
+    pivot["SPY Year"] = pd.Series(pivot.index, index=pivot.index).map(spy_year)
+    columns = list(range(1, 13)) + ["YTD", "SPY Year"]
+    head = "".join(f"<th>{label}</th>" for label in labels + ["YTD", "SPY Year"])
     rows = []
     for year, row in pivot.sort_index(ascending=False).iterrows():
         cells = []
@@ -481,7 +484,7 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
 <section class="metrics">{metric_html}</section>
 {protected_sections if audience == "member" else ""}
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Select SPY, QQQ, or VOO in the legend to add benchmark comparisons.</p><div class="chart">{chart_html}</div></section>
-<section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly)}</section>
+<section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly, benchmarks)}</section>
 {protected_sections if audience == "public" else ""}
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
 </main>
