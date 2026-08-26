@@ -25,9 +25,13 @@ jobs:
         run: |
           test -n "$SUPABASE_URL" || { echo "Missing SUPABASE_URL repository secret."; exit 1; }
           test -n "$SUPABASE_ANON_KEY" || { echo "Missing SUPABASE_ANON_KEY repository secret."; exit 1; }
-          curl --fail-with-body --silent --show-error \
+          if ! curl --fail-with-body --silent --show-error \
             --retry 3 \
             --retry-all-errors \
             --header "apikey: $SUPABASE_ANON_KEY" \
-            "$SUPABASE_URL/rest/v1/" \
-            > /dev/null
+            --output supabase-response.json \
+            "$SUPABASE_URL/rest/v1/"; then
+            echo "Supabase response:"
+            cat supabase-response.json
+            exit 1
+          fi
