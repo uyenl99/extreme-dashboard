@@ -30,8 +30,8 @@ The public member dashboard may show one of these model allocations:
 - `XLU`
 - `XLP / IEF`
 
-The `XLP / IEF` allocation represents a blended defensive allocation rather
-than a single ETF holding.
+The `XLP / IEF` allocation means buying `XLP` with 50% of the model portfolio
+and `IEF` with the other 50%.
 
 ## What are the four regimes?
 
@@ -78,6 +78,11 @@ latest alert or trade history.
 
 The alert is a model update, not personalized financial advice.
 
+## How are monthly entries and exits placed?
+
+The model assumes market-on-open (MOO) exit and entry orders on the first
+trading day of each month.
+
 ## Why can the allocation stay the same for several months?
 
 Momentum ETF2 only changes when the underlying regime changes enough to select
@@ -85,14 +90,6 @@ a different allocation. If the regime remains stable, the model can continue
 holding the same ETF or blend across multiple months.
 
 Low turnover is normal for this type of monthly regime strategy.
-
-## Why does the page show a last 50 trades table?
-
-The last 50 trades table shows the most recent completed allocation changes,
-newest first. It helps members see when the model switched from one allocation
-to another and how the effective holding month performed.
-
-This table is historical model output. It does not guarantee future results.
 
 ## What does the monthly returns table show?
 
@@ -151,13 +148,6 @@ Actual member results can differ because of:
 - Differences between model prices and personal execution prices
 
 The dashboard shows model output, not individualized account performance.
-
-## Are exact rules disclosed?
-
-No. Member-facing materials describe Momentum ETF2 at a high level only.
-
-The exact regime calculations, data-processing choices, parameters, thresholds,
-and implementation details are not distributed to members.
 
 ## Is this financial advice?
 

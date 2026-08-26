@@ -330,7 +330,7 @@ nav a {
 .trade-table td {
     border:1px solid #374151;
     padding:4px 6px;
-    font-size:12px;
+    font-size:15px;
 }
 
 .strategy-grid {

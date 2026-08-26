@@ -33,6 +33,15 @@ function Assert-Contains([string]$Path, [string[]]$RequiredText) {
     }
 }
 
+function Assert-NotContains([string]$Path, [string[]]$ForbiddenText) {
+    $content = Get-Content -LiteralPath (Join-Path $WebRoot $Path) -Raw
+    foreach ($text in $ForbiddenText) {
+        if ($content.Contains($text)) {
+            throw "Daily publication guard failed: $Path contains forbidden site marker: $text"
+        }
+    }
+}
+
 function Assert-SectionRowCount([string]$Path, [string]$Heading, [int]$ExpectedRows) {
     $content = Get-Content -LiteralPath (Join-Path $WebRoot $Path) -Raw
     $start = $content.IndexOf("<h2>$Heading</h2>")
@@ -133,6 +142,18 @@ foreach ($memberPage in @(
     )
 }
 Assert-Contains "api/_member-content/momentum.html" @('<h2>Current Partial Month</h2>')
+Assert-Contains "api/_member-content/momentum-stocks.html" @(
+    '<h2>Current Partial Month</h2>',
+    '<div class="metric-label">Current Month Return</div>',
+    'title="Partial month-to-date through',
+    ' open</td>'
+)
+Assert-NotContains "api/_member-content/momentum-stocks.html" @(
+    '<th>VIX 30d MA</th>',
+    '<th>SPY 10d RV</th>',
+    '<th>Realized Vol</th>',
+    '<th>VIX MA</th>'
+)
 foreach ($memberPage in @(
     "api/_member-content/momentum.html",
     "api/_member-content/momentum2.html",

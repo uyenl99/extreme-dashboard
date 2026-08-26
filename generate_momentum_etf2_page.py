@@ -131,7 +131,6 @@ def allocation_history(monthly_backtest, limit=20):
     display = pd.DataFrame(index=data.index)
     display["Month"] = data.index.astype(str)
     display["Holdings"] = data["held"]
-    display["Regime"] = data["signal_regime"].shift(1).str.replace("_", " ").str.title()
     display["Return"] = data["strategy_return"]
     display["SPY"] = data["spy_return"]
     return display.sort_index(ascending=False).head(limit).reset_index(drop=True)
@@ -142,7 +141,6 @@ def current_month_panel(monthly_backtest, daily):
     current_period = latest_day.to_period("M")
     row = monthly_backtest.loc[str(current_period)]
     holding = str(row["held"])
-    regime = str(monthly_backtest["signal_regime"].shift(1).loc[str(current_period)])
     month_return = float(row["strategy_return"])
     return_class = "positive" if month_return > 0 else "negative" if month_return < 0 else "muted"
     return (
@@ -151,7 +149,6 @@ def current_month_panel(monthly_backtest, daily):
         '<div class="metrics">'
         f'<div class="metric"><div class="metric-label">Current Month Return</div><div class="metric-value {return_class}">{pct(month_return)}</div></div>'
         f'<div class="metric"><div class="metric-label">Holding</div><div class="metric-value positive">{html.escape(holding)}</div></div>'
-        f'<div class="metric"><div class="metric-label">Regime</div><div class="metric-value">{html.escape(regime.upper())}</div></div>'
         f'<div class="metric"><div class="metric-label">Effective Month</div><div class="metric-value">{current_period}</div></div>'
         '</div></section>'
     )
@@ -166,7 +163,6 @@ def latest_alert_table(monthly_backtest, daily):
     previous_holding = signals["signal_holding"].shift(1).loc[signal_month]
     frame = pd.DataFrame([{
         "Signal": str(signal_month),
-        "Regime": str(row["signal_regime"]).replace("_", " ").upper(),
         "Holding": row["signal_holding"],
         "Execution": f"{signal_month + 1} open",
         "Changed": "Yes" if row["signal_holding"] != previous_holding else "No",
@@ -205,11 +201,11 @@ def render(source, audience, chart_src):
         allocations = allocation_history(monthly_backtest)
         protected = (
             current_month_panel(monthly_backtest, daily)
-            + '<section class="panel"><h2>Latest Alert</h2>'
+            + '<section class="panel enlarged-table"><h2>Latest Alert</h2>'
             + '<p class="subtle">The current-month signal is preliminary until month end and may change before execution.</p>'
             + latest_alert_table(monthly_backtest, daily)
             + '</section>'
-            + '<section class="panel"><h2>Latest 20 Historical Trades</h2>'
+            + '<section class="panel enlarged-table"><h2>Latest 20 Historical Trades</h2>'
             + table(allocations, ("Return", "SPY"))
             + '</section>'
         )
@@ -224,13 +220,13 @@ def render(source, audience, chart_src):
         after_results = protected
     chart_html = build_chart(daily, start_equity)
     page = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MoMoEtf2 Backtest - Extreme Trading Inc.</title>
-<style>*{{box-sizing:border-box}}body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}}nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}}nav a{{color:white;text-decoration:none;margin-left:20px}}a{{color:#60a5fa}}.container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}}.hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}}.eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}}h1{{margin:8px 0 10px}}h2{{margin-top:0}}.subtle,.muted{{color:#94a3b8}}.metrics{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:22px 0}}.metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}}.metric-label{{color:#94a3b8;font-size:13px}}.metric-value{{font-size:24px;font-weight:700;margin-top:6px}}.chart{{overflow:hidden}}.positive{{color:#22c55e}}.negative{{color:#f87171}}.table-wrap{{overflow-x:auto}}table{{width:100%;border-collapse:collapse;background:#111827}}th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:12px;white-space:nowrap}}th{{background:#1f2937;color:white}}th:first-child,td:first-child{{text-align:left}}.disclaimer{{font-size:13px;line-height:1.6;color:#94a3b8}}footer{{text-align:center;padding:30px;color:#94a3b8}}@media(max-width:800px){{nav{{align-items:flex-start;padding:16px;gap:12px}}nav div:last-child{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}}nav a{{margin-left:8px;font-size:12px}}.metrics{{grid-template-columns:repeat(2,1fr)}}.container{{padding:20px 10px}}}}@media(max-width:480px){{.metrics{{grid-template-columns:1fr}}}}{FAQ_CSS}</style></head><body>
+<style>*{{box-sizing:border-box}}body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}}nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}}nav a{{color:white;text-decoration:none;margin-left:20px}}a{{color:#60a5fa}}.container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}}.hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}}.eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}}h1{{margin:8px 0 10px}}h2{{margin-top:0}}.subtle,.muted{{color:#94a3b8}}.metrics{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:22px 0}}.metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}}.metric-label{{color:#94a3b8;font-size:13px}}.metric-value{{font-size:24px;font-weight:700;margin-top:6px}}.chart{{overflow:hidden}}.positive{{color:#22c55e}}.negative{{color:#f87171}}.table-wrap{{overflow-x:auto}}table{{width:100%;border-collapse:collapse;background:#111827}}th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:12px;white-space:nowrap}}.enlarged-table th,.enlarged-table td{{font-size:15px}}th{{background:#1f2937;color:white}}th:first-child,td:first-child{{text-align:left}}.disclaimer{{font-size:13px;line-height:1.6;color:#94a3b8}}footer{{text-align:center;padding:30px;color:#94a3b8}}@media(max-width:800px){{nav{{align-items:flex-start;padding:16px;gap:12px}}nav div:last-child{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}}nav a{{margin-left:8px;font-size:12px}}.metrics{{grid-template-columns:repeat(2,1fr)}}.container{{padding:20px 10px}}}}@media(max-width:480px){{.metrics{{grid-template-columns:1fr}}}}{FAQ_CSS}</style></head><body>
 <nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a></div></nav><main class="container">
 <section class="hero"><div class="eyebrow">Backtested tactical ETF allocation model</div><h1>MoMoEtf2</h1><p>Tactical asset allocation model that adjusts monthly across major market exposures using proprietary market-environment and risk-management signals. Subscribers receive current model allocations and update alerts.</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: {currency(start_equity)}</p>{render_faq("momentum2", audience)}</section>
 <section class="metrics">{metrics_html}</section>
 {before_results}
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">MoMoEtf2 compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
-<section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly, daily)}</section>
+<section class="panel enlarged-table"><h2>Monthly Returns</h2>{build_monthly_table(monthly, daily)}</section>
 {after_results}
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
 </main><footer>&copy; 2026 Extreme Trading Inc.</footer></body></html>"""
