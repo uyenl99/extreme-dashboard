@@ -30,7 +30,7 @@ jobs:
             --retry-all-errors \
             --header "apikey: $SUPABASE_ANON_KEY" \
             --output supabase-response.json \
-            "$SUPABASE_URL/rest/v1/"; then
+            "$SUPABASE_URL/rest/v1/keep_alive?select=id&limit=1"; then
             echo "Supabase response:"
             cat supabase-response.json
             exit 1
