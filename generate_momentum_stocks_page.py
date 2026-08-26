@@ -72,12 +72,15 @@ def load_alert(path):
     if signal.get("preliminary"):
         alert["Status"] = f'Preliminary through {signal.get("latest_price_date", "—")}'
     current = signal.get("current_allocation") or {}
-    current_holdings = current.get("holdings") or []
+    current_holdings = current.get("holdings") or holdings
     return alert, {
-        "Signal": current.get("signal_date", "—"),
-        "Regime": current.get("regime", "—"),
+        "Signal": current.get("signal_date") or signal.get("signal_date", "—"),
+        "Regime": current.get("regime") or signal.get("regime", "—"),
         "Holdings": ", ".join(item for item in current_holdings if item),
-        "Execution": current.get("execution_date", "—"),
+        "Execution": current.get("execution_date") or signal.get("execution_date", "—"),
+        "VIX 30d MA": f'{signal["vix_30d_average"]:.2f}',
+        "SPY 10d RV": f'{signal["spy_10d_realized_vol"]:.2f}',
+        "Status": f'Preliminary through {signal.get("latest_price_date", "—")}',
     }
 
 
@@ -150,7 +153,7 @@ def build_chart(daily):
     )
 
 
-def build_allocation_table(allocations, limit=50):
+def build_allocation_table(allocations, limit=20):
     rows = []
     recent = (
         allocations.rename(columns={"return": "strategy_return"})
@@ -198,12 +201,14 @@ def render_page(summary, daily, allocations, monthly, alert, current, audience="
     chart_html = build_chart(daily)
     if audience == "member":
         protected_sections = (
-            f'<section class="panel"><h2>Current Month Holdings</h2>{build_alert_table(current)}</section>'
+            '<section class="panel"><h2>Current Partial Month</h2>'
+            f'<p class="subtle">{html.escape(current["Status"])}; the month is incomplete.</p>'
+            f'{build_alert_table(current)}</section>'
             '<section class="panel"><h2>Latest Alert</h2>'
             f'<p class="subtle">{html.escape(alert.get("Status", "Preliminary"))}. '
             'The current-month signal may change before execution.</p>'
             f'{build_alert_table(alert)}</section>'
-            f'<section class="panel"><h2>Recent Monthly Allocations</h2>{build_allocation_table(allocations)}</section>'
+            f'<section class="panel"><h2>Latest 20 Historical Trades</h2>{build_allocation_table(allocations)}</section>'
         )
     else:
         protected_sections = (
@@ -244,7 +249,7 @@ def main():
     )
     page = render_page(summary, daily, allocations, monthly, alert, current, args.audience)
     if args.audience == "public":
-        forbidden = ("<h2>Current Month Holdings</h2>", "<h2>Latest Alert</h2>", "<h2>Recent Monthly Allocations</h2>")
+        forbidden = ("<h2>Current Partial Month</h2>", "<h2>Latest Alert</h2>", "<h2>Latest 20 Historical Trades</h2>")
         leaked = [item for item in forbidden if item in page]
         if leaked:
             raise RuntimeError(f"Public Momentum Stocks page contains member-only content: {leaked}")

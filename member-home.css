@@ -22,4 +22,7 @@ main{max-width:none;margin:0;padding:0}
 .member-loading{display:grid;min-height:220px;place-items:center;color:#64748b}
 #strategy-detail{max-width:1180px;margin:0 auto;padding:48px 24px 80px}
 .member-disclosure{max-width:1180px;margin:0 auto 60px}
+.member-site-footer{padding:30px 24px;background:#0f172a;color:#94a3b8;text-align:center}
+.member-site-footer a{color:#dbeafe;text-decoration:none}
+.member-site-footer a:hover{text-decoration:underline}
 @media(max-width:760px){nav{padding:18px 20px;align-items:flex-start;gap:18px}.nav-signout{margin-left:8px;font-size:.82rem}.home-hero{padding:60px 24px}.home-hero h1{font-size:clamp(2.3rem,12vw,3.4rem)}.home-section{padding:36px 18px}.home-cards{grid-template-columns:1fr}.home-card{padding:26px 24px}.home-date{justify-content:flex-start}.member-disclosure{margin:0 18px 36px}}
