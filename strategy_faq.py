@@ -29,7 +29,8 @@ FAQS = {
             ("What is the difference between current holdings and the latest alert?", "Current holdings are the allocation already in effect. The latest alert is the preliminary next-month allocation and can change until the signal period closes."),
             ("When is a monthly signal executed?", "The page states the intended execution month. Do not treat a signal dated in the current month as already held unless it appears under current holdings."),
             ("Why might the alert not change?", "The same ETFs can continue to rank highest or the risk filter can remain in the same state."),
-            ("How should positions be sized?", "The model uses equal weighting across selected ETFs. Personal sizing and risk limits remain the member's responsibility."),
+            ("How should positions be sized?", "The model uses equal weighting across selected ETFs when risk-on. When risk-off, the full model portfolio is allocated to SHY. Personal sizing and risk limits remain the member's responsibility."),
+            ("How are monthly entries and exits placed?", "The model assumes market-on-open (MOO) exit and entry orders on the first trading day of each month."),
         ],
     },
     "momentum2": {
@@ -42,11 +43,10 @@ FAQS = {
         "member": [
             ("What does current allocation mean?", "It is the model holding for the effective month displayed on the page."),
             ("What does next holding mean?", "It is the proposed allocation from the latest preliminary signal. It is intended for the execution month shown and may change before month end."),
-            ("What does XLP / IEF mean?", "It represents a blended defensive allocation rather than a single ETF holding."),
+            ("What does XLP / IEF mean?", "It means buying XLP with 50% of the model portfolio and IEF with the other 50%."),
+            ("How are monthly entries and exits placed?", "The model assumes market-on-open (MOO) exit and entry orders on the first trading day of each month."),
             ("How often is Momentum ETF2 updated?", "It is refreshed on weekdays, but allocations are monthly. The page may not materially change when no new completed data is available."),
-            ("What do the recent allocations show?", "They show completed effective holding months and model returns, newest first. Monthly returns compound rather than simply add."),
             ("Why can my account differ?", "Timing, spreads, fills, fees, taxes, fractional shares, cash drag, and delayed rebalancing can create differences."),
-            ("Are the exact model rules disclosed?", "No. The page explains the service at a useful level without publishing proprietary calculations, parameters, or source code."),
         ],
     },
     "momentum-stocks": {
@@ -58,8 +58,8 @@ FAQS = {
         ],
         "member": [
             ("Are the latest alert stocks already held?", "Not necessarily. Current holdings are listed separately. The alert is for the stated future execution date and can change before the signal period closes."),
-            ("How is the portfolio weighted?", "The displayed model uses equal weights across ten selected stocks when risk-on. Personal sizing remains your responsibility."),
-            ("What happens in risk-off conditions?", "The model moves away from the stock basket into the defensive allocation shown on the page."),
+            ("How is the portfolio weighted?", "When risk-on, the model holds ten selected stocks at 10% of the model portfolio each. When risk-off, 100% of the model portfolio is allocated to the selected defensive stock. Personal sizing remains your responsibility."),
+            ("When are entries and exits placed?", "The model assumes market-on-open (MOO) exit and entry orders on the first trading day of each month."),
             ("Why can my results differ?", "Stocks can gap and have different spreads or fills. Taxes, fees, account size, fractional shares, and execution timing also matter."),
         ],
     },
@@ -73,6 +73,7 @@ FAQS = {
         "member": [
             ("What should I check first?", "Review Latest MOO Orders, then Open Positions. An empty order table means the model currently has no new order to execute."),
             ("What does MOO mean?", "Market-on-open: the model assumes execution at the next regular market open after a completed-bar signal."),
+            ("How are long and short positions sized?", "With five slots per side, each long entry targets about 20% of current strategy equity. The entire short book targets 20% of equity, so each of five short entries targets about 4%. Actual weights can differ as equity and open slots change."),
             ("Why can the results date advance without a new order?", "Open positions are still marked to the latest close even when no entry or exit condition is triggered."),
             ("Can I copy the backtest exactly?", "Not necessarily. Opening prices, slippage, short availability, borrow costs, fees, and order timing can produce different results."),
         ],

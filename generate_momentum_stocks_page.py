@@ -65,9 +65,7 @@ def load_alert(path):
         "Signal": signal.get("signal_date", "—"),
         "Regime": signal.get("regime", "—"),
         "Holdings": ", ".join(item for item in holdings if item),
-        "Execution": signal.get("execution_date", "—"),
-        "VIX 30d MA": f'{signal["vix_30d_average"]:.2f}',
-        "SPY 10d RV": f'{signal["spy_10d_realized_vol"]:.2f}',
+        "Execution": f'{signal.get("execution_date", "—")} open',
     }
     if signal.get("preliminary"):
         alert["Status"] = f'Preliminary through {signal.get("latest_price_date", "—")}'
@@ -78,9 +76,9 @@ def load_alert(path):
         "Regime": current.get("regime") or signal.get("regime", "—"),
         "Holdings": ", ".join(item for item in current_holdings if item),
         "Execution": current.get("execution_date") or signal.get("execution_date", "—"),
-        "VIX 30d MA": f'{signal["vix_30d_average"]:.2f}',
-        "SPY 10d RV": f'{signal["spy_10d_realized_vol"]:.2f}',
-        "Status": f'Preliminary through {signal.get("latest_price_date", "—")}',
+        "Latest Price Date": current.get("latest_price_date") or signal.get("latest_price_date", "—"),
+        "Partial Return": current.get("partial_return"),
+        "SPY Partial Return": current.get("spy_partial_return"),
     }
 
 
@@ -153,12 +151,37 @@ def build_chart(daily):
     )
 
 
-def build_allocation_table(allocations, limit=20):
+def build_allocation_table(allocations, current=None, limit=20):
     rows = []
+    completed_limit = limit
+    if current and current.get("Execution") not in (None, "", "—"):
+        entry = pd.Timestamp(current["Execution"])
+        risk_off = str(current.get("Regime", "")).strip().upper() == "RISK OFF"
+        regime = "Risk Off" if risk_off else "Risk On"
+        regime_css = "risk-off" if risk_off else "risk-on"
+        partial_return = current.get("Partial Return")
+        spy_partial_return = current.get("SPY Partial Return")
+        return_text = "—" if partial_return is None else f"{float(partial_return) * 100:.2f}%"
+        return_css = (
+            "muted" if partial_return is None
+            else "positive" if float(partial_return) > 0
+            else "negative" if float(partial_return) < 0
+            else "muted"
+        )
+        spy_text = "—" if spy_partial_return is None else f"{float(spy_partial_return) * 100:.2f}%"
+        rows.append(
+            '<tr>'
+            f'<td title="Partial month-to-date through {html.escape(str(current.get("Latest Price Date", "—")))}">{entry:%Y-%m}*</td>'
+            f'<td>{html.escape(str(current.get("Holdings", "—")))}</td>'
+            f'<td><span class="regime {regime_css}">{regime}</span></td>'
+            f'<td class="{return_css}">{return_text}</td>'
+            f'<td>{spy_text}</td></tr>'
+        )
+        completed_limit -= 1
     recent = (
         allocations.rename(columns={"return": "strategy_return"})
         .sort_values("entry_date", ascending=False)
-        .head(limit)
+        .head(completed_limit)
     )
     for item in recent.itertuples(index=False):
         ret_css = "positive" if item.strategy_return > 0 else "negative"
@@ -169,13 +192,33 @@ def build_allocation_table(allocations, limit=20):
             f"<td>{html.escape(str(item.holdings))}</td>"
             f'<td><span class="regime {regime_css}">{regime}</span></td>'
             f'<td class="{ret_css}">{item.strategy_return * 100:.2f}%</td>'
-            f"<td>{item.spy_return * 100:.2f}%</td>"
-            f"<td>{item.realized_vol:.2f}%</td><td>{item.vix_ma:.2f}</td></tr>"
+            f"<td>{item.spy_return * 100:.2f}%</td></tr>"
         )
     return (
         '<div class="table-wrap"><table><thead><tr><th>Entry</th>'
         "<th>Holdings</th><th>Regime</th><th>Return</th><th>SPY</th>"
-        f'<th>Realized Vol</th><th>VIX MA</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
+        f'</tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
+    )
+
+
+def current_partial_month_panel(current):
+    partial_return = current.get("Partial Return")
+    if partial_return is None:
+        return_text, return_class = "—", "muted"
+    else:
+        partial_return = float(partial_return)
+        return_text = pct(partial_return)
+        return_class = "positive" if partial_return > 0 else "negative" if partial_return < 0 else "muted"
+    regime = str(current.get("Regime", "—")).replace("_", " ").title()
+    return (
+        '<section class="panel" id="current-month"><h2>Current Partial Month</h2>'
+        f'<p class="subtle">Mark-to-market through {html.escape(str(current.get("Latest Price Date", "—")))}; this is an incomplete-month estimate.</p>'
+        '<div class="metrics">'
+        f'<div class="metric"><div class="metric-label">Current Month Return</div><div class="metric-value {return_class}">{return_text}</div></div>'
+        f'<div class="metric"><div class="metric-label">Holdings</div><div class="metric-value positive">{html.escape(str(current.get("Holdings", "—")))}</div></div>'
+        f'<div class="metric"><div class="metric-label">Regime</div><div class="metric-value">{html.escape(regime)}</div></div>'
+        f'<div class="metric"><div class="metric-label">Entry Day</div><div class="metric-value">{html.escape(str(current.get("Execution", "—")))}</div></div>'
+        '</div></section>'
     )
 
 
@@ -201,14 +244,12 @@ def render_page(summary, daily, allocations, monthly, alert, current, audience="
     chart_html = build_chart(daily)
     if audience == "member":
         protected_sections = (
-            '<section class="panel"><h2>Current Partial Month</h2>'
-            f'<p class="subtle">{html.escape(current["Status"])}; the month is incomplete.</p>'
-            f'{build_alert_table(current)}</section>'
-            '<section class="panel"><h2>Latest Alert</h2>'
+            current_partial_month_panel(current)
+            + '<section class="panel"><h2>Latest Alert</h2>'
             f'<p class="subtle">{html.escape(alert.get("Status", "Preliminary"))}. '
             'The current-month signal may change before execution.</p>'
-            f'{build_alert_table(alert)}</section>'
-            f'<section class="panel"><h2>Latest 20 Historical Trades</h2>{build_allocation_table(allocations)}</section>'
+            f'{build_alert_table(alert, ("Signal", "Regime", "Holdings", "Execution"))}</section>'
+            f'<section class="panel"><h2>Latest 20 Historical Trades</h2>{build_allocation_table(allocations, current)}</section>'
         )
     else:
         protected_sections = (
@@ -223,7 +264,7 @@ def render_page(summary, daily, allocations, monthly, alert, current, audience="
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MoMo Stocks Backtest - Extreme Trading Inc.</title>
 <style>
-*{{box-sizing:border-box}} body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}} nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}} nav a{{color:white;text-decoration:none;margin-left:20px}} .container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}} .hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}} .eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}} h1{{margin:8px 0 10px}} h2{{margin-top:0}} .subtle,.muted{{color:#94a3b8}} .metrics{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:22px 0}} .metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}} .metric-label{{color:#94a3b8;font-size:13px}} .metric-value{{font-size:24px;font-weight:700;margin-top:6px}} .chart{{overflow:hidden}} .table-wrap{{overflow-x:auto}} table{{width:100%;border-collapse:collapse;background:#111827}} th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:12px;white-space:nowrap}} th{{background:#1f2937;color:white}} th:first-child,td:first-child{{text-align:left}} .positive{{color:#22c55e;font-weight:600}} .negative{{color:#f87171;font-weight:600}} .compact{{max-width:420px}} .regime{{font-weight:700}} .risk-on{{color:#60a5fa}} .risk-off{{color:#f59e0b}} .disclaimer{{font-size:13px;line-height:1.6;color:#94a3b8}} footer{{text-align:center;padding:30px;color:#94a3b8}} @media(max-width:800px){{nav{{align-items:flex-start;padding:16px;gap:12px}}nav div:last-child{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}}nav a{{margin-left:8px;font-size:12px}}.metrics{{grid-template-columns:repeat(2,1fr)}}.container{{padding:20px 10px}}}} @media(max-width:480px){{.metrics{{grid-template-columns:1fr}}}}
+*{{box-sizing:border-box}} body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}} nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}} nav a{{color:white;text-decoration:none;margin-left:20px}} .container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}} .hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}} .eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}} h1{{margin:8px 0 10px}} h2{{margin-top:0}} .subtle,.muted{{color:#94a3b8}} .metrics{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:22px 0}} .metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}} .metric-label{{color:#94a3b8;font-size:13px}} .metric-value{{font-size:24px;font-weight:700;margin-top:6px}} .chart{{overflow:hidden}} .table-wrap{{overflow-x:auto}} table{{width:100%;border-collapse:collapse;background:#111827}} th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:15px;white-space:nowrap}} th{{background:#1f2937;color:white}} th:first-child,td:first-child{{text-align:left}} .positive{{color:#22c55e;font-weight:600}} .negative{{color:#f87171;font-weight:600}} .compact{{max-width:420px}} .regime{{font-weight:700}} .risk-on{{color:#60a5fa}} .risk-off{{color:#f59e0b}} .disclaimer{{font-size:13px;line-height:1.6;color:#94a3b8}} footer{{text-align:center;padding:30px;color:#94a3b8}} @media(max-width:800px){{nav{{align-items:flex-start;padding:16px;gap:12px}}nav div:last-child{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}}nav a{{margin-left:8px;font-size:12px}}.metrics{{grid-template-columns:repeat(2,1fr)}}.container{{padding:20px 10px}}}} @media(max-width:480px){{.metrics{{grid-template-columns:1fr}}}}
 {FAQ_CSS}</style>
 </head>
 <body>

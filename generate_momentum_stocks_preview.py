@@ -53,11 +53,46 @@ def main():
     execution_date = pd.bdate_range(next_month, periods=1)[0]
     preview["execution_date"] = f"{execution_date:%Y-%m-%d}"
     preview["preliminary"] = True
+    current_holdings = completed.get("holdings") or [completed.get("defensive_holding")]
+    current_holdings = [ticker for ticker in current_holdings if ticker]
+    requested_entry = pd.Timestamp(completed.get("execution_date"))
+    price_dates = clean_prices.index[
+        (clean_prices.index >= requested_entry) & (clean_prices.index <= latest_date)
+    ]
+    if price_dates.empty:
+        raise RuntimeError(
+            f"No current-allocation prices from {requested_entry:%Y-%m-%d} through "
+            f"{latest_date:%Y-%m-%d}"
+        )
+    entry_date = price_dates[0]
+    current_price_date = price_dates[-1]
+    missing_holdings = [ticker for ticker in current_holdings if ticker not in clean_prices]
+    if missing_holdings:
+        raise RuntimeError(
+            "Current allocation is missing price history for: "
+            + ", ".join(missing_holdings)
+        )
+    holding_returns = (
+        clean_prices.loc[current_price_date, current_holdings]
+        / clean_prices.loc[entry_date, current_holdings]
+        - 1
+    )
+    if holding_returns.isna().any():
+        missing_returns = holding_returns[holding_returns.isna()].index.tolist()
+        raise RuntimeError(
+            "Current allocation cannot be marked for: " + ", ".join(missing_returns)
+        )
+    spy = live.yahoo_series("SPY", entry_date, current_price_date).dropna()
+    if spy.empty:
+        raise RuntimeError("SPY history is unavailable for the current allocation period")
     preview["current_allocation"] = {
         "signal_date": completed.get("signal_date"),
-        "execution_date": completed.get("execution_date"),
+        "execution_date": f"{entry_date:%Y-%m-%d}",
         "regime": completed.get("regime"),
-        "holdings": completed.get("holdings") or [completed.get("defensive_holding")],
+        "holdings": current_holdings,
+        "latest_price_date": f"{current_price_date:%Y-%m-%d}",
+        "partial_return": float(holding_returns.mean()),
+        "spy_partial_return": float(spy.iloc[-1] / spy.iloc[0] - 1),
     }
 
     signal_path.write_text(json.dumps(preview, indent=2), encoding="utf-8")

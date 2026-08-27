@@ -105,8 +105,8 @@ def parse_alert(path):
     return alert
 
 
-def build_alert_table(alert):
-    columns = ("Signal", "Regime", "Holdings", "Execution", "VIX 30d MA", "SPY 10d RV")
+def build_alert_table(alert, columns=None):
+    columns = columns or ("Signal", "Regime", "Holdings", "Execution", "VIX 30d MA", "SPY 10d RV")
     headers = "".join(f"<th>{column}</th>" for column in columns)
     cells = []
     for column in columns:
@@ -201,9 +201,26 @@ def build_monthly_table(monthly, partial=None, daily=None):
     )
 
 
-def build_allocation_table(allocations, limit=20):
+def build_allocation_table(allocations, partial=None, limit=20):
     rows = []
-    recent = allocations.sort_values("date", ascending=False).head(limit)
+    completed_limit = limit
+    if partial is not None:
+        risk_off = str(partial.get("risk_off", "")).strip().lower() in ("true", "1", "yes")
+        regime = "Risk Off" if risk_off else "Risk On"
+        regime_css = "risk-off" if risk_off else "risk-on"
+        partial_return = float(partial["partial_return"])
+        return_css = "positive" if partial_return > 0 else "negative" if partial_return < 0 else "muted"
+        entry_month = pd.Timestamp(partial["entry_month"]).strftime("%Y-%m")
+        rows.append(
+            '<tr>'
+            f'<td title="Partial month-to-date through {html.escape(str(partial["latest_day"]))}">{entry_month}*</td>'
+            f"<td>{html.escape(str(partial['holdings']))}</td>"
+            f'<td><span class="regime {regime_css}">{regime}</span></td>'
+            f'<td class="{return_css}">{partial_return * 100:.2f}%</td>'
+            '<td class="muted">—</td></tr>'
+        )
+        completed_limit -= 1
+    recent = allocations.sort_values("date", ascending=False).head(completed_limit)
     for item in recent.itertuples(index=False):
         ret_css = "positive" if item.port_ret > 0 else "negative"
         regime = "Risk Off" if item.risk_off else "Risk On"
@@ -214,13 +231,12 @@ def build_allocation_table(allocations, limit=20):
             f"<td>{html.escape(holdings)}</td>"
             f'<td><span class="regime {regime_css}">{regime}</span></td>'
             f'<td class="{ret_css}">{item.port_ret * 100:.2f}%</td>'
-            f"<td>{item.spy_ret * 100:.2f}%</td>"
-            f"<td>{item.realized_vol:.2f}%</td><td>{item.vix_ma:.2f}</td></tr>"
+            f"<td>{item.spy_ret * 100:.2f}%</td></tr>"
         )
     return (
         '<div class="table-wrap"><table><thead><tr><th>Month</th>'
         "<th>Holdings</th><th>Regime</th><th>Return</th><th>SPY</th>"
-        f'<th>Realized Vol</th><th>VIX MA</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
+        f'</tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
     )
 
 
@@ -267,8 +283,8 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None, audie
     if audience == "member":
         member_sections = (
             current_partial_month_panel(partial)
-            + f'<section class="panel"><h2>Latest Alert</h2>{build_alert_table(alert)}</section>'
-            f'<section class="panel"><h2>Latest 20 Historical Trades</h2>{build_allocation_table(allocations)}</section>'
+            + f'<section class="panel"><h2>Latest Alert</h2>{build_alert_table(alert, ("Signal", "Regime", "Holdings", "Execution"))}</section>'
+            f'<section class="panel"><h2>Latest 20 Historical Trades</h2>{build_allocation_table(allocations, partial)}</section>'
         )
     else:
         member_sections = (
@@ -283,7 +299,7 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None, audie
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MoMoEtf1 Backtest - Extreme Trading Inc.</title>
 <style>
-*{{box-sizing:border-box}} body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}} nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}} nav a{{color:white;text-decoration:none;margin-left:20px}} .container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}} .hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}} .eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}} h1{{margin:8px 0 10px}} h2{{margin-top:0}} .subtle,.muted{{color:#94a3b8}} .metrics{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:22px 0}} .metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}} .metric-label{{color:#94a3b8;font-size:13px}} .metric-value{{font-size:24px;font-weight:700;margin-top:6px}} .chart{{overflow:hidden}} .table-wrap{{overflow-x:auto}} table{{width:100%;border-collapse:collapse;background:#111827}} th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:12px;white-space:nowrap}} th{{background:#1f2937;color:white}} th:first-child,td:first-child{{text-align:left}} .positive{{color:#22c55e;font-weight:600}} .negative{{color:#f87171;font-weight:600}} .compact{{max-width:420px}} .regime{{font-weight:700}} .risk-on{{color:#60a5fa}} .risk-off{{color:#f59e0b}} .disclaimer{{font-size:13px;line-height:1.6;color:#94a3b8}} footer{{text-align:center;padding:30px;color:#94a3b8}} @media(max-width:800px){{nav{{align-items:flex-start;padding:16px;gap:12px}}nav div:last-child{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}}nav a{{margin-left:8px;font-size:12px}}.metrics{{grid-template-columns:repeat(2,1fr)}}.container{{padding:20px 10px}}}} @media(max-width:480px){{.metrics{{grid-template-columns:1fr}}}}
+*{{box-sizing:border-box}} body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}} nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}} nav a{{color:white;text-decoration:none;margin-left:20px}} .container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}} .hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}} .eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}} h1{{margin:8px 0 10px}} h2{{margin-top:0}} .subtle,.muted{{color:#94a3b8}} .metrics{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:22px 0}} .metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}} .metric-label{{color:#94a3b8;font-size:13px}} .metric-value{{font-size:24px;font-weight:700;margin-top:6px}} .chart{{overflow:hidden}} .table-wrap{{overflow-x:auto}} table{{width:100%;border-collapse:collapse;background:#111827}} th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:15px;white-space:nowrap}} th{{background:#1f2937;color:white}} th:first-child,td:first-child{{text-align:left}} .positive{{color:#22c55e;font-weight:600}} .negative{{color:#f87171;font-weight:600}} .compact{{max-width:420px}} .regime{{font-weight:700}} .risk-on{{color:#60a5fa}} .risk-off{{color:#f59e0b}} .disclaimer{{font-size:13px;line-height:1.6;color:#94a3b8}} footer{{text-align:center;padding:30px;color:#94a3b8}} @media(max-width:800px){{nav{{align-items:flex-start;padding:16px;gap:12px}}nav div:last-child{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}}nav a{{margin-left:8px;font-size:12px}}.metrics{{grid-template-columns:repeat(2,1fr)}}.container{{padding:20px 10px}}}} @media(max-width:480px){{.metrics{{grid-template-columns:1fr}}}}
 {FAQ_CSS}</style>
 </head>
 <body>
