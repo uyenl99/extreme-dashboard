@@ -65,6 +65,20 @@ This file records automation failures so they are not repeated. A calculation is
 - Fix: Prepend the configured Git executable directory to `PATH` before invoking GitHub CLI.
 - Prevention: Validate both direct executable calls and any subprocess dependencies they launch under the exact scheduled-task environment.
 
+## 2026-08-27 — MoMo Stocks preview consumed a prior preview as completed state
+
+- Impact: Mean Reversion, MoMoEtf1, and MoMoEtf2 calculated August 27 results, but the shared batch stopped before MoMo Stocks and published nothing.
+- Cause: The combined Momentum wrapper ran `generate_momentum_stocks_preview.py` before `update_v2a_live.py`. Because the preview extends `latest_signal.json` in place, the next run read the prior preliminary September 1 execution as the completed current allocation. It then attempted to mark prices over the impossible range September 1 through August 26.
+- Fix: Run `update_v2a_live.py` first so it writes a fresh completed signal, then run the preview. Determine the preview date with `latest_completed_price_date()` so a post-close run can use the current completed session.
+- Prevention: Treat completed-state generation as a required dependency of preview generation, and test the production sequence on consecutive runs so preliminary output can never become the next run's completed input.
+
+## 2026-08-27 — Scheduled failure had no user notification
+
+- Impact: The 3:00 PM batch failed at 3:39 PM, but the stale production date was noticed manually instead of being reported when the task exited.
+- Cause: The Windows scheduled task only wrote local transcript logs. No failure-notification hook or active monitor surfaced the nonzero exit code.
+- Fix: During a requested monitored run, keep the process attached and report the first nonzero stage immediately. A persistent notification channel still needs to be added for unattended daily runs.
+- Prevention: Do not describe a daily update as complete without checking the task exit code, shared PR, deployment, and production dates. Add an explicit unattended failure-notification step before relying on the schedule alone.
+
 ## Required release checklist
 
 1. Test with the exact Task Scheduler user, environment, executable, and PowerShell version.
