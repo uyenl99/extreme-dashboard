@@ -165,9 +165,12 @@ try {
         if (-not (Test-Path -LiteralPath $sourcePath)) { throw "Generated member page not found: $sourcePath" }
         Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $memberContentRoot $memberPages[$sourceName]) -Force
     }
+    $memberPagePaths = @($memberPages.Values | ForEach-Object { Join-Path $memberContentRoot $_ })
+    & $python (Join-Path $webRoot "inject_position_calculator.py") @memberPagePaths
+    if ($LASTEXITCODE -ne 0) { throw "Position calculator injection failed." }
 
     Set-RunStage -Name "Commit generated results"
-    & $git -C $webRoot add -- mean-reversion.html index.html momentum.html momentum2.html inflation-compass momentum-stocks.html api/_member-content
+    & $git -C $webRoot add -- mean-reversion.html index.html momentum.html momentum2.html inflation-compass momentum-stocks.html api/_member-content position-calculator.js
     & $git -C $webRoot diff --cached --quiet
     if ($LASTEXITCODE -eq 1) {
         & $git -C $webRoot config user.name "Extreme Dashboard Automation"
