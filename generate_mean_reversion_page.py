@@ -478,7 +478,10 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
 {FAQ_CSS}</style>
 </head>
 <body>
-<nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a></div></nav>
+<nav class="site-nav">
+<strong class="brand">Extreme Trading Inc.</strong>
+<div class="navlinks"><a href="index.html">Home</a><a href="strategies.html">Strategies</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a></div>
+</nav>
 <main class="container">
 <section class="hero"><div class="eyebrow">Next-day MOO long/short strategy</div><h1>Mean Reversion</h1><p>Systematic equity strategy seeking short-term price dislocations and subsequent reversion while managing long and short exposure. Signals use completed daily bars and simulated entries and exits fill at the next market open.</p><p class="subtle">Backtest period: {summary.start_date} through {summary.end_date} · Starting equity: ${equity.iloc[0]['equity']:,.0f}</p><p class="subtle">Dashboard updated: {generated_at}</p>{render_faq("mean-reversion", audience)}</section>
 <section class="metrics">{metric_html}</section>

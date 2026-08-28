@@ -303,7 +303,10 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None, audie
 {FAQ_CSS}</style>
 </head>
 <body>
-<nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a></div></nav>
+<nav class="site-nav">
+<strong class="brand">Extreme Trading Inc.</strong>
+<div class="navlinks"><a href="index.html">Home</a><a href="strategies.html">Strategies</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a></div>
+</nav>
 <main class="container">
 <section class="hero"><div class="eyebrow">Backtested ETF allocation model</div><h1>MoMoEtf1</h1><p>Systematic ETF allocation model that adjusts monthly across major market exposures using proprietary trend and risk-management signals. Subscribers receive current model allocations and update alerts.</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: ${daily.iloc[0]["Equity"]:,.0f}</p>{render_faq("momentum", audience)}</section>
 <section class="metrics">{metric_html}</section>
