@@ -1,13 +1,380 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+
+<html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="0; url=index.html">
-<link rel="canonical" href="index.html">
 <title>Home - Extreme Trading Inc.</title>
+<style>
+
+body{
+    margin:0;
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    background:#f1f5f9;
+    color:#172033;
+}
+
+nav{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:20px 60px;
+    background:#111827;
+}
+
+nav a{
+    color:white;
+    text-decoration:none;
+    margin-left:25px;
+}
+
+.hero{
+    padding:80px 10%;
+    background:#0f172a;
+    color:white;
+    text-align:center;
+}
+
+.hero h1{
+    font-size:54px;
+    margin-bottom:10px;
+}
+
+.section{
+    max-width:1240px;
+    margin:auto;
+    padding:50px 30px;
+}
+
+.cards{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:24px;
+}
+
+.card{
+    --accent:#1e3a5f;
+    --accent-soft:#f1f5f9;
+    position:relative;
+    overflow:hidden;
+    background:white;
+    padding:30px 30px 28px;
+    border:1px solid #dbe3ef;
+    border-radius:20px;
+    box-shadow:0 12px 35px rgba(15,23,42,.07);
+    transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;
+}
+
+.card:before{
+    content:"";
+    position:absolute;
+    inset:0 0 auto;
+    height:3px;
+    background:var(--accent);
+}
+
+.card:hover{
+    transform:translateY(-4px);
+    border-color:#94a3b8;
+    box-shadow:0 20px 45px rgba(15,23,42,.12);
+}
+
+.card h2{
+    margin:10px 0 12px;
+    font-size:1.65rem;
+    letter-spacing:-.02em;
+}
+
+.card>p{
+    color:#64748b;
+    line-height:1.65;
+}
+
+.card-kicker{
+    color:#64748b;
+    font-size:.75rem;
+    font-weight:800;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+}
+
+.card-stats{
+    display:flex;
+    flex-wrap:wrap;
+    gap:9px;
+    margin:22px 0 24px;
+}
+
+.card-stats span{
+    padding:8px 11px;
+    border-radius:999px;
+    background:var(--accent-soft);
+    color:#334155;
+    font-size:.83rem;
+    font-weight:750;
+    line-height:1.2;
+}
+
+.card-stats .positive{background:var(--accent-soft);color:#15803d}
+.card-stats .negative{background:var(--accent-soft);color:#dc2626}
+.card-stats .neutral{background:#f8fafc;color:#475569}
+
+@media(max-width:760px){
+    nav{padding:18px 20px;align-items:flex-start;gap:18px}
+    nav div:last-child{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px}
+    nav a{margin-left:8px;font-size:.82rem}
+    .hero{padding:60px 24px}
+    .hero h1{font-size:clamp(2.3rem,12vw,3.4rem)}
+    .section{padding:36px 18px}
+    .cards{grid-template-columns:1fr}
+    .card{padding:26px 24px}
+}
+
+.btn{
+    display:inline-block;
+    padding:12px 20px;
+    background:var(--accent,#2563eb);
+    color:white;
+    text-decoration:none;
+    border-radius:9px;
+    font-weight:bold;
+    box-shadow:0 7px 18px color-mix(in srgb,var(--accent,#2563eb) 22%,transparent);
+}
+
+.coming-soon{
+    color:#666;
+    font-style:italic;
+}
+
+.cta{
+    text-align:center;
+    margin-top:60px;
+    padding:40px;
+    background:white;
+    border-radius:12px;
+    box-shadow:0 2px 10px rgba(0,0,0,.1);
+}
+
+footer{
+    text-align:center;
+    padding:40px;
+    color:#666;
+}
+
+footer a{
+    color:#2563eb;
+    text-decoration:none;
+}
+
+.legal-note{
+    margin-top:18px;
+    color:#64748b;
+    font-size:13px;
+    line-height:1.55;
+}
+
+</style>
+
 </head>
+
 <body>
-<p>The Strategies page is now the <a href="index.html">home page</a>.</p>
+
+<nav>
+
+<div>
+<strong>Extreme Trading Inc.</strong>
+</div>
+
+<div>
+<a href="index.html">Home</a>
+<a href="subscribe.html">Subscribe</a>
+<a href="members.html">Login</a>
+<a href="about.html">About</a>
+<a href="contact.html">Contact</a>
+</div>
+
+</nav>
+
+<div class="hero">
+
+<h1>Trading Strategies</h1>
+
+<p>
+Explore our systematic stock selection strategies and
+track record of historical performance.
+</p>
+
+</div>
+
+<div class="section">
+
+<div class="cards">
+
+<div class="card">
+
+<span class="card-kicker">Flagship strategy</span>
+
+<h2>Extreme OS</h2>
+
+<p>
+Our flagship strategy focused on identifying
+high-probability stock opportunities using
+systematic analysis and disciplined risk management.
+</p>
+
+<p class="card-stats">
+<span>Active Strategy</span>
+<span>Historical Track Record</span>
+<span>Member Trade Alerts</span>
+</p>
+
+<a class="btn" href="extreme-os.html">
+Learn More
+</a>
+
+</div>
+
+<div class="card">
+
+<span class="card-kicker">Monthly ETF allocation</span>
+
+<h2>MoMoEtf1</h2>
+
+<p>
+Systematic ETF allocation model that adjusts
+monthly across major market exposures using
+proprietary trend and risk-management signals.
+</p>
+
+<p class="card-stats">
+<span class="positive">25.25% Backtest CAGR</span>
+<span class="positive">1.22 Sharpe Ratio</span>
+<span class="negative">-18.30% Maximum Drawdown</span>
+</p>
+
+<a class="btn" href="momentum.html">
+View Backtest Results
+</a>
+
+</div>
+
+<div class="card">
+
+<span class="card-kicker">Tactical ETF allocation</span>
+
+<h2>MoMoEtf2</h2>
+
+<p>
+Tactical asset allocation model that adjusts monthly
+across major ETF exposures using proprietary market
+environment and risk-management signals.
+</p>
+
+<p class="card-stats">
+<span class="positive">22.46% Backtest CAGR</span>
+<span class="positive">1.31 Sharpe Ratio</span>
+<span class="negative">-23.69% Maximum Drawdown</span>
+</p>
+
+<a class="btn" href="momentum2.html">
+View Backtest Results
+</a>
+
+</div>
+
+<div class="card">
+
+<span class="card-kicker">Monthly stock allocation</span>
+
+<h2>MoMo Stocks</h2>
+
+<p>
+Systematic stock allocation model that adjusts
+monthly across selected equity opportunities using
+proprietary trend and risk-management signals.
+</p>
+
+<p class="card-stats">
+<span class="positive">46.50% Backtest CAGR</span>
+<span class="positive">1.34 Sharpe Ratio</span>
+<span class="negative">-38.33% Maximum Drawdown</span>
+</p>
+
+<a class="btn" href="momentum-stocks.html">
+View Backtest Results
+</a>
+
+</div>
+
+<div class="card">
+
+<span class="card-kicker">Daily long / short</span>
+
+<h2>Mean Reversion</h2>
+
+<p>
+Systematic long/short strategy targeting
+short-term price dislocations and subsequent
+mean-reversion opportunities.
+</p>
+
+<p class="card-stats">
+<span class="positive">23.84% Backtest CAGR</span>
+<span class="positive">1.63 Sharpe Ratio</span>
+<span class="negative">-17.27% Maximum Drawdown</span>
+</p>
+
+<a class="btn" href="mean-reversion.html">
+View Backtest Results
+</a>
+
+</div>
+
+</div>
+
+<div class="cta">
+
+<h2>Want Access to Current Picks?</h2>
+
+<p>
+Subscribers receive current opportunities,
+open positions, strategy updates,
+email alerts, and future SMS notifications.
+</p>
+
+<a class="btn" href="subscribe.html">
+Become a Member
+</a>
+
+<p class="legal-note">
+General model research only. Not personalized advice. Trading involves substantial risk of loss.
+Review the <a href="risk-disclosure.html">Risk Disclosure</a>,
+<a href="hypothetical-performance.html">Hypothetical Performance Disclosure</a>, and
+<a href="terms.html">Terms</a>.
+</p>
+
+</div>
+
+</div>
+
+<footer>
+
+<p>
+© 2026 Extreme Trading Inc.
+</p>
+
+<p>
+<a href="index.html">Home</a> |
+<a href="members.html">Login</a> |
+<a href="subscribe.html">Subscribe</a> |
+<a href="contact.html">Contact</a> |
+<a href="terms.html">Terms</a> |
+<a href="risk-disclosure.html">Risk Disclosure</a> |
+<a href="hypothetical-performance.html">Hypothetical Performance</a> |
+<a href="refund-cancellation.html">Refunds</a> |
+<a href="privacy.html">Privacy</a>
+</p>
+
+</footer>
+
 </body>
 </html>
