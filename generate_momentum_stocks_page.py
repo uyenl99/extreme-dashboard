@@ -7,7 +7,7 @@ import pandas as pd
 
 from strategy_faq import FAQ_CSS, render_faq
 from metric_style import metric_class
-from strategy_card import update_backtest_card
+from strategy_card import update_backtest_card, update_member_backtest_card
 from strategy_chart import build_equity_drawdown_chart
 
 from generate_momentum_page import (
@@ -59,6 +59,12 @@ def parse_args():
         type=Path,
         default=Path("strategies.html"),
         help="Strategies page whose MoMo Stocks card metrics should be refreshed.",
+    )
+    parser.add_argument(
+        "--members-page",
+        type=Path,
+        default=Path("members.html"),
+        help="Authenticated strategy directory whose MoMo Stocks metrics should be refreshed.",
     )
     return parser.parse_args()
 
@@ -234,11 +240,11 @@ def render_page(summary, daily, allocations, monthly, alert, current, audience="
     max_drawdown = summary.daily_max_drawdown
     metrics = (
         ("Strategy CAGR", pct(summary.cagr, 1)),
+        ("SPY CAGR", pct(summary.spy_cagr, 1)),
         ("Strategy Max Drawdown", pct(max_drawdown, 1)),
+        ("SPY Max Drawdown", pct(summary.spy_max_drawdown_period, 1)),
         ("Total Return", pct(total_return)),
         ("Sharpe Ratio", f"{sharpe:.2f}"),
-        ("SPY CAGR", pct(summary.spy_cagr, 1)),
-        ("SPY Max Drawdown", pct(summary.spy_max_drawdown_period, 1)),
         ("Final Equity", f"${summary.final_equity:,.0f}"),
         ("Active Months", f"{len(allocations):,}"),
     )
@@ -307,6 +313,14 @@ def main():
     args.output.write_text(page, encoding="utf-8")
     update_backtest_card(
         args.strategies_page,
+        "MoMo Stocks",
+        summary.cagr,
+        summary.sharpe_0rf,
+        summary.daily_max_drawdown,
+        summary.spy_max_drawdown_period,
+    )
+    update_member_backtest_card(
+        args.members_page,
         "MoMo Stocks",
         summary.cagr,
         summary.sharpe_0rf,

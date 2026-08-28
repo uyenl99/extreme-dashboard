@@ -13,8 +13,8 @@ main{max-width:none;margin:0;padding:0}
 .home-card h2{margin:10px 0 12px;font-size:1.65rem;letter-spacing:-.02em}
 .home-card>p{color:#64748b;line-height:1.65}
 .home-kicker{color:#64748b;font-size:.75rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
-.home-stats{display:flex;flex-wrap:wrap;gap:9px;margin:22px 0 24px}
-.home-stats span{padding:8px 11px;border-radius:999px;background:var(--accent-soft);color:#334155;font-size:.83rem;font-weight:750;line-height:1.2}
+.home-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:22px 0 24px}
+.home-stats span{display:grid;place-items:center;padding:8px 11px;border-radius:999px;background:var(--accent-soft);color:#334155;font-size:.83rem;font-weight:750;line-height:1.2;text-align:center}
 .home-stats .positive{background:var(--accent-soft);color:#15803d}
 .home-stats .negative{background:var(--accent-soft);color:#dc2626}
 .home-btn{display:inline-block;padding:12px 20px;background:var(--accent,#2563eb);color:#fff;text-decoration:none;border-radius:9px;font-weight:700;box-shadow:0 7px 18px color-mix(in srgb,var(--accent,#2563eb) 22%,transparent)}

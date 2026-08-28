@@ -62,6 +62,7 @@ $allowedPaths = @(
     '^extreme-os\.html$',
     '^performance-details\.html$',
     '^index\.html$',
+    '^members\.html$',
     '^strategies\.html$',
     '^mean-reversion\.html$',
     '^momentum\.html$',
@@ -97,6 +98,21 @@ if (-not ((Mask-GeneratedCardStats $baseIndex) -ceq (Mask-GeneratedCardStats $cu
     throw "Daily publication guard blocked changes outside generated strategy statistics on strategies.html."
 }
 
+$baseMembers = (Read-GitUtf8File $BaseRef "members.html") -replace "`r`n?", "`n"
+$baseMembers = $baseMembers.TrimEnd()
+$currentMembers = [System.IO.File]::ReadAllText((Join-Path $WebRoot "members.html"), (New-Object System.Text.UTF8Encoding($false))) -replace "`r`n?", "`n"
+$currentMembers = $currentMembers.TrimEnd()
+function Mask-GeneratedMemberStats([string]$Content) {
+    return [regex]::Replace(
+        $Content,
+        '(?s)<p class="home-stats">.*?</p>',
+        '<p class="home-stats">__GENERATED_MEMBER_STATS__</p>'
+    )
+}
+if (-not ((Mask-GeneratedMemberStats $baseMembers) -ceq (Mask-GeneratedMemberStats $currentMembers))) {
+    throw "Daily publication guard blocked changes outside generated member statistics on members.html."
+}
+
 Assert-Contains "members.html" @(
     'id="strategy-directory"',
     'members.html?strategy=extreme-os',
@@ -116,7 +132,8 @@ Assert-Contains "member.js" @(
 )
 Assert-Contains "api/member-page.js" @(
     '<a href="members.html">Home</a>',
-    "localStorage.removeItem('eti_member_session')",
+    'localStorage.removeItem("eti_member_session")',
+    'Manage billing',
     'Sign out'
 )
 Assert-Contains "index.html" @(

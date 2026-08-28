@@ -7,7 +7,7 @@ import pandas as pd
 from strategy_faq import FAQ_CSS, render_faq
 from metric_style import metric_class
 from strategy_benchmark import yearly_returns_by_year
-from strategy_card import update_backtest_card
+from strategy_card import update_backtest_card, update_member_backtest_card
 from strategy_chart import build_equity_drawdown_chart
 
 
@@ -54,6 +54,12 @@ def parse_args():
         choices=("public", "member"),
         default="public",
         help="Public omits alerts, positions, portfolio actions, and recent trades.",
+    )
+    parser.add_argument(
+        "--members-page",
+        type=Path,
+        default=Path("members.html"),
+        help="Authenticated strategy directory whose card metrics should be refreshed.",
     )
     return parser.parse_args()
 
@@ -412,11 +418,11 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
     spy_drawdown = (spy["SPY_equity"] / spy["SPY_equity"].cummax() - 1).min()
     metrics = (
         ("Strategy CAGR", pct(summary.cagr, 1)),
+        ("SPY CAGR", pct(spy_cagr, 1)),
         ("Strategy Max Drawdown", pct(summary.max_drawdown, 1)),
+        ("SPY Max Drawdown", pct(spy_drawdown, 1)),
         ("Total Return", pct(summary.total_return)),
         ("Sharpe Ratio", f"{summary.annualized_sharpe:.2f}"),
-        ("SPY CAGR", pct(spy_cagr, 1)),
-        ("SPY Max Drawdown", pct(spy_drawdown, 1)),
         ("Final Equity", f"${summary.final_equity:,.0f}"),
         ("Closed Trades", f"{int(summary.trades):,}"),
         ("Win Rate", pct(summary.win_rate)),
@@ -477,6 +483,14 @@ def main():
     spy_drawdown = (spy["SPY_equity"] / spy["SPY_equity"].cummax() - 1).min()
     update_backtest_card(
         args.strategies_page,
+        "Mean Reversion",
+        summary.cagr,
+        summary.annualized_sharpe,
+        summary.max_drawdown,
+        spy_drawdown,
+    )
+    update_member_backtest_card(
+        args.members_page,
         "Mean Reversion",
         summary.cagr,
         summary.annualized_sharpe,
