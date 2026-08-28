@@ -17,6 +17,7 @@
     show("billing-button", visible);
     show("member-login-link", !visible);
     $("member-home-link").href = visible ? "members.html" : "index.html";
+    $("member-strategies-link").href = visible ? "members.html" : "strategies.html";
     $("member-home-link").textContent = "Home";
   }
 
