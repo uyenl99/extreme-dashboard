@@ -76,9 +76,6 @@ try {
     }
     finally { Pop-Location }
 
-    & $python $momoSpPreview --strategy-root $momoSpRoot
-    if ($LASTEXITCODE -ne 0) { throw "Momentum SP preview signal failed." }
-
     & $python $momentumEtf2Generator `
         --source (Join-Path $inflationRoot "output") `
         --output (Join-Path $webRoot "momentum2.html") `
@@ -118,6 +115,11 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Momentum SP refresh failed." }
     }
     finally { Pop-Location }
+
+    # The completed signal must be refreshed before the preview reads it.
+    # The preview intentionally extends that completed state in the same file.
+    & $python $momoSpPreview --strategy-root $momoSpRoot
+    if ($LASTEXITCODE -ne 0) { throw "Momentum SP preview signal failed." }
 
     Push-Location $webRoot
     try {

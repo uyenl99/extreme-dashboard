@@ -27,7 +27,7 @@ def main():
     completed = json.loads(signal_path.read_text(encoding="utf-8"))
     membership = pd.read_csv(live.MEMBERSHIP_FILE, parse_dates=["date"])
     membership_date = membership["date"].max().normalize()
-    latest_date = pd.Timestamp.now().normalize() - pd.offsets.BDay(1)
+    latest_date = live.latest_completed_price_date()
     members = sorted(
         membership.loc[membership["date"].eq(membership_date), "ticker"].unique()
     )
