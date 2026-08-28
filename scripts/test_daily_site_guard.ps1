@@ -79,26 +79,22 @@ foreach ($path in $changedPaths) {
     }
 }
 
-# The Mean Reversion generator may update only its card contents on the public
-# strategies page. The prefix and suffix around that card must match current
-# main byte for byte, preventing an old generator from replacing navigation or layout.
+# Daily generators may refresh only the generated statistics blocks on the
+# public strategies page. Mask those blocks, then require every other byte to
+# match main so an old generator cannot replace navigation or layout.
 $baseIndex = (Read-GitUtf8File $BaseRef "strategies.html") -replace "`r`n?", "`n"
 $baseIndex = $baseIndex.TrimEnd()
 $currentIndex = [System.IO.File]::ReadAllText((Join-Path $WebRoot "strategies.html"), (New-Object System.Text.UTF8Encoding($false))) -replace "`r`n?", "`n"
 $currentIndex = $currentIndex.TrimEnd()
-$marker = '<h2>Mean Reversion</h2>'
-$baseStart = $baseIndex.IndexOf($marker)
-$currentStart = $currentIndex.IndexOf($marker)
-if ($baseStart -lt 0 -or $currentStart -lt 0) { throw "Daily publication guard could not locate the Mean Reversion strategies card." }
-$baseEnd = $baseIndex.IndexOf('</div>', $baseStart)
-$currentEnd = $currentIndex.IndexOf('</div>', $currentStart)
-if ($baseEnd -lt 0 -or $currentEnd -lt 0) { throw "Daily publication guard could not locate the end of the Mean Reversion homepage card." }
-$baseEnd += 6
-$currentEnd += 6
-$protectedPrefixMatches = $baseIndex.Substring(0, $baseStart) -ceq $currentIndex.Substring(0, $currentStart)
-$protectedSuffixMatches = $baseIndex.Substring($baseEnd) -ceq $currentIndex.Substring($currentEnd)
-if (-not $protectedPrefixMatches -or -not $protectedSuffixMatches) {
-    throw "Daily publication guard blocked changes outside the Mean Reversion card on strategies.html (prefix=$protectedPrefixMatches, suffix=$protectedSuffixMatches, baseLength=$($baseIndex.Length), currentLength=$($currentIndex.Length), finalCode=$([int][char]$currentIndex[$currentIndex.Length - 1]))."
+function Mask-GeneratedCardStats([string]$Content) {
+    return [regex]::Replace(
+        $Content,
+        '(?s)<p class="card-stats">.*?</p>',
+        '<p class="card-stats">__GENERATED_STRATEGY_STATS__</p>'
+    )
+}
+if (-not ((Mask-GeneratedCardStats $baseIndex) -ceq (Mask-GeneratedCardStats $currentIndex))) {
+    throw "Daily publication guard blocked changes outside generated strategy statistics on strategies.html."
 }
 
 Assert-Contains "members.html" @(

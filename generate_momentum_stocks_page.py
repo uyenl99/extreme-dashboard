@@ -4,10 +4,11 @@ import json
 from pathlib import Path
 
 import pandas as pd
-import plotly.graph_objects as go
 
 from strategy_faq import FAQ_CSS, render_faq
 from metric_style import metric_class
+from strategy_card import update_backtest_card
+from strategy_chart import build_equity_drawdown_chart
 
 from generate_momentum_page import (
     build_alert_table,
@@ -52,6 +53,12 @@ def parse_args():
         choices=("public", "member"),
         default="public",
         help="Public omits current alerts and recent allocations.",
+    )
+    parser.add_argument(
+        "--strategies-page",
+        type=Path,
+        default=Path("strategies.html"),
+        help="Strategies page whose MoMo Stocks card metrics should be refreshed.",
     )
     return parser.parse_args()
 
@@ -108,46 +115,45 @@ def load_results(source, alert_source):
         if frame[column].isna().any() or not frame[column].is_monotonic_increasing:
             raise ValueError(f"{label}.csv dates must be valid and sorted")
 
-    return summary.iloc[0], daily, allocations, monthly, alert, current
+    result = summary.iloc[0]
+    daily = extend_daily_to_partial(daily, result, current)
+    return result, daily, allocations, monthly, alert, current
+
+
+def extend_daily_to_partial(daily, summary, current):
+    """Extend completed monthly equity through the live partial-month mark."""
+    latest_value = current.get("Latest Price Date")
+    if not latest_value or latest_value == "—":
+        return daily
+    latest_day = pd.Timestamp(latest_value)
+    if latest_day <= daily["date"].max():
+        return daily
+    partial_return = current.get("Partial Return")
+    spy_partial_return = current.get("SPY Partial Return")
+    if partial_return is None or spy_partial_return is None:
+        return daily
+    addition = pd.DataFrame(
+        [{
+            "date": latest_day,
+            "equity": float(summary.final_equity) * (1.0 + float(partial_return)),
+            "spy_equity": float(daily.iloc[-1]["spy_equity"]) * (1.0 + float(spy_partial_return)),
+        }]
+    )
+    return (
+        pd.concat([daily, addition], ignore_index=True)
+        .sort_values("date")
+        .drop_duplicates("date", keep="last")
+        .reset_index(drop=True)
+    )
 
 
 def build_chart(daily):
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=daily["date"],
-            y=daily["equity"],
-            mode="lines",
-            name="MoMo Stocks",
-            line=dict(color="#60a5fa", width=3),
-        )
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=daily["date"],
-            y=daily["spy_equity"],
-            mode="lines",
-            name="SPY",
-            line=dict(color="#94a3b8", width=1.7),
-        )
-    )
-    fig.update_layout(
-        template="plotly_dark",
-        height=520,
-        margin=dict(l=55, r=25, t=25, b=45),
-        paper_bgcolor="#111827",
-        plot_bgcolor="#111827",
-        hovermode="x unified",
-        legend=dict(orientation="h", y=1.08, x=0),
-        yaxis_title="Equity ($)",
-    )
-    fig.update_yaxes(tickprefix="$", tickformat=",.0f", gridcolor="#273449")
-    fig.update_xaxes(gridcolor="#273449")
-    return fig.to_html(
-        full_html=False,
-        include_plotlyjs="cdn",
-        config={"responsive": True},
-        div_id="momentum-stocks-equity-chart",
+    return build_equity_drawdown_chart(
+        daily["date"],
+        daily["equity"],
+        daily["spy_equity"],
+        "MoMo Stocks",
+        "momentum-stocks-equity-chart",
     )
 
 
@@ -227,12 +233,12 @@ def render_page(summary, daily, allocations, monthly, alert, current, audience="
     sharpe = summary.sharpe_0rf
     max_drawdown = summary.daily_max_drawdown
     metrics = (
-        ("Strategy CAGR", pct(summary.cagr)),
-        ("Strategy Max Drawdown", pct(max_drawdown)),
+        ("Strategy CAGR", pct(summary.cagr, 1)),
+        ("Strategy Max Drawdown", pct(max_drawdown, 1)),
         ("Total Return", pct(total_return)),
         ("Sharpe Ratio", f"{sharpe:.2f}"),
-        ("SPY CAGR", pct(summary.spy_cagr)),
-        ("SPY Max Drawdown", pct(summary.spy_max_drawdown_period)),
+        ("SPY CAGR", pct(summary.spy_cagr, 1)),
+        ("SPY Max Drawdown", pct(summary.spy_max_drawdown_period, 1)),
         ("Final Equity", f"${summary.final_equity:,.0f}"),
         ("Active Months", f"{len(allocations):,}"),
     )
@@ -273,10 +279,10 @@ def render_page(summary, daily, allocations, monthly, alert, current, audience="
 <div class="navlinks"><a href="index.html">Home</a><a href="strategies.html">Strategies</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a></div>
 </nav>
 <main class="container">
-<section class="hero"><div class="eyebrow">Backtested stock allocation model</div><h1>MoMo Stocks</h1><p>Systematic stock allocation model that adjusts monthly across selected equity opportunities using proprietary trend, quality, and risk-management signals. Subscribers receive current model allocations and update alerts.</p><p class="subtle">Backtest period: {summary.start} through {summary.end} · Starting equity: ${INITIAL_EQUITY:,.0f}</p>{render_faq("momentum-stocks", audience)}</section>
+<section class="hero"><div class="eyebrow">Backtested stock allocation model</div><h1>MoMo Stocks</h1><p>Systematic stock allocation model that adjusts monthly across selected equity opportunities using proprietary trend, quality, and risk-management signals. Subscribers receive current model allocations and update alerts.</p><p class="subtle">Backtest period: {summary.start} through {daily['date'].max():%Y-%m-%d} · Starting equity: ${INITIAL_EQUITY:,.0f}</p>{render_faq("momentum-stocks", audience)}</section>
 <section class="metrics">{metric_html}</section>
 {protected_sections if audience == "member" else ""}
-<section class="panel"><h2>Equity Curve</h2><p class="subtle">MoMo Stocks compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
+<section class="panel"><h2>Equity Curve</h2><p class="subtle">MoMo Stocks and SPY equity with drawdowns through {daily['date'].max():%Y-%m-%d}.</p><div class="chart">{chart_html}</div></section>
 <section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly, daily=daily.rename(columns={"date": "Date", "spy_equity": "SPY_Equity"}))}</section>
 {protected_sections if audience == "public" else ""}
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
@@ -299,6 +305,14 @@ def main():
             raise RuntimeError(f"Public Momentum Stocks page contains member-only content: {leaked}")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(page, encoding="utf-8")
+    update_backtest_card(
+        args.strategies_page,
+        "MoMo Stocks",
+        summary.cagr,
+        summary.sharpe_0rf,
+        summary.daily_max_drawdown,
+        summary.spy_max_drawdown_period,
+    )
     print(f"Generated {args.audience} {args.output} from {args.source}")
 
 

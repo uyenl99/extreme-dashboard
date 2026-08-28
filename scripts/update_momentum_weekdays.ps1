@@ -51,10 +51,10 @@ try {
             if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 data refresh failed." }
             & $python "momo5.py"
             if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 backtest failed." }
-            $publicGeneratorCode = "import runpy,sys; sys.path.insert(0,r'$webRoot'); sys.path.insert(0,r'$plotlyDir'); sys.argv=['generate_momentum_page.py','--source',r'$dualMomRoot\output_momo5','--output',r'$webRoot\momentum.html','--audience','public']; runpy.run_path(r'$webRoot\generate_momentum_page.py',run_name='__main__')"
+            $publicGeneratorCode = "import runpy,sys; sys.path.insert(0,r'$webRoot'); sys.path.insert(0,r'$plotlyDir'); sys.argv=['generate_momentum_page.py','--source',r'$dualMomRoot\output_momo5','--output',r'$webRoot\momentum.html','--audience','public','--strategies-page',r'$webRoot\strategies.html']; runpy.run_path(r'$webRoot\generate_momentum_page.py',run_name='__main__')"
             & $python -c $publicGeneratorCode
             if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 public page generation failed." }
-            $memberGeneratorCode = "import runpy,sys; sys.path.insert(0,r'$webRoot'); sys.path.insert(0,r'$plotlyDir'); sys.argv=['generate_momentum_page.py','--source',r'$dualMomRoot\output_momo5','--output',r'$privateMomentumPage','--audience','member']; runpy.run_path(r'$webRoot\generate_momentum_page.py',run_name='__main__')"
+            $memberGeneratorCode = "import runpy,sys; sys.path.insert(0,r'$webRoot'); sys.path.insert(0,r'$plotlyDir'); sys.argv=['generate_momentum_page.py','--source',r'$dualMomRoot\output_momo5','--output',r'$privateMomentumPage','--audience','member','--strategies-page',r'$webRoot\strategies.html']; runpy.run_path(r'$webRoot\generate_momentum_page.py',run_name='__main__')"
             & $python -c $memberGeneratorCode
             if ($LASTEXITCODE -ne 0) { throw "Momentum ETF1 member page generation failed." }
             Write-Host "Private Momentum ETF1 member page: $privateMomentumPage"
@@ -80,12 +80,14 @@ try {
         --source (Join-Path $inflationRoot "output") `
         --output (Join-Path $webRoot "momentum2.html") `
         --audience public `
+        --strategies-page (Join-Path $webRoot "strategies.html") `
         --chart-src "inflation-compass/wealth.png"
     if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2 public page generation failed." }
     & $python $momentumEtf2Generator `
         --source (Join-Path $inflationRoot "output") `
         --output $privateMomentumEtf2Page `
         --audience member `
+        --strategies-page (Join-Path $webRoot "strategies.html") `
         --chart-src "inflation-compass/wealth.png"
     if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2 member page generation failed." }
     Write-Host "Private Momentum ETF2 member page: $privateMomentumEtf2Page"
@@ -127,13 +129,15 @@ try {
             --source $momoSpOutput `
             --alert-source $momoSpAlert `
             --output (Join-Path $webRoot "momentum-stocks.html") `
-            --audience public
+            --audience public `
+            --strategies-page (Join-Path $webRoot "strategies.html")
         if ($LASTEXITCODE -ne 0) { throw "Momentum SP public page generation failed." }
         & $python $momoSpGenerator `
             --source $momoSpOutput `
             --alert-source $momoSpAlert `
             --output $privateMomentumStocksPage `
-            --audience member
+            --audience member `
+            --strategies-page (Join-Path $webRoot "strategies.html")
         if ($LASTEXITCODE -ne 0) { throw "Momentum SP member page generation failed." }
         Write-Host "Private Momentum Stocks member page: $privateMomentumStocksPage"
     }
