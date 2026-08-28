@@ -75,7 +75,7 @@ FAQS = {
         "member": [
             ("What should I check first?", "Review Latest MOO Orders, then Open Positions. An empty order table means the model currently has no new order to execute."),
             ("What does MOO mean?", "Market-on-open: the model assumes execution at the next regular market open after a completed-bar signal."),
-            ("How are long and short positions sized?", "With five slots per side, each long entry targets about 20% of current strategy equity. The entire short book targets 20% of equity, so each of five short entries targets about 4%. Actual weights can differ as equity and open slots change."),
+            ("How are long and short positions sized?", "The strategy targets 80% of equity on the long side and 20% on the short side, with five slots per side. Each long slot therefore targets about 16% of equity (80% divided by 5), and each short slot targets about 4% (20% divided by 5). Actual weights can differ as equity, prices, and available slots change."),
             ("Why can the results date advance without a new order?", "Open positions are still marked to the latest close even when no entry or exit condition is triggered."),
             ("Can I copy the backtest exactly?", "Not necessarily. Opening prices, slippage, short availability, borrow costs, fees, and order timing can produce different results."),
         ],
