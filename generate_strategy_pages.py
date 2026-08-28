@@ -20,6 +20,34 @@ def to_market_time(values):
     )
 
 
+def format_quantity(value):
+    return f"{float(value):,.0f}"
+
+
+def format_price(value):
+    return f"{float(value):,.2f}"
+
+
+def format_pnl(value):
+    if pd.isna(value):
+        return "&mdash;"
+    amount = float(value)
+    css_class = "pnl-pos" if amount >= 0 else "pnl-neg"
+    return f'<span class="{css_class}">${amount:,.2f}</span>'
+
+
+def collective2_disclosure():
+    return """
+<section class="disclosure-panel" aria-label="Collective2 and risk disclosure">
+<h2>Important Collective2 and Risk Disclosure</h2>
+<p><strong>Go-forward verified signals, not live account performance.</strong> The signals shown are tracked and verified on a go-forward basis by Collective2; publishers cannot add a backtested history or remove executed signals. They are not a record of trades executed in any specific live brokerage account, and Collective2 requires all displayed performance to be regarded as hypothetical.</p>
+<p>Displayed fills may be based on Collective2 real-time quote simulations or, when available, aggregated AutoTrade brokerage fills. Your results may differ materially because of timing, opening gaps, spreads, slippage, liquidity, commissions, fees, position sizing, missed trades, broker restrictions, and other execution differences.</p>
+<p>Trading involves substantial risk of loss. Past performance does not guarantee future results, and future drawdowns may exceed historical drawdowns. This information is impersonal research and education—not personalized investment advice, a recommendation, or a guarantee. You remain responsible for every trading decision and order.</p>
+<p><a href="https://www.collective2.com/how-we-calculate-hypothetical-results" target="_blank" rel="noopener">How Collective2 calculates hypothetical results</a> · <a href="/hypothetical-performance.html">Hypothetical performance disclosure</a> · <a href="/risk-disclosure.html">Risk disclosure</a></p>
+</section>
+"""
+
+
 # ============================================================
 # LOAD DATA
 # ============================================================
@@ -122,14 +150,15 @@ def build_open_positions_table():
     if len(open_df) == 0:
     
         return "<p>No open positions.</p>"
-    print(open_df.columns.tolist())
     table = open_df[["OpenedDate", "Symbol", "Quantity", "AvgPx"]].copy()
     quantity = pd.to_numeric(table["Quantity"], errors="coerce").fillna(0)
     price = pd.to_numeric(table["AvgPx"], errors="coerce").fillna(0)
     table.insert(2, "Direction", quantity.apply(lambda value: "Long" if value >= 0 else "Short"))
-    table["Quantity"] = quantity.abs()
-    table["Position Value"] = quantity.abs() * price
-    table.columns = ["Open Time", "Symbol", "Direction", "Qty", "Entry", "Position Value"]
+    table["OpenedDate"] = to_market_time(table["OpenedDate"]).dt.strftime("%Y-%m-%d %H:%M")
+    table["Quantity"] = quantity.abs().map(format_quantity)
+    table["AvgPx"] = price.map(format_price)
+    table["Position Value"] = (quantity.abs() * price).map(format_price)
+    table.columns = ["Open Time (ET)", "Symbol", "Direction", "Qty", "Entry", "Position Value"]
     return table.to_html(
         index=False,
         classes="trade-table",
@@ -184,24 +213,23 @@ def build_recent_closed_table(df, limit=RECENT_TRADE_LIMIT):
     ].copy()
     
     closed_df.columns = [
-        "Open Time",
+        "Open Time (ET)",
         "Symbol",
         "Description",
         "Side",
         "Qty",
         "Entry",
-        "Close Time",
+        "Close Time (ET)",
         "Exit",
         "P/L"
     ]
 
-    closed_df["P/L"] = closed_df["P/L"].apply(
-        lambda x:
-        f'<span class="pnl-pos">${x:,.0f}</span>'
-        if float(x) >= 0
-        else
-        f'<span class="pnl-neg">${x:,.0f}</span>'
-    )
+    closed_df["Open Time (ET)"] = closed_df["Open Time (ET)"].dt.strftime("%Y-%m-%d %H:%M")
+    closed_df["Close Time (ET)"] = closed_df["Close Time (ET)"].dt.strftime("%Y-%m-%d %H:%M")
+    closed_df["Qty"] = pd.to_numeric(closed_df["Qty"], errors="coerce").abs().map(format_quantity)
+    closed_df["Entry"] = pd.to_numeric(closed_df["Entry"], errors="coerce").map(format_price)
+    closed_df["Exit"] = pd.to_numeric(closed_df["Exit"], errors="coerce").map(format_price)
+    closed_df["P/L"] = closed_df["P/L"].map(format_pnl)
     return closed_df.to_html(
         index=False,
         classes="trade-table",
@@ -236,8 +264,14 @@ def build_todays_trades_table(df):
             })
     if not rows:
         return '<p class="subtle">No trades today.</p>'
-    return pd.DataFrame(rows).sort_values("Time", ascending=False).to_html(
-        index=False, classes="trade-table", index_names=False, na_rep="—"
+    table = pd.DataFrame(rows).sort_values("Time", ascending=False)
+    table["Time"] = table["Time"].dt.strftime("%H:%M")
+    table["Qty"] = table["Qty"].map(format_quantity)
+    table["Price"] = table["Price"].map(format_price)
+    table["P/L"] = table["P/L"].map(format_pnl)
+    table = table.rename(columns={"Time": "Time (ET)"})
+    return table.to_html(
+        index=False, classes="trade-table", index_names=False, escape=False
     )
 
 
@@ -326,6 +360,7 @@ nav a {
 
 .trade-table th {
     background:#1f2937;
+    text-align:center;
 }
 
 .trade-table th,
@@ -413,6 +448,27 @@ nav a {
 .pnl-neg{
     color:#ff5252;
     font-weight:600;
+}
+
+.disclosure-panel {
+    background:#0b1220;
+    border:1px solid #374151;
+    border-radius:12px;
+    color:#cbd5e1;
+    font-size:13px;
+    line-height:1.55;
+    margin-bottom:22px;
+    padding:22px 26px;
+}
+
+.disclosure-panel h2 {
+    color:#f8fafc;
+    font-size:18px;
+    margin-top:0;
+}
+
+.disclosure-panel a {
+    color:#60a5fa;
 }
 """
 
@@ -561,6 +617,8 @@ Trades are sourced from Collective2 and updated daily. Public trade details are 
 <section class="panel">
 <iframe class="performance-details" src="/performance-details.html" title="Extreme OS equity curve and monthly returns" loading="lazy"></iframe>
 </section>
+
+{collective2_disclosure()}
 """
 
     Path(output_file).write_text(
@@ -585,9 +643,9 @@ def generate_strategy_member_page(
 
     body = f"""
 <section class="hero">
-<div class="eyebrow">Verified Collective2 strategy</div>
+<div class="eyebrow">Collective2 go-forward verified track record</div>
 <h1>{title}</h1>
-<p>Systematic live strategy with performance and trading activity sourced from Collective2.</p>
+<p>Signals are submitted and tracked go-forward by Collective2. Displayed results remain hypothetical and do not represent any specific live brokerage account.</p>
 
 {render_faq("extreme-os", "member")}
 </section>
@@ -621,6 +679,8 @@ def generate_strategy_member_page(
 <section class="panel">
 <iframe class="performance-details" src="/performance-details.html" title="Extreme OS equity curve and monthly returns" loading="lazy"></iframe>
 </section>
+
+{collective2_disclosure()}
 
 """
 

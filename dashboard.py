@@ -549,8 +549,9 @@ h2{{margin:20px 0 12px}}
 table{{width:100%;border-collapse:collapse}}
 .returns-table td{{padding:2px 6px;font-size:15px;background:#111827;color:#e5e7eb;border:1px solid #374151}}
 .returns-table th{{padding:4px 6px;font-size:15px;background:#1f2937;color:white;border:1px solid #374151}}
-td,th{{text-align:right}}
-td:first-child,th:first-child{{text-align:center}}
+th{{text-align:center}}
+td{{text-align:right}}
+td:first-child{{text-align:center}}
 </style>
 </head>
 <body>
