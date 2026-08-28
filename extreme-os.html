@@ -89,6 +89,7 @@ nav a {
 
 .trade-table th {
     background:#1f2937;
+    text-align:center;
 }
 
 .trade-table th,
@@ -178,6 +179,27 @@ nav a {
     font-weight:600;
 }
 
+.disclosure-panel {
+    background:#0b1220;
+    border:1px solid #374151;
+    border-radius:12px;
+    color:#cbd5e1;
+    font-size:13px;
+    line-height:1.55;
+    margin-bottom:22px;
+    padding:22px 26px;
+}
+
+.disclosure-panel h2 {
+    color:#f8fafc;
+    font-size:18px;
+    margin-top:0;
+}
+
+.disclosure-panel a {
+    color:#60a5fa;
+}
+
 .faq-wrap{margin:14px 0 0}.faq-wrap>summary{display:inline-flex;align-items:center;gap:8px;cursor:pointer;list-style:none;background:#2563eb;color:#fff;border:1px solid #60a5fa;border-radius:8px;padding:10px 16px;font-weight:700}.faq-wrap>summary::-webkit-details-marker{display:none}.faq-wrap>summary:after{content:'+';font-size:18px}.faq-wrap[open]>summary:after{content:'−'}.faq-content{margin-top:14px;padding:4px 18px;background:#0f172a;border:1px solid #374151;border-radius:10px}.faq-content details{padding:14px 0;border-bottom:1px solid #273449}.faq-content details:last-child{border-bottom:0}.faq-content details summary{cursor:pointer;font-weight:700;color:#e5e7eb}.faq-content details p{color:#cbd5e1;line-height:1.6;margin:10px 0 2px}.faq-note{color:#94a3b8;font-size:13px;margin:14px 0}
 
 </style>
@@ -225,237 +247,237 @@ Trades are sourced from Collective2 and updated daily. Public trade details are 
 <table border="1" class="dataframe trade-table">
   <thead>
     <tr style="text-align: right;">
-      <th>Open Time</th>
+      <th>Open Time (ET)</th>
       <th>Symbol</th>
       <th>Description</th>
       <th>Side</th>
       <th>Qty</th>
       <th>Entry</th>
-      <th>Close Time</th>
+      <th>Close Time (ET)</th>
       <th>Exit</th>
       <th>P/L</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>2026-08-19 15:08:56</td>
+      <td>2026-08-19 15:08</td>
       <td>SMTC</td>
       <td>SMTC</td>
       <td>Long</td>
-      <td>35.0</td>
-      <td>125.370000</td>
-      <td>2026-08-21 10:02:41</td>
-      <td>127.907016</td>
-      <td><span class="pnl-pos">$88</span></td>
+      <td>35</td>
+      <td>125.37</td>
+      <td>2026-08-21 10:02</td>
+      <td>127.91</td>
+      <td><span class="pnl-pos">$88.10</span></td>
     </tr>
     <tr>
-      <td>2026-08-20 13:49:10</td>
+      <td>2026-08-20 13:49</td>
       <td>KLAR</td>
       <td>KLAR</td>
       <td>Long</td>
-      <td>300.0</td>
-      <td>13.927122</td>
-      <td>2026-08-21 10:02:36</td>
-      <td>14.426481</td>
-      <td><span class="pnl-pos">$144</span></td>
+      <td>300</td>
+      <td>13.93</td>
+      <td>2026-08-21 10:02</td>
+      <td>14.43</td>
+      <td><span class="pnl-pos">$143.81</span></td>
     </tr>
     <tr>
-      <td>2026-08-20 12:51:07</td>
+      <td>2026-08-20 12:51</td>
       <td>KRMN</td>
       <td>KRMN</td>
       <td>Long</td>
-      <td>80.0</td>
-      <td>53.239625</td>
-      <td>2026-08-20 15:48:06</td>
-      <td>54.257222</td>
-      <td><span class="pnl-pos">$80</span></td>
+      <td>80</td>
+      <td>53.24</td>
+      <td>2026-08-20 15:48</td>
+      <td>54.26</td>
+      <td><span class="pnl-pos">$79.81</span></td>
     </tr>
     <tr>
-      <td>2026-08-20 15:06:58</td>
+      <td>2026-08-20 15:06</td>
       <td>VIK</td>
       <td>VIK</td>
       <td>Long</td>
-      <td>45.0</td>
-      <td>87.826970</td>
-      <td>2026-08-20 15:47:50</td>
-      <td>90.035125</td>
-      <td><span class="pnl-pos">$98</span></td>
+      <td>45</td>
+      <td>87.83</td>
+      <td>2026-08-20 15:47</td>
+      <td>90.04</td>
+      <td><span class="pnl-pos">$98.47</span></td>
     </tr>
     <tr>
-      <td>2026-08-17 11:36:23</td>
+      <td>2026-08-17 11:36</td>
       <td>YETI</td>
       <td>YETI</td>
       <td>Long</td>
-      <td>100.0</td>
-      <td>43.509500</td>
-      <td>2026-08-19 13:39:36</td>
-      <td>43.887222</td>
-      <td><span class="pnl-pos">$36</span></td>
+      <td>100</td>
+      <td>43.51</td>
+      <td>2026-08-19 13:39</td>
+      <td>43.89</td>
+      <td><span class="pnl-pos">$35.77</span></td>
     </tr>
     <tr>
-      <td>2026-08-18 14:55:32</td>
+      <td>2026-08-18 14:55</td>
       <td>APP</td>
       <td>APP</td>
       <td>Long</td>
-      <td>13.0</td>
-      <td>308.245273</td>
-      <td>2026-08-19 12:04:12</td>
-      <td>315.267273</td>
-      <td><span class="pnl-pos">$91</span></td>
+      <td>13</td>
+      <td>308.25</td>
+      <td>2026-08-19 12:04</td>
+      <td>315.27</td>
+      <td><span class="pnl-pos">$91.03</span></td>
     </tr>
     <tr>
-      <td>2026-08-18 14:13:11</td>
+      <td>2026-08-18 14:13</td>
       <td>BIDU</td>
       <td>BIDU</td>
       <td>Long</td>
-      <td>50.0</td>
-      <td>89.934083</td>
-      <td>2026-08-19 09:34:42</td>
-      <td>92.017333</td>
-      <td><span class="pnl-pos">$103</span></td>
+      <td>50</td>
+      <td>89.93</td>
+      <td>2026-08-19 09:34</td>
+      <td>92.02</td>
+      <td><span class="pnl-pos">$103.16</span></td>
     </tr>
     <tr>
-      <td>2026-08-17 12:14:09</td>
+      <td>2026-08-17 12:14</td>
       <td>ARE</td>
       <td>ARE</td>
       <td>Long</td>
-      <td>90.0</td>
-      <td>46.280744</td>
-      <td>2026-08-18 12:18:03</td>
-      <td>46.509194</td>
-      <td><span class="pnl-pos">$19</span></td>
+      <td>90</td>
+      <td>46.28</td>
+      <td>2026-08-18 12:18</td>
+      <td>46.51</td>
+      <td><span class="pnl-pos">$18.76</span></td>
     </tr>
     <tr>
-      <td>2026-08-12 14:48:39</td>
+      <td>2026-08-12 14:48</td>
       <td>AEO</td>
       <td>AEO</td>
       <td>Long</td>
-      <td>250.0</td>
-      <td>16.336083</td>
-      <td>2026-08-17 13:58:57</td>
-      <td>16.301750</td>
-      <td><span class="pnl-neg">$-14</span></td>
+      <td>250</td>
+      <td>16.34</td>
+      <td>2026-08-17 13:58</td>
+      <td>16.30</td>
+      <td><span class="pnl-neg">$-13.58</span></td>
     </tr>
     <tr>
-      <td>2026-08-14 14:43:18</td>
+      <td>2026-08-14 14:43</td>
       <td>AVGO</td>
       <td>AVGO</td>
       <td>Long</td>
-      <td>12.0</td>
-      <td>390.472857</td>
-      <td>2026-08-17 12:00:51</td>
-      <td>398.194286</td>
-      <td><span class="pnl-pos">$92</span></td>
+      <td>12</td>
+      <td>390.47</td>
+      <td>2026-08-17 12:00</td>
+      <td>398.19</td>
+      <td><span class="pnl-pos">$92.42</span></td>
     </tr>
     <tr>
-      <td>2026-08-10 14:34:53</td>
+      <td>2026-08-10 14:34</td>
       <td>VVV</td>
       <td>VVV</td>
       <td>Long</td>
-      <td>140.0</td>
-      <td>33.662056</td>
-      <td>2026-08-14 12:22:51</td>
-      <td>33.949778</td>
-      <td><span class="pnl-pos">$37</span></td>
+      <td>140</td>
+      <td>33.66</td>
+      <td>2026-08-14 12:22</td>
+      <td>33.95</td>
+      <td><span class="pnl-pos">$37.48</span></td>
     </tr>
     <tr>
-      <td>2026-08-11 13:27:14</td>
+      <td>2026-08-11 13:27</td>
       <td>APP</td>
       <td>APP</td>
       <td>Long</td>
-      <td>15.0</td>
-      <td>321.356923</td>
-      <td>2026-08-14 10:01:20</td>
-      <td>322.379577</td>
-      <td><span class="pnl-pos">$15</span></td>
+      <td>15</td>
+      <td>321.36</td>
+      <td>2026-08-14 10:01</td>
+      <td>322.38</td>
+      <td><span class="pnl-pos">$15.04</span></td>
     </tr>
     <tr>
-      <td>2026-08-13 15:02:09</td>
+      <td>2026-08-13 15:02</td>
       <td>TCEHY</td>
       <td>TCEHY</td>
       <td>Long</td>
-      <td>80.0</td>
-      <td>55.230000</td>
-      <td>2026-08-14 10:01:06</td>
-      <td>56.220000</td>
-      <td><span class="pnl-pos">$78</span></td>
+      <td>80</td>
+      <td>55.23</td>
+      <td>2026-08-14 10:01</td>
+      <td>56.22</td>
+      <td><span class="pnl-pos">$77.60</span></td>
     </tr>
     <tr>
-      <td>2026-08-13 14:27:08</td>
+      <td>2026-08-13 14:27</td>
       <td>LQDA</td>
       <td>LQDA</td>
       <td>Long</td>
-      <td>50.0</td>
-      <td>72.669444</td>
-      <td>2026-08-14 09:32:36</td>
-      <td>75.705000</td>
-      <td><span class="pnl-pos">$151</span></td>
+      <td>50</td>
+      <td>72.67</td>
+      <td>2026-08-14 09:32</td>
+      <td>75.70</td>
+      <td><span class="pnl-pos">$150.78</span></td>
     </tr>
     <tr>
-      <td>2026-08-12 11:47:11</td>
+      <td>2026-08-12 11:47</td>
       <td>ACM</td>
       <td>ACM</td>
       <td>Long</td>
-      <td>65.0</td>
-      <td>62.353405</td>
-      <td>2026-08-13 15:49:14</td>
-      <td>63.664069</td>
-      <td><span class="pnl-pos">$84</span></td>
+      <td>65</td>
+      <td>62.35</td>
+      <td>2026-08-13 15:49</td>
+      <td>63.66</td>
+      <td><span class="pnl-pos">$83.89</span></td>
     </tr>
     <tr>
-      <td>2026-08-11 13:11:03</td>
+      <td>2026-08-11 13:11</td>
       <td>LASR</td>
       <td>LASR</td>
       <td>Long</td>
-      <td>90.0</td>
-      <td>50.090000</td>
-      <td>2026-08-12 09:41:36</td>
-      <td>50.570210</td>
-      <td><span class="pnl-pos">$41</span></td>
+      <td>90</td>
+      <td>50.09</td>
+      <td>2026-08-12 09:41</td>
+      <td>50.57</td>
+      <td><span class="pnl-pos">$41.42</span></td>
     </tr>
     <tr>
-      <td>2026-08-10 14:29:01</td>
+      <td>2026-08-10 14:29</td>
       <td>HGV</td>
       <td>HGV</td>
       <td>Long</td>
-      <td>100.0</td>
-      <td>42.748611</td>
-      <td>2026-08-11 14:42:12</td>
-      <td>43.187583</td>
-      <td><span class="pnl-pos">$42</span></td>
+      <td>100</td>
+      <td>42.75</td>
+      <td>2026-08-11 14:42</td>
+      <td>43.19</td>
+      <td><span class="pnl-pos">$41.90</span></td>
     </tr>
     <tr>
-      <td>2026-04-22 14:49:16</td>
+      <td>2026-04-22 14:49</td>
       <td>TSCO</td>
       <td>TSCO</td>
       <td>Long</td>
-      <td>100.0</td>
-      <td>38.642379</td>
-      <td>2026-08-11 11:45:57</td>
-      <td>35.885000</td>
-      <td><span class="pnl-neg">$-278</span></td>
+      <td>100</td>
+      <td>38.64</td>
+      <td>2026-08-11 11:45</td>
+      <td>35.88</td>
+      <td><span class="pnl-neg">$-277.74</span></td>
     </tr>
     <tr>
-      <td>2026-08-07 15:03:50</td>
+      <td>2026-08-07 15:03</td>
       <td>FOUR</td>
       <td>FOUR</td>
       <td>Long</td>
-      <td>100.0</td>
-      <td>40.634722</td>
-      <td>2026-08-10 14:22:56</td>
-      <td>41.953694</td>
-      <td><span class="pnl-pos">$130</span></td>
+      <td>100</td>
+      <td>40.63</td>
+      <td>2026-08-10 14:22</td>
+      <td>41.95</td>
+      <td><span class="pnl-pos">$129.90</span></td>
     </tr>
     <tr>
-      <td>2026-08-06 15:30:46</td>
+      <td>2026-08-06 15:30</td>
       <td>DVA</td>
       <td>DVA</td>
       <td>Long</td>
-      <td>20.0</td>
-      <td>179.766111</td>
-      <td>2026-08-10 14:22:52</td>
-      <td>182.816944</td>
-      <td><span class="pnl-pos">$61</span></td>
+      <td>20</td>
+      <td>179.77</td>
+      <td>2026-08-10 14:22</td>
+      <td>182.82</td>
+      <td><span class="pnl-pos">$60.62</span></td>
     </tr>
   </tbody>
 </table>
@@ -465,6 +487,16 @@ Trades are sourced from Collective2 and updated daily. Public trade details are 
 <section class="panel">
 <iframe class="performance-details" src="/performance-details.html" title="Extreme OS equity curve and monthly returns" loading="lazy"></iframe>
 </section>
+
+
+<section class="disclosure-panel" aria-label="Collective2 and risk disclosure">
+<h2>Important Collective2 and Risk Disclosure</h2>
+<p><strong>Go-forward verified signals, not live account performance.</strong> The signals shown are tracked and verified on a go-forward basis by Collective2; publishers cannot add a backtested history or remove executed signals. They are not a record of trades executed in any specific live brokerage account, and Collective2 requires all displayed performance to be regarded as hypothetical.</p>
+<p>Displayed fills may be based on Collective2 real-time quote simulations or, when available, aggregated AutoTrade brokerage fills. Your results may differ materially because of timing, opening gaps, spreads, slippage, liquidity, commissions, fees, position sizing, missed trades, broker restrictions, and other execution differences.</p>
+<p>Trading involves substantial risk of loss. Past performance does not guarantee future results, and future drawdowns may exceed historical drawdowns. This information is impersonal research and education—not personalized investment advice, a recommendation, or a guarantee. You remain responsible for every trading decision and order.</p>
+<p><a href="https://www.collective2.com/how-we-calculate-hypothetical-results" target="_blank" rel="noopener">How Collective2 calculates hypothetical results</a> · <a href="/hypothetical-performance.html">Hypothetical performance disclosure</a> · <a href="/risk-disclosure.html">Risk disclosure</a></p>
+</section>
+
 
 
 </div>
