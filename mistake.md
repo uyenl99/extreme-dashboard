@@ -79,6 +79,13 @@ This file records automation failures so they are not repeated. A calculation is
 - Fix: The runner now writes `last-run-status.json` throughout the batch and shows a Windows notification for both success and failure. A weekday Codex monitor reads that terminal status as a backup notification.
 - Prevention: Do not describe a daily update as complete without checking the task exit code, shared PR, deployment, production dates, and terminal status. Notification errors must never replace the strategy job's real exit result.
 
+## 2026-08-27 — Extreme OS “Today’s Trades” used the UTC calendar date
+
+- Impact: The member card omitted two August 27 entries and one August 27 exit even though the same positions and closed trade appeared elsewhere on the page.
+- Cause: Collective2 timestamps were stripped to timezone-free UTC while labeled as Eastern Time, and “today” was also selected using UTC. A page generated after midnight UTC therefore treated the still-current U.S. trading session as the prior day.
+- Fix: Convert Collective2 timestamps to `America/New_York` before removing timezone metadata, and select the current trading date in that same timezone.
+- Prevention: Date-based trading sections must derive both event timestamps and the comparison date from one explicit market timezone. Test generation during the UTC/ET date boundary.
+
 ## Required release checklist
 
 1. Test with the exact Task Scheduler user, environment, executable, and PowerShell version.

@@ -8,6 +8,16 @@ from metric_style import metric_class
 
 PUBLIC_DELAY_HOURS = 96
 RECENT_TRADE_LIMIT = 20
+MARKET_TIMEZONE = "America/New_York"
+
+
+def to_market_time(values):
+    """Convert Collective2 UTC timestamps to timezone-free New York time."""
+    return (
+        pd.to_datetime(values, errors="coerce", utc=True)
+        .dt.tz_convert(MARKET_TIMEZONE)
+        .dt.tz_localize(None)
+    )
 
 
 # ============================================================
@@ -39,19 +49,11 @@ def load_csv(path):
         })
 
     if "Closed Time ET" in df.columns:
-        df["Closed Time ET"] = pd.to_datetime(
-            df["Closed Time ET"],
-            errors="coerce",
-            utc=True
-        ).dt.tz_localize(None)
+        df["Closed Time ET"] = to_market_time(df["Closed Time ET"])
 
     
     if "Open Time ET" in df.columns:
-        df["Open Time ET"] = pd.to_datetime(
-            df["Open Time ET"],
-            errors="coerce",
-            utc=True
-        ).dt.tz_localize(None)    
+        df["Open Time ET"] = to_market_time(df["Open Time ET"])
     return df
 
 
@@ -209,7 +211,7 @@ def build_recent_closed_table(df, limit=RECENT_TRADE_LIMIT):
 
 def build_todays_trades_table(df):
     closed = df[df["Closed Time ET"].notna()].copy()
-    today = pd.Timestamp.now(tz="UTC").tz_localize(None).normalize()
+    today = pd.Timestamp.now(tz=MARKET_TIMEZONE).tz_localize(None).normalize()
     todays_trades = closed[closed["Closed Time ET"].dt.normalize().eq(today)]
     rows = []
     for _, trade in todays_trades.sort_values("Closed Time ET", ascending=False).iterrows():
@@ -223,7 +225,7 @@ def build_todays_trades_table(df):
     except (FileNotFoundError, pd.errors.EmptyDataError):
         open_df = pd.DataFrame()
     if not open_df.empty:
-        opened = pd.to_datetime(open_df["OpenedDate"], errors="coerce", utc=True).dt.tz_localize(None)
+        opened = to_market_time(open_df["OpenedDate"])
         new_positions = open_df[opened.dt.normalize().eq(today)].copy()
         for index, position in new_positions.iterrows():
             quantity = float(position["Quantity"])
