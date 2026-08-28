@@ -7,7 +7,7 @@ import pandas as pd
 from strategy_faq import FAQ_CSS, render_faq
 from metric_style import metric_class
 from strategy_benchmark import yearly_returns_by_year
-from strategy_card import update_backtest_card
+from strategy_card import update_backtest_card, update_member_backtest_card
 from strategy_chart import build_equity_drawdown_chart
 
 
@@ -47,6 +47,12 @@ def parse_args():
         type=Path,
         default=Path("strategies.html"),
         help="Strategies page whose MoMoEtf1 card metrics should be refreshed.",
+    )
+    parser.add_argument(
+        "--members-page",
+        type=Path,
+        default=Path("members.html"),
+        help="Authenticated strategy directory whose MoMoEtf1 metrics should be refreshed.",
     )
     return parser.parse_args()
 
@@ -291,11 +297,11 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None, audie
     active_months = len(allocations)
     metrics = (
         ("Strategy CAGR", pct(summary.cagr, 1)),
+        ("SPY CAGR", pct(summary.spy_cagr, 1)),
         ("Strategy Max Drawdown", pct(summary.daily_max_drawdown, 1)),
+        ("SPY Max Drawdown", pct(summary.spy_daily_max_drawdown, 1)),
         ("Total Return", pct(summary.total_return)),
         ("Sharpe Ratio", f"{summary.sharpe:.2f}"),
-        ("SPY CAGR", pct(summary.spy_cagr, 1)),
-        ("SPY Max Drawdown", pct(summary.spy_daily_max_drawdown, 1)),
         ("Final Equity", f"${summary.final:,.0f}"),
         ("Active Months", f"{active_months:,}"),
     )
@@ -371,6 +377,14 @@ def main():
     args.output.write_text(page, encoding="utf-8")
     update_backtest_card(
         args.strategies_page,
+        "MoMoEtf1",
+        summary.cagr,
+        summary.sharpe,
+        summary.daily_max_drawdown,
+        summary.spy_daily_max_drawdown,
+    )
+    update_member_backtest_card(
+        args.members_page,
         "MoMoEtf1",
         summary.cagr,
         summary.sharpe,

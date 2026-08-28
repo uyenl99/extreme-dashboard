@@ -69,9 +69,9 @@ try {
 
     Push-Location $checkout
     try {
-        & $python "generate_mean_reversion_page.py" --source $backtestOutput --output "mean-reversion.html" --audience public 2>&1 | Tee-Object -FilePath $commandLog -Append
+        & $python "generate_mean_reversion_page.py" --source $backtestOutput --output "mean-reversion.html" --audience public --members-page (Join-Path $checkout "members.html") 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion public page generation failed." }
-        & $python "generate_mean_reversion_page.py" --source $backtestOutput --output $privateMeanReversionPage --audience member 2>&1 | Tee-Object -FilePath $commandLog -Append
+        & $python "generate_mean_reversion_page.py" --source $backtestOutput --output $privateMeanReversionPage --audience member --members-page (Join-Path $checkout "members.html") 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion member page generation failed." }
         Write-Output "Private Mean Reversion member page: $privateMeanReversionPage"
 
@@ -80,7 +80,7 @@ try {
             return
         }
 
-        & $git add -- mean-reversion.html strategies.html
+        & $git add -- mean-reversion.html strategies.html members.html
         & $git diff --cached --quiet
         if ($LASTEXITCODE -eq 0) {
             Write-Output "No Mean Reversion website changes to publish."
