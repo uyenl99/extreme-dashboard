@@ -86,6 +86,13 @@ This file records automation failures so they are not repeated. A calculation is
 - Fix: Convert Collective2 timestamps to `America/New_York` before removing timezone metadata, and select the current trading date in that same timezone.
 - Prevention: Date-based trading sections must derive both event timestamps and the comparison date from one explicit market timezone. Test generation during the UTC/ET date boundary.
 
+## 2026-08-28 — Undefined Python runtime blocked publication after calculations
+
+- Impact: Collective2, Mean Reversion, and all three Momentum calculations completed, but the batch failed while preparing member pages. No preview PR was created.
+- Cause: The newly added position-calculator injection invoked `$python`, but the sequential runner did not define that variable.
+- Fix: Define the bundled Python executable explicitly and validate it with every other required dependency before starting the batch.
+- Prevention: Preflight all executables and helper scripts before dispatching any expensive calculation, and exercise new native-command invocations under Windows PowerShell 5.1.
+
 ## Required release checklist
 
 1. Test with the exact Task Scheduler user, environment, executable, and PowerShell version.

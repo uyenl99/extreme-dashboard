@@ -4,6 +4,7 @@ $repo = "uyenl99/extreme-dashboard"
 $previewBranch = "automation/daily-strategies-preview"
 $gh = "C:\Program Files\GitHub CLI\gh.exe"
 $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
+$python = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
 $gitDirectory = Split-Path -Parent $git
 $env:PATH = "$gitDirectory;$env:PATH"
 $workflow = "update-performance.yml"
@@ -22,6 +23,20 @@ $currentStage = "Initialization"
 $prUrl = $null
 
 New-Item -ItemType Directory -Force $logRoot, $statusRoot | Out-Null
+
+foreach ($requiredPath in @(
+    $gh,
+    $git,
+    $python,
+    $meanReversionUpdate,
+    $momentumUpdate,
+    $publicationGuard,
+    (Join-Path $webRoot "inject_position_calculator.py")
+)) {
+    if (-not (Test-Path -LiteralPath $requiredPath)) {
+        throw "Required sequential-update dependency not found: $requiredPath"
+    }
+}
 
 function Write-RunStatus {
     param(
