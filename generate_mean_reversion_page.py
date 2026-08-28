@@ -326,7 +326,7 @@ def build_portfolio_tables(alert_source, signal_date, total_equity):
         )
     for row in entries.itertuples(index=False):
         side = str(row.side).title()
-        target_value = total_equity / 5 if side.lower() == "long" else total_equity * 0.20 / 5
+        target_value = total_equity * 0.80 / 5 if side.lower() == "long" else total_equity * 0.20 / 5
         price = float(row.close)
         estimated_shares = target_value / price if price else 0.0
         action = "Buy" if side.lower() == "long" else "Sell Short"
