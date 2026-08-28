@@ -80,7 +80,7 @@ try {
             return
         }
 
-        & $git add -- mean-reversion.html index.html
+        & $git add -- mean-reversion.html strategies.html
         & $git diff --cached --quiet
         if ($LASTEXITCODE -eq 0) {
             Write-Output "No Mean Reversion website changes to publish."

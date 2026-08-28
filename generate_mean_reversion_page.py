@@ -47,7 +47,7 @@ def parse_args():
     parser.add_argument(
         "--strategies-page",
         type=Path,
-        default=Path("index.html"),
+        default=Path("strategies.html"),
         help="Strategies page whose Mean Reversion card metrics should be refreshed.",
     )
     parser.add_argument(
