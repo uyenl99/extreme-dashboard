@@ -170,7 +170,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Position calculator injection failed." }
 
     Set-RunStage -Name "Commit generated results"
-    & $git -C $webRoot add -- mean-reversion.html index.html momentum.html momentum2.html inflation-compass momentum-stocks.html api/_member-content position-calculator.js
+    & $git -C $webRoot add -- mean-reversion.html strategies.html momentum.html momentum2.html inflation-compass momentum-stocks.html api/_member-content position-calculator.js
     & $git -C $webRoot diff --cached --quiet
     if ($LASTEXITCODE -eq 1) {
         & $git -C $webRoot config user.name "Extreme Dashboard Automation"

@@ -62,6 +62,7 @@ $allowedPaths = @(
     '^extreme-os\.html$',
     '^performance-details\.html$',
     '^index\.html$',
+    '^strategies\.html$',
     '^mean-reversion\.html$',
     '^momentum\.html$',
     '^momentum2\.html$',
@@ -79,16 +80,16 @@ foreach ($path in $changedPaths) {
 }
 
 # The Mean Reversion generator may update only its card contents on the public
-# homepage. The prefix and suffix around that card must match current main byte
-# for byte, preventing an old generator from replacing navigation or layout.
-$baseIndex = (Read-GitUtf8File $BaseRef "index.html") -replace "`r`n?", "`n"
+# strategies page. The prefix and suffix around that card must match current
+# main byte for byte, preventing an old generator from replacing navigation or layout.
+$baseIndex = (Read-GitUtf8File $BaseRef "strategies.html") -replace "`r`n?", "`n"
 $baseIndex = $baseIndex.TrimEnd()
-$currentIndex = [System.IO.File]::ReadAllText((Join-Path $WebRoot "index.html"), (New-Object System.Text.UTF8Encoding($false))) -replace "`r`n?", "`n"
+$currentIndex = [System.IO.File]::ReadAllText((Join-Path $WebRoot "strategies.html"), (New-Object System.Text.UTF8Encoding($false))) -replace "`r`n?", "`n"
 $currentIndex = $currentIndex.TrimEnd()
 $marker = '<h2>Mean Reversion</h2>'
 $baseStart = $baseIndex.IndexOf($marker)
 $currentStart = $currentIndex.IndexOf($marker)
-if ($baseStart -lt 0 -or $currentStart -lt 0) { throw "Daily publication guard could not locate the Mean Reversion homepage card." }
+if ($baseStart -lt 0 -or $currentStart -lt 0) { throw "Daily publication guard could not locate the Mean Reversion strategies card." }
 $baseEnd = $baseIndex.IndexOf('</div>', $baseStart)
 $currentEnd = $currentIndex.IndexOf('</div>', $currentStart)
 if ($baseEnd -lt 0 -or $currentEnd -lt 0) { throw "Daily publication guard could not locate the end of the Mean Reversion homepage card." }
@@ -97,7 +98,7 @@ $currentEnd += 6
 $protectedPrefixMatches = $baseIndex.Substring(0, $baseStart) -ceq $currentIndex.Substring(0, $currentStart)
 $protectedSuffixMatches = $baseIndex.Substring($baseEnd) -ceq $currentIndex.Substring($currentEnd)
 if (-not $protectedPrefixMatches -or -not $protectedSuffixMatches) {
-    throw "Daily publication guard blocked changes outside the Mean Reversion card on index.html (prefix=$protectedPrefixMatches, suffix=$protectedSuffixMatches, baseLength=$($baseIndex.Length), currentLength=$($currentIndex.Length), finalCode=$([int][char]$currentIndex[$currentIndex.Length - 1]))."
+    throw "Daily publication guard blocked changes outside the Mean Reversion card on strategies.html (prefix=$protectedPrefixMatches, suffix=$protectedSuffixMatches, baseLength=$($baseIndex.Length), currentLength=$($currentIndex.Length), finalCode=$([int][char]$currentIndex[$currentIndex.Length - 1]))."
 }
 
 Assert-Contains "members.html" @(
@@ -123,6 +124,15 @@ Assert-Contains "api/member-page.js" @(
     'Sign out'
 )
 Assert-Contains "index.html" @(
+    '<a href="members.html">Login</a>',
+    '<h1>Two decades of trading experience. A new generation of systematic research.</h1>',
+    '<a class="button secondary" href="extreme-os.html">Review the Extreme OS record</a>',
+    '<small>THE NEW RESEARCH PRIORITY</small>',
+    '<h2>Lower drawdown by design</h2>',
+    '<b>Lower historical drawdowns than SPY in backtests</b>',
+    'Hypothetical results, not live performance. Lower backtest drawdown does not guarantee lower future risk.'
+)
+Assert-Contains "strategies.html" @(
     '<a href="members.html">Login</a>',
     '<h1>Trading Strategies</h1>',
     '<h2>Extreme OS</h2>',
