@@ -12,13 +12,85 @@ $meanReversionUpdate = Join-Path $webRoot "scripts\update_mean_reversion_daily.p
 $momentumUpdate = Join-Path $webRoot "scripts\update_momentum_weekdays.ps1"
 $publicationGuard = Join-Path $webRoot "scripts\test_daily_site_guard.ps1"
 $logRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\logs"
+$statusRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
+$statusFile = Join-Path $statusRoot "last-run-status.json"
 $today = Get-Date -Format "yyyy-MM-dd"
 $log = Join-Path $logRoot "all-strategies-sequential-$today.log"
+$productionUrl = "https://uyenl99.github.io/extreme-dashboard/index.html"
+$runStarted = Get-Date
+$currentStage = "Initialization"
+$prUrl = $null
 
-New-Item -ItemType Directory -Force $logRoot | Out-Null
+New-Item -ItemType Directory -Force $logRoot, $statusRoot | Out-Null
+
+function Write-RunStatus {
+    param(
+        [ValidateSet("Running", "Succeeded", "Failed")][string]$Status,
+        [string]$Stage,
+        [string]$Message,
+        [string]$PullRequestUrl
+    )
+
+    try {
+        $payload = [ordered]@{
+            status = $Status
+            stage = $Stage
+            message = $Message
+            started_at = $runStarted.ToString("o")
+            updated_at = (Get-Date).ToString("o")
+            log_path = $log
+            pull_request_url = $PullRequestUrl
+            production_url = $productionUrl
+        }
+        $temporaryStatusFile = "$statusFile.tmp"
+        $payload | ConvertTo-Json | Set-Content -LiteralPath $temporaryStatusFile -Encoding UTF8
+        Move-Item -LiteralPath $temporaryStatusFile -Destination $statusFile -Force
+    }
+    catch {
+        Write-Warning "Could not write automation status: $($_.Exception.Message)"
+    }
+}
+
+function Set-RunStage {
+    param([string]$Name, [string]$Message = "Stage started.")
+    $script:currentStage = $Name
+    Write-RunStatus -Status "Running" -Stage $Name -Message $Message -PullRequestUrl $script:prUrl
+}
+
+function Show-RunNotification {
+    param(
+        [string]$Title,
+        [string]$Message,
+        [ValidateSet("Info", "Error")][string]$Level = "Info"
+    )
+
+    try {
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+        if ($Message.Length -gt 240) { $Message = $Message.Substring(0, 237) + "..." }
+        $notification = New-Object System.Windows.Forms.NotifyIcon
+        $notification.Icon = if ($Level -eq "Error") {
+            [System.Drawing.SystemIcons]::Error
+        }
+        else {
+            [System.Drawing.SystemIcons]::Information
+        }
+        $notification.BalloonTipTitle = $Title
+        $notification.BalloonTipText = $Message
+        $notification.BalloonTipIcon = $Level
+        $notification.Visible = $true
+        $notification.ShowBalloonTip(10000)
+        Start-Sleep -Seconds 10
+        $notification.Dispose()
+    }
+    catch {
+        Write-Warning "Could not display Windows notification: $($_.Exception.Message)"
+    }
+}
 
 function Invoke-Stage {
     param([string]$Name, [scriptblock]$Action)
+    Set-RunStage -Name $Name
     $started = Get-Date
     Write-Host "`n=== START $Name at $started ==="
     & $Action
@@ -46,6 +118,7 @@ function Wait-ForRun([string]$RunId) {
     throw "Timed out waiting for Collective2 workflow."
 }
 
+Write-RunStatus -Status "Running" -Stage $currentStage -Message "Daily strategy batch started." -PullRequestUrl $null
 Start-Transcript -Path $log -Append
 try {
     $openPr = & $gh pr list --repo $repo --head $previewBranch --state open --json url | ConvertFrom-Json | Select-Object -First 1
@@ -77,6 +150,7 @@ try {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $momentumUpdate -NoPublish
     }
 
+    Set-RunStage -Name "Prepare generated site files"
     $generatedMemberRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\member-pages"
     $memberContentRoot = Join-Path $webRoot "api\_member-content"
     New-Item -ItemType Directory -Force $memberContentRoot | Out-Null
@@ -92,6 +166,7 @@ try {
         Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $memberContentRoot $memberPages[$sourceName]) -Force
     }
 
+    Set-RunStage -Name "Commit generated results"
     & $git -C $webRoot add -- mean-reversion.html index.html momentum.html momentum2.html inflation-compass momentum-stocks.html api/_member-content
     & $git -C $webRoot diff --cached --quiet
     if ($LASTEXITCODE -eq 1) {
@@ -107,6 +182,7 @@ try {
 
     # Rebase generated results onto the newest production site. Any overlap with
     # a site edit stops the batch instead of allowing stale HTML to win.
+    Set-RunStage -Name "Rebase and validate publication"
     & $git -C $webRoot fetch origin main
     if ($LASTEXITCODE -ne 0) { throw "Could not refresh main before publication." }
     & $git -C $webRoot rebase origin/main
@@ -114,19 +190,22 @@ try {
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $publicationGuard -WebRoot $webRoot -BaseRef origin/main
     if ($LASTEXITCODE -ne 0) { throw "Daily site publication guard failed; production was not changed." }
 
+    Set-RunStage -Name "Publish preview branch"
     & $git -C $webRoot push --force-with-lease -u origin $previewBranch
     if ($LASTEXITCODE -ne 0) { throw "Could not publish the completed batch branch." }
 
-    $prUrl = $null
+    Set-RunStage -Name "Create preview PR"
     for ($attempt = 1; $attempt -le 12 -and -not $prUrl; $attempt++) {
         $created = & $gh pr create --repo $repo --draft --base main --head $previewBranch --title "Daily strategy batch update" --body "All five daily jobs completed: Collective2, Mean Reversion 5x5 next-day MOO backtest, Momentum ETF1, Momentum ETF2, and Momentum SP. This PR is published automatically only after the Vercel preview check passes." 2>&1
         if ($LASTEXITCODE -eq 0) { $prUrl = "$created".Trim() } else { Start-Sleep -Seconds 10 }
     }
     if (-not $prUrl) { throw "All jobs finished, but the shared PR could not be created." }
+    Set-RunStage -Name "Wait for preview checks" -Message "Preview PR created; waiting for required checks."
     & $gh pr ready $prUrl --repo $repo
     if ($LASTEXITCODE -ne 0) { throw "Could not mark the daily update PR ready: $prUrl" }
     & $gh pr checks $prUrl --repo $repo --watch --interval 10 --fail-fast
     if ($LASTEXITCODE -ne 0) { throw "Daily update preview checks failed; production was not changed: $prUrl" }
+    Set-RunStage -Name "Merge daily update" -Message "Preview checks passed; validating and merging the daily update."
     & $git -C $webRoot fetch origin main
     if ($LASTEXITCODE -ne 0) { throw "Could not refresh main before merge." }
     & $git -C $webRoot merge-base --is-ancestor origin/main HEAD
@@ -136,6 +215,7 @@ try {
     $mergeInfo = & $gh pr view $prUrl --repo $repo --json mergeCommit | ConvertFrom-Json
     $mergeSha = $mergeInfo.mergeCommit.oid
     if (-not $mergeSha) { throw "Daily update merged, but its production commit could not be identified: $prUrl" }
+    Set-RunStage -Name "Wait for production deployment" -Message "Daily update merged; waiting for GitHub Pages to publish."
     $pagesPublished = $false
     for ($attempt = 1; $attempt -le 60 -and -not $pagesPublished; $attempt++) {
         $pagesBuild = & $gh api "repos/$repo/pages/builds/latest" | ConvertFrom-Json
@@ -148,6 +228,15 @@ try {
         else { Start-Sleep -Seconds 10 }
     }
     if (-not $pagesPublished) { throw "Timed out waiting for GitHub Pages to publish daily update commit $mergeSha." }
-    Write-Host "All five updates completed and were published to https://uyenl99.github.io/extreme-dashboard/index.html ($mergeSha)."
+    $successMessage = "All five updates published successfully. PR: $prUrl Production: $productionUrl"
+    Write-Host "$successMessage ($mergeSha)."
+    Write-RunStatus -Status "Succeeded" -Stage "Complete" -Message $successMessage -PullRequestUrl $prUrl
+    Show-RunNotification -Title "Extreme Dashboard update succeeded" -Message $successMessage -Level Info
+}
+catch {
+    $failureMessage = $_.Exception.Message
+    Write-RunStatus -Status "Failed" -Stage $currentStage -Message $failureMessage -PullRequestUrl $prUrl
+    Show-RunNotification -Title "Extreme Dashboard update failed" -Message "$currentStage`: $failureMessage Log: $log" -Level Error
+    throw
 }
 finally { Stop-Transcript }
