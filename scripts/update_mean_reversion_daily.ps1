@@ -62,7 +62,7 @@ try {
 
     Push-Location $revMurphyRoot
     try {
-        & $python "main_long_short_next_open.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0 --long-positions 5 --short-positions 5 2>&1 | Tee-Object -FilePath $commandLog -Append
+        & $python "main_long_short_next_open.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0 --long-positions 5 --short-positions 5 --long-gross-ratio 0.80 --short-gross-ratio 0.20 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion next-day MOO 5x5 backtest refresh failed." }
     }
     finally { Pop-Location }
