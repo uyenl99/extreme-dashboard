@@ -1,15 +1,14 @@
 import argparse
 import html
-import re
 from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
-import plotly.graph_objects as go
-
 from strategy_faq import FAQ_CSS, render_faq
 from metric_style import metric_class
 from strategy_benchmark import yearly_returns_by_year
+from strategy_card import update_backtest_card
+from strategy_chart import build_equity_drawdown_chart
 
 
 REQUIRED_FILES = (
@@ -91,53 +90,24 @@ def pct(value, decimals=2):
 
 
 def build_chart(equity, benchmarks):
-    chart = equity[["date", "equity"]].merge(benchmarks, on="date", how="left")
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=chart["date"],
-            y=chart["equity"],
-            mode="lines",
-            name="Mean Reversion",
-            line=dict(color="#60a5fa", width=3),
-        )
+    chart = equity[["date", "equity"]].merge(
+        benchmarks[["date", "SPY_equity"]], on="date", how="inner"
     )
-    colors = {"SPY_equity": "#94a3b8", "QQQ_equity": "#a78bfa", "VOO_equity": "#34d399"}
-    for column, color in colors.items():
-        if column in chart:
-            fig.add_trace(
-                go.Scatter(
-                    x=chart["date"],
-                    y=chart[column],
-                    mode="lines",
-                    name=column.replace("_equity", ""),
-                    line=dict(color=color, width=1.5),
-                    visible="legendonly",
-                )
-            )
-    fig.update_layout(
-        template="plotly_dark",
-        height=520,
-        margin=dict(l=55, r=25, t=25, b=45),
-        paper_bgcolor="#111827",
-        plot_bgcolor="#111827",
-        hovermode="x unified",
-        legend=dict(orientation="h", y=1.08, x=0),
-        yaxis_title="Equity ($)",
-    )
-    fig.update_yaxes(tickprefix="$", tickformat=",.0f", gridcolor="#273449")
-    fig.update_xaxes(gridcolor="#273449")
-    return fig.to_html(
-        full_html=False,
-        include_plotlyjs="cdn",
-        config={"responsive": True},
-        div_id="mean-reversion-equity-chart",
+    return build_equity_drawdown_chart(
+        chart["date"],
+        chart["equity"],
+        chart["SPY_equity"],
+        "Mean Reversion",
+        "mean-reversion-equity-chart",
+        start_date="2019-01-01",
+        rebase=True,
     )
 
 
 def build_monthly_table(monthly, benchmarks):
     data = monthly.copy()
     data["year"] = data["month"].astype(str).str[:4].astype(int)
+    data = data.loc[data["year"].between(2019, 2026)].copy()
     data["month_number"] = data["month"].astype(str).str[5:7].astype(int)
     pivot = data.pivot(index="year", columns="month_number", values="return_pct")
     pivot["YTD"] = pivot.apply(
@@ -418,17 +388,6 @@ def build_trade_table(trades, limit=20):
     return f'<div class="table-wrap"><table><thead><tr><th>Ticker</th><th>Side</th><th>Entry Date</th><th>Entry Price</th><th>Exit Date</th><th>Exit Price</th><th>P/L</th><th>Return</th><th>Status</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
 
 
-def update_strategy_card(path, summary):
-    text = path.read_text(encoding="utf-8")
-    start = text.index("<h2>Mean Reversion</h2>")
-    end = text.index("</div>", start)
-    card = text[start:end]
-    card = re.sub(r"[\d.]+% Backtest CAGR", f"{summary.cagr * 100:.2f}% Backtest CAGR", card)
-    card = re.sub(r"[\d.]+ Sharpe Ratio", f"{summary.annualized_sharpe:.2f} Sharpe Ratio", card)
-    card = re.sub(r"-[\d.]+% Maximum Drawdown", f"{summary.max_drawdown * 100:.2f}% Maximum Drawdown", card)
-    path.write_text(text[:start] + card + text[end:], encoding="utf-8")
-
-
 def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, alert_source, audience="public"):
     generated_at = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M %p %Z")
     if audience == "member":
@@ -452,12 +411,12 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
     spy_cagr = (spy["SPY_equity"].iloc[-1] / spy["SPY_equity"].iloc[0]) ** (1 / spy_years) - 1
     spy_drawdown = (spy["SPY_equity"] / spy["SPY_equity"].cummax() - 1).min()
     metrics = (
-        ("Strategy CAGR", pct(summary.cagr)),
-        ("Strategy Max Drawdown", pct(summary.max_drawdown)),
+        ("Strategy CAGR", pct(summary.cagr, 1)),
+        ("Strategy Max Drawdown", pct(summary.max_drawdown, 1)),
         ("Total Return", pct(summary.total_return)),
         ("Sharpe Ratio", f"{summary.annualized_sharpe:.2f}"),
-        ("SPY CAGR", pct(spy_cagr)),
-        ("SPY Max Drawdown", pct(spy_drawdown)),
+        ("SPY CAGR", pct(spy_cagr, 1)),
+        ("SPY Max Drawdown", pct(spy_drawdown, 1)),
         ("Final Equity", f"${summary.final_equity:,.0f}"),
         ("Closed Trades", f"{int(summary.trades):,}"),
         ("Win Rate", pct(summary.win_rate)),
@@ -486,7 +445,7 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
 <section class="hero"><div class="eyebrow">Next-day MOO long/short strategy</div><h1>Mean Reversion</h1><p>Systematic equity strategy seeking short-term price dislocations and subsequent reversion while managing long and short exposure. Signals use completed daily bars and simulated entries and exits fill at the next market open.</p><p class="subtle">Backtest period: {summary.start_date} through {summary.end_date} · Starting equity: ${equity.iloc[0]['equity']:,.0f}</p><p class="subtle">Dashboard updated: {generated_at}</p>{render_faq("mean-reversion", audience)}</section>
 <section class="metrics">{metric_html}</section>
 {protected_sections if audience == "member" else ""}
-<section class="panel"><h2>Equity Curve</h2><p class="subtle">Select SPY, QQQ, or VOO in the legend to add benchmark comparisons.</p><div class="chart">{chart_html}</div></section>
+<section class="panel"><h2>Equity Curve</h2><p class="subtle">Mean Reversion and SPY equity with drawdowns, shown from 2019 through {equity['date'].max():%Y-%m-%d}.</p><div class="chart">{chart_html}</div></section>
 <section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly, benchmarks)}</section>
 {protected_sections if audience == "public" else ""}
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
@@ -514,7 +473,16 @@ def main():
             raise RuntimeError(f"Public Mean Reversion page contains member-only content: {leaked}")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(page, encoding="utf-8")
-    update_strategy_card(args.strategies_page, summary)
+    spy = benchmarks[["date", "SPY_equity"]].dropna()
+    spy_drawdown = (spy["SPY_equity"] / spy["SPY_equity"].cummax() - 1).min()
+    update_backtest_card(
+        args.strategies_page,
+        "Mean Reversion",
+        summary.cagr,
+        summary.annualized_sharpe,
+        summary.max_drawdown,
+        spy_drawdown,
+    )
     print(f"Generated {args.audience} {args.output} from {args.source}")
 
 

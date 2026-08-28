@@ -3,11 +3,12 @@ import html
 from pathlib import Path
 
 import pandas as pd
-import plotly.graph_objects as go
 
 from strategy_faq import FAQ_CSS, render_faq
 from metric_style import metric_class
 from strategy_benchmark import yearly_returns_by_year
+from strategy_card import update_backtest_card
+from strategy_chart import build_equity_drawdown_chart
 
 
 REQUIRED_FILES = (
@@ -41,6 +42,12 @@ def parse_args():
         default="public",
         help="Public omits current holdings, alerts, and recent allocations.",
     )
+    parser.add_argument(
+        "--strategies-page",
+        type=Path,
+        default=Path("strategies.html"),
+        help="Strategies page whose MoMoEtf1 card metrics should be refreshed.",
+    )
     return parser.parse_args()
 
 
@@ -73,12 +80,60 @@ def load_results(source):
         if frame[column].isna().any() or not frame[column].is_monotonic_increasing:
             raise ValueError(f"{label}.csv dates must be valid and sorted")
 
+    result = summary.iloc[0]
+    daily = extend_daily_to_partial(daily, result, partial, source)
     alert = parse_alert(source / "next_entry_alert.txt")
-    return summary.iloc[0], daily, allocations, monthly, alert, partial
+    return result, daily, allocations, monthly, alert, partial
 
 
 def pct(value, decimals=2):
     return f"{float(value) * 100:,.{decimals}f}%"
+
+
+def extend_daily_to_partial(daily, summary, partial, source):
+    """Extend completed monthly equity through the latest partial trading day."""
+    if partial is None:
+        return daily
+    latest_day = pd.Timestamp(partial["latest_day"])
+    if latest_day <= daily["Date"].max():
+        return daily
+
+    entry_day = pd.Timestamp(partial["entry_day"])
+    spy_path = source.parent / "data" / "SPY_daily.csv"
+    if not spy_path.is_file():
+        raise FileNotFoundError(f"Missing SPY daily prices for partial-month chart: {spy_path}")
+    spy_prices = pd.read_csv(spy_path)
+    date_column = "Date" if "Date" in spy_prices.columns else "date"
+    close_column = next(
+        column for column in ("Adj Close", "Close", "adj_close", "close")
+        if column in spy_prices.columns
+    )
+    spy_prices[date_column] = pd.to_datetime(spy_prices[date_column])
+    spy_prices = spy_prices.sort_values(date_column)
+    entry_close = spy_prices.loc[spy_prices[date_column] <= entry_day, close_column].iloc[-1]
+    latest_close = spy_prices.loc[spy_prices[date_column] <= latest_day, close_column].iloc[-1]
+    spy_partial_return = float(latest_close) / float(entry_close) - 1.0
+
+    additions = pd.DataFrame(
+        [
+            {
+                "Date": entry_day,
+                "Equity": float(summary.final),
+                "SPY_Equity": float(summary.spy_final),
+            },
+            {
+                "Date": latest_day,
+                "Equity": float(summary.final) * (1.0 + float(partial["partial_return"])),
+                "SPY_Equity": float(summary.spy_final) * (1.0 + spy_partial_return),
+            },
+        ]
+    )
+    return (
+        pd.concat([daily, additions], ignore_index=True)
+        .sort_values("Date")
+        .drop_duplicates("Date", keep="last")
+        .reset_index(drop=True)
+    )
 
 
 def parse_alert(path):
@@ -119,42 +174,12 @@ def build_alert_table(alert, columns=None):
 
 
 def build_chart(daily):
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=daily["Date"],
-            y=daily["Equity"],
-            mode="lines",
-            name="MoMoEtf1",
-            line=dict(color="#60a5fa", width=3),
-        )
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=daily["Date"],
-            y=daily["SPY_Equity"],
-            mode="lines",
-            name="SPY",
-            line=dict(color="#94a3b8", width=1.7),
-        )
-    )
-    fig.update_layout(
-        template="plotly_dark",
-        height=520,
-        margin=dict(l=55, r=25, t=25, b=45),
-        paper_bgcolor="#111827",
-        plot_bgcolor="#111827",
-        hovermode="x unified",
-        legend=dict(orientation="h", y=1.08, x=0),
-        yaxis_title="Equity ($)",
-    )
-    fig.update_yaxes(tickprefix="$", tickformat=",.0f", gridcolor="#273449")
-    fig.update_xaxes(gridcolor="#273449")
-    return fig.to_html(
-        full_html=False,
-        include_plotlyjs="cdn",
-        config={"responsive": True},
-        div_id="momoetf1-equity-chart",
+    return build_equity_drawdown_chart(
+        daily["Date"],
+        daily["Equity"],
+        daily["SPY_Equity"],
+        "MoMoEtf1",
+        "momoetf1-equity-chart",
     )
 
 
@@ -265,12 +290,12 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None, audie
     end_date = daily["Date"].max().strftime("%Y-%m-%d")
     active_months = len(allocations)
     metrics = (
-        ("Strategy CAGR", pct(summary.cagr)),
-        ("Strategy Max Drawdown", pct(summary.daily_max_drawdown)),
+        ("Strategy CAGR", pct(summary.cagr, 1)),
+        ("Strategy Max Drawdown", pct(summary.daily_max_drawdown, 1)),
         ("Total Return", pct(summary.total_return)),
         ("Sharpe Ratio", f"{summary.sharpe:.2f}"),
-        ("SPY CAGR", pct(summary.spy_cagr)),
-        ("SPY Max Drawdown", pct(summary.spy_daily_max_drawdown)),
+        ("SPY CAGR", pct(summary.spy_cagr, 1)),
+        ("SPY Max Drawdown", pct(summary.spy_daily_max_drawdown, 1)),
         ("Final Equity", f"${summary.final:,.0f}"),
         ("Active Months", f"{active_months:,}"),
     )
@@ -311,7 +336,7 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None, audie
 <section class="hero"><div class="eyebrow">Backtested ETF allocation model</div><h1>MoMoEtf1</h1><p>Systematic ETF allocation model that adjusts monthly across major market exposures using proprietary trend and risk-management signals. Subscribers receive current model allocations and update alerts.</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: ${daily.iloc[0]["Equity"]:,.0f}</p>{render_faq("momentum", audience)}</section>
 <section class="metrics">{metric_html}</section>
 {member_sections if audience == "member" else ""}
-<section class="panel"><h2>Equity Curve</h2><p class="subtle">MoMoEtf1 compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
+<section class="panel"><h2>Equity Curve</h2><p class="subtle">MoMoEtf1 and SPY equity with drawdowns through {end_date}.</p><div class="chart">{chart_html}</div></section>
 <section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly, partial, daily)}</section>
 {member_sections if audience == "public" else ""}
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
@@ -344,6 +369,14 @@ def main():
         validate_public_page(page)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(page, encoding="utf-8")
+    update_backtest_card(
+        args.strategies_page,
+        "MoMoEtf1",
+        summary.cagr,
+        summary.sharpe,
+        summary.daily_max_drawdown,
+        summary.spy_daily_max_drawdown,
+    )
     print(f"Generated {args.audience} {args.output} from {args.source}")
 
 

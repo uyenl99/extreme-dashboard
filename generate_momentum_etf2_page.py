@@ -1,6 +1,5 @@
 import argparse
 import html
-import json
 from pathlib import Path
 
 import pandas as pd
@@ -8,6 +7,8 @@ import pandas as pd
 from strategy_faq import FAQ_CSS, render_faq
 from metric_style import metric_class
 from strategy_benchmark import yearly_returns_by_year
+from strategy_card import update_backtest_card
+from strategy_chart import build_equity_drawdown_chart
 
 
 def parse_args():
@@ -16,11 +17,17 @@ def parse_args():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--audience", choices=("public", "member"), default="public")
     parser.add_argument("--chart-src", default="inflation-compass/wealth.png")
+    parser.add_argument(
+        "--strategies-page",
+        type=Path,
+        default=Path("strategies.html"),
+        help="Strategies page whose MoMoEtf2 card metrics should be refreshed.",
+    )
     return parser.parse_args()
 
 
-def pct(value):
-    return f"{float(value) * 100:.2f}%"
+def pct(value, decimals=2):
+    return f"{float(value) * 100:.{decimals}f}%"
 
 
 def currency(value):
@@ -47,55 +54,12 @@ def table(frame, percent_columns=()):
 
 
 def build_chart(daily, start_equity=100000.0):
-    dates = [pd.Timestamp(value).isoformat() for value in daily.index]
-    strategy = [round(float(value) * start_equity, 2) for value in daily["strategy_wealth"]]
-    spy = [round(float(value) * start_equity, 2) for value in daily["spy_wealth"]]
-    traces = [
-        {
-            "x": dates,
-            "y": strategy,
-            "mode": "lines",
-            "name": "MoMoEtf2",
-            "line": {"color": "#60a5fa", "width": 3},
-            "type": "scatter",
-        },
-        {
-            "x": dates,
-            "y": spy,
-            "mode": "lines",
-            "name": "SPY",
-            "line": {"color": "#94a3b8", "width": 1.7},
-            "type": "scatter",
-        },
-    ]
-    layout = {
-        "template": "plotly_dark",
-        "height": 520,
-        "margin": {"l": 55, "r": 25, "t": 25, "b": 45},
-        "paper_bgcolor": "#111827",
-        "plot_bgcolor": "#111827",
-        "hovermode": "x unified",
-        "legend": {"orientation": "h", "y": 1.08, "x": 0},
-        "yaxis": {
-            "title": {"text": "Equity ($)"},
-            "tickprefix": "$",
-            "tickformat": ",.0f",
-            "gridcolor": "#273449",
-        },
-        "xaxis": {"gridcolor": "#273449"},
-    }
-    return (
-        '<div style="height:520px; width:100%;">'
-        '<script>window.PlotlyConfig = {MathJaxConfig: "local"};</script>'
-        '<script charset="utf-8" src="https://cdn.plot.ly/plotly-3.7.0.min.js" '
-        'integrity="sha256-jvTGqxNp8AGWEcvNLVuKr+8j5dGe9Yw51LQkmDH+IYA=" crossorigin="anonymous"></script>'
-        '<div id="momoetf2-equity-chart" class="plotly-graph-div" style="height:100%; width:100%;"></div>'
-        "<script>window.PLOTLYENV=window.PLOTLYENV || {};"
-        'if (document.getElementById("momoetf2-equity-chart")) {'
-        'Plotly.newPlot("momoetf2-equity-chart",'
-        f"{json.dumps(traces, separators=(',', ':'))},"
-        f"{json.dumps(layout, separators=(',', ':'))},"
-        '{"responsive":true});}</script></div>'
+    return build_equity_drawdown_chart(
+        daily.index,
+        daily["strategy_wealth"] * start_equity,
+        daily["spy_wealth"] * start_equity,
+        "MoMoEtf2",
+        "momoetf2-equity-chart",
     )
 
 
@@ -184,12 +148,12 @@ def render(source, audience, chart_src):
     active_months = int(monthly[["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]].count(axis=1).sum())
     final_equity = float(strategy["Growth of $1"]) * start_equity
     metrics = (
-        ("Strategy CAGR", pct(strategy["CAGR"])),
-        ("Strategy Max Drawdown", pct(strategy["Daily max drawdown"])),
+        ("Strategy CAGR", pct(strategy["CAGR"], 1)),
+        ("Strategy Max Drawdown", pct(strategy["Daily max drawdown"], 1)),
         ("Total Return", pct(float(strategy["Growth of $1"]) - 1)),
         ("Sharpe Ratio", f'{float(strategy["Sharpe"]):.2f}'),
-        ("SPY CAGR", pct(spy["CAGR"])),
-        ("SPY Max Drawdown", pct(spy["Daily max drawdown"])),
+        ("SPY CAGR", pct(spy["CAGR"], 1)),
+        ("SPY Max Drawdown", pct(spy["Daily max drawdown"], 1)),
         ("Final Equity", currency(final_equity)),
         ("Active Months", f"{active_months:,}"),
     )
@@ -225,7 +189,7 @@ def render(source, audience, chart_src):
 <section class="hero"><div class="eyebrow">Backtested tactical ETF allocation model</div><h1>MoMoEtf2</h1><p>Tactical asset allocation model that adjusts monthly across major market exposures using proprietary market-environment and risk-management signals. Subscribers receive current model allocations and update alerts.</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: {currency(start_equity)}</p>{render_faq("momentum2", audience)}</section>
 <section class="metrics">{metrics_html}</section>
 {before_results}
-<section class="panel"><h2>Equity Curve</h2><p class="subtle">MoMoEtf2 compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
+<section class="panel"><h2>Equity Curve</h2><p class="subtle">MoMoEtf2 and SPY equity with drawdowns through {end_date}.</p><div class="chart">{chart_html}</div></section>
 <section class="panel enlarged-table"><h2>Monthly Returns</h2>{build_monthly_table(monthly, daily)}</section>
 {after_results}
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
@@ -243,6 +207,17 @@ def main():
     page = render(args.source, args.audience, args.chart_src)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(page, encoding="utf-8")
+    summary = pd.read_csv(args.source / "summary.csv", index_col=0)
+    strategy = summary.iloc[:, 0]
+    spy = summary.iloc[:, 1]
+    update_backtest_card(
+        args.strategies_page,
+        "MoMoEtf2",
+        strategy["CAGR"],
+        strategy["Sharpe"],
+        strategy["Daily max drawdown"],
+        spy["Daily max drawdown"],
+    )
     print(f"Generated {args.audience} {args.output} from {args.source}")
 
 

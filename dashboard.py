@@ -3,10 +3,11 @@ import json
 import os
 import requests
 import pandas as pd
-import plotly.graph_objects as go
 from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
+
+from strategy_chart import build_equity_drawdown_chart
 
 Path("data").mkdir(exist_ok=True)
 API_KEY = os.environ["C2_API_KEY"]
@@ -54,29 +55,41 @@ daily = data["Results"][0]["DailyEquity"]
 df = pd.DataFrame(daily)
 df["Date"] = pd.to_datetime(df["Date"])
 
-fig = go.Figure()
-fig.update_layout(
-    template="plotly_dark",
-    height=550,
-    margin=dict(
-        l=40,
-        r=20,
-        t=30,
-        b=40
+def download_spy_equity(start_date, end_date, starting_equity):
+    """Download daily SPY closes without requiring another paid API key."""
+    period1 = int(pd.Timestamp(start_date, tz="UTC").timestamp())
+    period2 = int((pd.Timestamp(end_date, tz="UTC") + pd.Timedelta(days=2)).timestamp())
+    response = requests.get(
+        "https://query1.finance.yahoo.com/v8/finance/chart/SPY",
+        params={"period1": period1, "period2": period2, "interval": "1d", "events": "history"},
+        headers={"User-Agent": "Mozilla/5.0 ExtremeTradingDashboard/1.0"},
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
-)
-fig.add_trace(
-    go.Scatter(
-        x=df["Date"],
-        y=df["EquityWithCosts"],
-        mode="lines",
-        name="Equity With Costs"
-    )
-)
-fig.update_xaxes(
-    dtick="M12",
-    tickformat="%Y"
-)
+    response.raise_for_status()
+    result = response.json().get("chart", {}).get("result")
+    if not result:
+        raise RuntimeError("Yahoo Finance returned no SPY history")
+    result = result[0]
+    timestamps = result.get("timestamp") or []
+    indicators = result.get("indicators", {})
+    adjusted = (indicators.get("adjclose") or [{}])[0].get("adjclose")
+    closes = adjusted or (indicators.get("quote") or [{}])[0].get("close") or []
+    spy = pd.DataFrame({
+        "Date": pd.to_datetime(timestamps, unit="s", utc=True).tz_convert(None).normalize(),
+        "SPY_Close": closes,
+    }).dropna()
+    spy = spy.sort_values("Date").drop_duplicates("Date", keep="last")
+    if spy.empty:
+        raise RuntimeError("Yahoo Finance returned no usable SPY closes")
+    spy["SPY_Equity"] = float(starting_equity) * spy["SPY_Close"] / spy["SPY_Close"].iloc[0]
+    return spy[["Date", "SPY_Equity"]]
+
+
+df["Date"] = df["Date"].dt.tz_localize(None).dt.normalize()
+spy_daily = download_spy_equity(df["Date"].min(), df["Date"].max(), df["EquityWithCosts"].iloc[0])
+chart_data = df[["Date", "EquityWithCosts"]].merge(spy_daily, on="Date", how="inner")
+if chart_data.empty or chart_data["Date"].max() < df["Date"].max():
+    raise RuntimeError("SPY comparison data does not reach the latest Collective2 equity date")
 
 monthly_url = "https://api4-general.collective2.com/Strategies/GetStrategyHistoricalEquity"
 monthly_params = {
@@ -97,9 +110,12 @@ if not monthly_data.get("Results") or not monthly_data["Results"][0].get("Monthl
 #print(
 #    monthly_data["Results"][0].keys()
 #)
-chart_html = fig.to_html(
-    full_html=False,
-    include_plotlyjs="cdn"
+chart_html = build_equity_drawdown_chart(
+    chart_data["Date"],
+    chart_data["EquityWithCosts"],
+    chart_data["SPY_Equity"],
+    "Extreme OS",
+    "extreme-os-equity-chart",
 )
 monthly_results = monthly_data["Results"][0]["MonthlyResults"]
 #print("MONTHLY COUNT:", len(monthly_results))
