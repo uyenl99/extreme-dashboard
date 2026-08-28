@@ -495,17 +495,9 @@ def page_template(title, body):
 
 <body>
 
-<nav>
-
-<div>
-<strong>Extreme Trading Inc.</strong>
-</div>
-
-<div>
-<a href="index.html">Home</a>
-<a href="members.html">Login</a>
-</div>
-
+<nav class="site-nav">
+<strong class="brand">Extreme Trading Inc.</strong>
+<div class="navlinks"><a href="index.html">Home</a><a href="strategies.html">Strategies</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a></div>
 </nav>
 
 <div class="container">
