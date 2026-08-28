@@ -76,8 +76,8 @@ This file records automation failures so they are not repeated. A calculation is
 
 - Impact: The 3:00 PM batch failed at 3:39 PM, but the stale production date was noticed manually instead of being reported when the task exited.
 - Cause: The Windows scheduled task only wrote local transcript logs. No failure-notification hook or active monitor surfaced the nonzero exit code.
-- Fix: During a requested monitored run, keep the process attached and report the first nonzero stage immediately. A persistent notification channel still needs to be added for unattended daily runs.
-- Prevention: Do not describe a daily update as complete without checking the task exit code, shared PR, deployment, and production dates. Add an explicit unattended failure-notification step before relying on the schedule alone.
+- Fix: The runner now writes `last-run-status.json` throughout the batch and shows a Windows notification for both success and failure. A weekday Codex monitor reads that terminal status as a backup notification.
+- Prevention: Do not describe a daily update as complete without checking the task exit code, shared PR, deployment, production dates, and terminal status. Notification errors must never replace the strategy job's real exit result.
 
 ## Required release checklist
 
@@ -89,3 +89,4 @@ This file records automation failures so they are not repeated. A calculation is
 6. Verify expected output files and timestamps after every stage.
 7. Verify pushed commit, open PR, Vercel checks, production deployment, and final task exit code separately.
 8. Never report success merely because calculation finished.
+9. Verify that every scheduled run wrote a terminal status and emitted a success/failure notification.
