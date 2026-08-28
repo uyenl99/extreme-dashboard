@@ -4,7 +4,7 @@ const { getMembership, getUser } = require("./_auth");
 
 const PAGES = { "extreme-os": "extreme-os.html", momentum: "momentum.html", momentum2: "momentum2.html", "momentum-stocks": "momentum-stocks.html", "mean-reversion": "mean-reversion.html" };
 const NAV_BUTTON_STYLE = "margin-left:20px;padding:0;border:0;background:none;color:white;font:inherit;cursor:pointer";
-const MEMBER_NAV = `<nav class="site-nav"><strong class="brand">Extreme Trading Inc.</strong><div class="navlinks"><a href="members.html">Home</a><a href="strategies.html">Strategies</a><a href="subscribe.html">Subscribe</a><a href="about.html">About</a><a href="contact.html">Contact</a><button id="detail-billing-button" type="button" style="${NAV_BUTTON_STYLE}">Manage billing</button><button id="detail-signout-button" type="button" style="${NAV_BUTTON_STYLE}">Sign out</button></div></nav>`;
+const MEMBER_NAV = `<nav class="site-nav"><strong class="brand">Extreme Trading Inc.</strong><div class="navlinks"><a href="members.html">Home</a><a href="members.html">Strategies</a><a href="subscribe.html">Subscribe</a><a href="about.html">About</a><a href="contact.html">Contact</a><button id="detail-billing-button" type="button" style="${NAV_BUTTON_STYLE}">Manage billing</button><button id="detail-signout-button" type="button" style="${NAV_BUTTON_STYLE}">Sign out</button></div></nav>`;
 const MEMBER_NAV_SCRIPT = `<script>
 document.getElementById("detail-billing-button")?.addEventListener("click", async () => {
   let session = null;

@@ -128,10 +128,12 @@ Assert-Contains "members.html" @(
 Assert-Contains "member.js" @(
     'location.replace("members.html")',
     'show("strategy-directory", !showDetail)',
-    'showMemberNavigation(true)'
+    'showMemberNavigation(true)',
+    '$("member-strategies-link").href = visible ? "members.html" : "strategies.html"'
 )
 Assert-Contains "api/member-page.js" @(
     '<a href="members.html">Home</a>',
+    '<a href="members.html">Strategies</a>',
     'localStorage.removeItem("eti_member_session")',
     'Manage billing',
     'Sign out'
