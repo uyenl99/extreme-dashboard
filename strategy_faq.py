@@ -6,13 +6,17 @@ from html import escape
 FAQS = {
     "extreme-os": {
         "public": [
-            ("What is Extreme OS?", "Extreme OS is a rules-based trading strategy whose published history is sourced from Collective2. The public page focuses on published closed trades and historical performance."),
+            ("What is Extreme OS?", "Extreme OS is an intraday discretionary stock trading system whose published history is sourced from Collective2. The public page focuses on published closed trades and historical performance."),
             ("Are the public results the member feed?", "No. The public page shows published historical results. Current orders and positions are reserved for active members."),
             ("What do the performance figures represent?", "They summarize the strategy record shown on the page. They are not a promise of future returns and may differ from an individual account."),
             ("What do members receive?", "Members can view current orders, open positions, alerts, and the complete available trade history."),
         ],
         "member": [
-            ("Where should I look first?", "Check Today's Orders first, then Current Open Positions. Historical trades provide context but are not current instructions."),
+            ("What is Extreme OS?", "Extreme OS is an intraday discretionary stock trading system. It is not a rules-based or backtested model; its signals are submitted and tracked go-forward through Collective2."),
+            ("When do trades take place?", "There is no fixed intraday schedule. Discretionary entries and exits can occur at unpredictable times throughout the regular trading day."),
+            ("How many positions can the system hold, and how are they sized?", "The system can hold as many as 15 positions and has rarely used margin. Its recent positioning has generally been more conservative. This service does not prescribe subscriber-specific position sizes; each subscriber independently decides whether to trade and how much risk to take. More aggressive sizing increases loss and margin risk."),
+            ("How is a subscription here different from Collective2?", "A Collective2 subscription provides Collective2's full Extreme OS signal delivery and optional AutoTrade; the Extreme OS content here is a summary. A subscription here does not provide AutoTrade, but it includes access to the other backtested systems. Direct email alerts for members who do not use Collective2 are planned but are not yet an active delivery channel."),
+            ("Where should I look first?", "Check Today's Trades first, then Open Positions. Historical trades provide context but are not current instructions."),
             ("When is the page updated?", "The site refreshes from the latest published Collective2 data. Always check the displayed update time before acting."),
             ("Why can my fill differ?", "Broker timing, spreads, liquidity, order handling, account size, and missed alerts can make personal results differ from the model."),
             ("Are alerts personalized advice?", "No. Alerts report model activity. Members remain responsible for execution, sizing, taxes, and risk decisions."),
