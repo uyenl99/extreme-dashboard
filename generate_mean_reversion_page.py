@@ -169,11 +169,13 @@ def build_moo_order_tables(trades, total_equity):
         execution_date = pd.Timestamp.today().normalize()
 
     entries = data[data["entry_date"].eq(execution_date)].copy()
+    entry_gross = entries["entry_notional"].abs().sum()
     exits = data[
         data["status"].astype(str).str.lower().eq("closed")
         & data["exit_date"].eq(execution_date)
     ].copy()
     change_rows = []
+    calculator_rows = []
     for row in exits.itertuples(index=False):
         side = str(row.side).title()
         exit_price = float(row.exit_price) if pd.notna(row.exit_price) else 0.0
@@ -188,11 +190,18 @@ def build_moo_order_tables(trades, total_equity):
         target_value = float(row.entry_notional)
         price = float(row.entry_price)
         action = "Buy" if side.lower() == "long" else "Sell Short"
+        weight = abs(target_value) / entry_gross if entry_gross else 0.0
         change_rows.append(
             f"<tr><td>{action}</td><td>{html.escape(str(row.ticker))}</td>"
             f'<td><span class="side {side.lower()}">{side}</span></td>'
             f"<td>${target_value:,.0f}</td><td>{float(row.shares):,.2f}</td>"
             f"<td>${price:,.2f}</td></tr>"
+        )
+        calculator_rows.append(
+            f'<tr data-weight="{weight:.12f}"><td>{action}</td>'
+            f"<td>{html.escape(str(row.ticker))}</td>"
+            f'<td><span class="side {side.lower()}">{side}</span></td>'
+            f'<td>{weight * 100:.2f}%</td><td class="calculated-size">—</td></tr>'
         )
     if not change_rows:
         change_rows.append('<tr><td colspan="6" class="muted">None - no MOO orders on the latest execution date.</td></tr>')
@@ -201,6 +210,21 @@ def build_moo_order_tables(trades, total_equity):
         '<div class="table-wrap"><table><thead><tr><th>Action</th><th>Ticker</th>'
         '<th>Direction</th><th>Position Value</th><th>Shares</th>'
         f'<th>MOO Fill Price</th></tr></thead><tbody>{"".join(change_rows)}</tbody></table></div>'
+        + (
+            '<div class="position-calculator-actions"><button type="button" id="position-calculator-toggle" '
+            'aria-expanded="false" aria-controls="position-calculator">Calculate Position Size</button></div>'
+            '<div id="position-calculator" class="position-calculator" hidden>'
+            '<label for="account-equity">Your account equity</label>'
+            '<input id="account-equity" type="number" min="0.01" step="1000" inputmode="decimal" placeholder="100,000">'
+            '<p id="position-calculator-error" class="calculator-error" role="alert"></p>'
+            '<div class="table-wrap"><table><thead><tr><th>Action</th><th>Ticker</th><th>Direction</th>'
+            '<th>Model Weight</th><th>Your Position Size</th></tr></thead>'
+            f'<tbody id="position-calculator-rows">{"".join(calculator_rows)}</tbody></table></div>'
+            '<p class="subtle calculator-note">Dollar targets preserve the model weights shown above. '
+            'They do not calculate share quantity or account for fills, slippage, commissions, or broker requirements.</p>'
+            '</div>'
+            if calculator_rows else ""
+        )
     )
 
     position_rows = []
@@ -302,8 +326,12 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mean Reversion Backtest - Extreme Trading Inc.</title>
 <style>
-*{{box-sizing:border-box}} body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}} nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}} nav a{{color:white;text-decoration:none;margin-left:20px}} .container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}} .hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}} .eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}} h1{{margin:8px 0 10px}} h2{{margin-top:0}} .subtle,.muted{{color:#94a3b8}} .metrics{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:22px 0}} .metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}} .metric-label{{color:#94a3b8;font-size:13px}} .metric-value{{font-size:24px;font-weight:700;margin-top:6px}} .chart{{overflow:hidden}} .table-wrap{{overflow-x:auto}} table{{width:100%;border-collapse:collapse;background:#111827}} th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:12px;white-space:nowrap}} th{{background:#1f2937;color:white}} th:first-child,td:first-child{{text-align:left}} .positive{{color:#22c55e;font-weight:600}} .negative{{color:#f87171;font-weight:600}} .compact{{max-width:680px}} .side{{font-weight:700}} .side.long{{color:#60a5fa}} .side.short{{color:#f59e0b}} .disclaimer{{font-size:13px;line-height:1.6;color:#94a3b8}} footer{{text-align:center;padding:30px;color:#94a3b8}} @media(max-width:800px){{nav{{align-items:flex-start;padding:16px;gap:12px}}nav div:last-child{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}}nav a{{margin-left:8px;font-size:12px}}.metrics{{grid-template-columns:repeat(2,1fr)}}.container{{padding:20px 10px}}}} @media(max-width:480px){{.metrics{{grid-template-columns:1fr}}}}
+*{{box-sizing:border-box}} body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}} nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}} nav a{{color:white;text-decoration:none;margin-left:20px}} .container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}} .hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}} .eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}} h1{{margin:8px 0 10px}} h2{{margin-top:0}} .subtle,.muted{{color:#94a3b8}} .metrics{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:22px 0}} .metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}} .metric-label{{color:#94a3b8;font-size:13px}} .metric-value{{font-size:24px;font-weight:700;margin-top:6px}} .chart{{overflow:hidden}} .table-wrap{{overflow-x:auto}} table{{width:100%;border-collapse:collapse;background:#111827}} th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:12px;white-space:nowrap}} th{{background:#1f2937;color:white}} th:first-child,td:first-child{{text-align:left}} .positive{{color:#22c55e;font-weight:600}} .negative{{color:#f87171;font-weight:600}} .compact{{max-width:680px}} .side{{font-weight:700}} .side.long{{color:#60a5fa}} .side.short{{color:#f59e0b}} .position-calculator-actions{{margin-top:16px}} #position-calculator-toggle{{border:0;border-radius:7px;background:#2563eb;color:white;padding:10px 15px;font:inherit;font-weight:700;cursor:pointer}} .position-calculator{{margin-top:18px;padding-top:18px;border-top:1px solid #374151}} .position-calculator label{{display:block;margin-bottom:7px;color:#cbd5e1;font-size:13px}} #account-equity{{width:min(100%,320px);border:1px solid #4b5563;border-radius:7px;background:#0f172a;color:#e5e7eb;padding:10px 12px;font:inherit}} .calculator-error{{min-height:20px;margin:7px 0;color:#f87171;font-size:13px}} .calculator-note{{margin-bottom:0}} .disclaimer{{font-size:13px;line-height:1.6;color:#94a3b8}} footer{{text-align:center;padding:30px;color:#94a3b8}} @media(max-width:800px){{nav{{align-items:flex-start;padding:16px;gap:12px}}nav div:last-child{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}}nav a{{margin-left:8px;font-size:12px}}.metrics{{grid-template-columns:repeat(2,1fr)}}.container{{padding:20px 10px}}}} @media(max-width:480px){{.metrics{{grid-template-columns:1fr}}}}
 </style>
+<script>
+  window.va = window.va || function () {{ (window.vaq = window.vaq || []).push(arguments); }};
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body>
 <nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a></div></nav>
@@ -318,6 +346,36 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades):
 <section class="panel disclaimer"><strong>Important:</strong> These are simulated backtest results, not verified live performance. Backtests are hypothetical, may benefit from hindsight, and may not reflect transaction costs, slippage, liquidity constraints, taxes, or future market conditions. Past or simulated performance does not guarantee future results.</section>
 </main>
 <footer>© 2026 Extreme Trading Inc.</footer>
+<script>
+(() => {{
+  const toggle = document.getElementById("position-calculator-toggle");
+  if (!toggle) return;
+  const calculator = document.getElementById("position-calculator");
+  const equityInput = document.getElementById("account-equity");
+  const error = document.getElementById("position-calculator-error");
+  const rows = Array.from(document.querySelectorAll("#position-calculator-rows tr"));
+  const currency = new Intl.NumberFormat("en-US", {{ style: "currency", currency: "USD", maximumFractionDigits: 2 }});
+
+  function calculate() {{
+    const equity = Number(equityInput.value);
+    const valid = Number.isFinite(equity) && equity > 0;
+    error.textContent = valid || !equityInput.value ? "" : "Enter an account equity greater than zero.";
+    rows.forEach((row) => {{
+      const cell = row.querySelector(".calculated-size");
+      cell.textContent = valid ? currency.format(equity * Number(row.dataset.weight)) : "—";
+    }});
+  }}
+
+  toggle.addEventListener("click", () => {{
+    const opening = calculator.hidden;
+    calculator.hidden = !opening;
+    toggle.setAttribute("aria-expanded", String(opening));
+    toggle.textContent = opening ? "Hide Position Calculator" : "Calculate Position Size";
+    if (opening) equityInput.focus();
+  }});
+  equityInput.addEventListener("input", calculate);
+}})();
+</script>
 </body>
 </html>"""
 

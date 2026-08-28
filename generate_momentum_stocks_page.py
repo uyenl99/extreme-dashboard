@@ -7,8 +7,8 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from generate_momentum_page import (
-    build_alert_table,
     build_monthly_table,
+    build_position_calculator,
     pct,
 )
 
@@ -59,7 +59,18 @@ def load_alert(path):
         "Execution": signal.get("execution_date", "—"),
         "VIX 30d MA": f'{signal["vix_30d_average"]:.2f}',
         "SPY 10d RV": f'{signal["spy_10d_realized_vol"]:.2f}',
+        "Position Holdings": [item for item in holdings if item],
     }
+
+
+def build_stock_alert(alert):
+    columns = ("Signal", "Regime", "Holdings", "Execution", "VIX 30d MA", "SPY 10d RV")
+    headers = "".join(f"<th>{html.escape(column)}</th>" for column in columns)
+    cells = "".join(f"<td>{html.escape(str(alert.get(column, '—')))}</td>" for column in columns)
+    return (
+        f'<div class="table-wrap"><table><thead><tr>{headers}</tr></thead><tbody><tr>{cells}</tr></tbody></table></div>'
+        + build_position_calculator(alert.get("Position Holdings", []), "momentum-stocks-position-calculator")
+    )
 
 
 def load_results(source, alert_source):
@@ -186,13 +197,17 @@ def render_page(summary, daily, allocations, monthly, alert):
 <style>
 *{{box-sizing:border-box}} body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}} nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}} nav a{{color:white;text-decoration:none;margin-left:20px}} .container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}} .hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}} .eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}} h1{{margin:8px 0 10px}} h2{{margin-top:0}} .subtle,.muted{{color:#94a3b8}} .metrics{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:22px 0}} .metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}} .metric-label{{color:#94a3b8;font-size:13px}} .metric-value{{font-size:24px;font-weight:700;margin-top:6px}} .chart{{overflow:hidden}} .table-wrap{{overflow-x:auto}} table{{width:100%;border-collapse:collapse;background:#111827}} th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:12px;white-space:nowrap}} th{{background:#1f2937;color:white}} th:first-child,td:first-child{{text-align:left}} .positive{{color:#22c55e;font-weight:600}} .negative{{color:#f87171;font-weight:600}} .compact{{max-width:420px}} .regime{{font-weight:700}} .risk-on{{color:#60a5fa}} .risk-off{{color:#f59e0b}} .disclaimer{{font-size:13px;line-height:1.6;color:#94a3b8}} footer{{text-align:center;padding:30px;color:#94a3b8}} @media(max-width:800px){{nav{{align-items:flex-start;padding:16px;gap:12px}}nav div:last-child{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}}nav a{{margin-left:8px;font-size:12px}}.metrics{{grid-template-columns:repeat(2,1fr)}}.container{{padding:20px 10px}}}} @media(max-width:480px){{.metrics{{grid-template-columns:1fr}}}}
 </style>
+<script>
+  window.va = window.va || function () {{ (window.vaq = window.vaq || []).push(arguments); }};
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body>
 <nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a></div></nav>
 <main class="container">
 <section class="hero"><div class="eyebrow">Backtested stock rotation strategy</div><h1>Momentum Stocks</h1><p>Monthly equal-weight rotation into the ten strongest stocks from a point-in-time Russell 1000 universe, filtered for market capitalization. A VIX-versus-SPY realized-volatility filter moves the portfolio into defensive assets during risk-off periods.</p><p class="subtle">Backtest period: {summary.start} through {summary.end} · Starting equity: ${INITIAL_EQUITY:,.0f}</p></section>
 <section class="metrics">{metric_html}</section>
-<section class="panel"><h2>Latest Alert</h2>{build_alert_table(alert)}</section>
+<section class="panel"><h2>Latest Alert</h2>{build_stock_alert(alert)}</section>
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Momentum Stocks compared with an equal-starting-equity SPY benchmark.</p><div class="chart">{chart_html}</div></section>
 <section class="panel"><h2>Monthly Returns</h2>{build_monthly_table(monthly)}</section>
 <section class="panel"><h2>Recent Monthly Allocations</h2>{build_allocation_table(allocations)}</section>
