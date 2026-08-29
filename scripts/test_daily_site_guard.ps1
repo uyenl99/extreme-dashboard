@@ -126,19 +126,19 @@ Assert-Contains "members.html" @(
     '<a href="hypothetical-performance.html">Hypothetical Performance Disclosure</a>'
 )
 Assert-Contains "member.js" @(
-    'location.replace("members.html")',
+    'location.replace(MEMBER_DIRECTORY_URL)',
     'show("strategy-directory", !showDetail)',
     'showMemberNavigation(true)',
     'showMemberNavigationPending()',
-    '$("member-strategies-link").href = visible ? "members.html" : "strategies.html"'
+    '$("member-strategies-link").href = visible ? MEMBER_DIRECTORY_URL : "strategies.html"'
 )
 Assert-Contains "api/member-page.js" @(
-    '<a href="members.html">Home</a>',
-    '<a href="members.html">Strategies</a>',
+    'const MEMBER_DIRECTORY_URL = "members.html?view=strategies&nav=12"',
     'localStorage.removeItem("eti_member_session")',
     'Manage billing',
     'Sign out'
 )
+Assert-NotContains "members.html" @('<a id="member-login-link"')
 Assert-Contains "index.html" @(
     '<a href="members.html">Login</a>',
     '<h1>Two decades of trading experience. A new generation of systematic research.</h1>',

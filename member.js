@@ -5,6 +5,7 @@
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const date = (value) => value ? new Date(value).toLocaleString() : "—";
   const money = (value) => value == null ? "—" : Number(value).toLocaleString(undefined, { style: "currency", currency: "USD" });
+  const MEMBER_DIRECTORY_URL = "members.html?view=strategies&nav=12";
 
   function saveSession(session) {
     state.session = session;
@@ -15,16 +16,25 @@
   function showMemberNavigation(visible) {
     show("nav-signout-button", visible);
     show("billing-button", visible);
-    show("member-login-link", !visible);
-    $("member-home-link").href = visible ? "members.html" : "index.html";
-    $("member-strategies-link").href = visible ? "members.html" : "strategies.html";
+    let loginLink = $("member-login-link");
+    if (!visible && !loginLink) {
+      loginLink = document.createElement("a");
+      loginLink.id = "member-login-link";
+      loginLink.href = "members.html";
+      loginLink.textContent = "Login";
+      $("member-login-slot").append(loginLink);
+    }
+    if (loginLink) loginLink.hidden = visible;
+    $("member-home-link").href = visible ? MEMBER_DIRECTORY_URL : "index.html";
+    $("member-strategies-link").href = visible ? MEMBER_DIRECTORY_URL : "strategies.html";
     $("member-home-link").textContent = "Home";
   }
 
   function showMemberNavigationPending() {
     show("nav-signout-button", false);
     show("billing-button", false);
-    show("member-login-link", false);
+    const loginLink = $("member-login-link");
+    if (loginLink) loginLink.hidden = true;
   }
 
   function readCallback() {
@@ -138,7 +148,7 @@
       show("strategies-home");
       window.scrollTo({ top: 0, behavior: "auto" });
     } catch (error) {
-      history.replaceState(null, "", "members.html");
+      history.replaceState(null, "", MEMBER_DIRECTORY_URL);
       show("strategies-home");
       show("strategy-directory");
       show("strategy-detail", false);
@@ -160,7 +170,7 @@
     const payload = await response.json();
     if (response.ok && adoptAuth(payload)) {
       $("auth-message").textContent = "";
-      location.replace("members.html");
+      location.replace(MEMBER_DIRECTORY_URL);
       return;
     }
     else $("auth-message").textContent = payload.error_description || payload.msg || "Incorrect email or password.";

@@ -1,4 +1,12 @@
 {
   "outputDirectory": ".",
-  "functions": { "api/member-page.js": { "includeFiles": "api/_member-content/**" } }
+  "functions": { "api/member-page.js": { "includeFiles": "api/_member-content/**" } },
+  "headers": [
+    {
+      "source": "/members.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "private, no-store, max-age=0" }
+      ]
+    }
+  ]
 }
