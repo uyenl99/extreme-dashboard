@@ -39,6 +39,11 @@
 
   function readCallback() {
     const hash = new URLSearchParams(location.hash.slice(1));
+    if (hash.get("error")) {
+      history.replaceState(null, "", location.pathname + location.search);
+      $("auth-message").textContent = "This password-reset link is invalid or expired. Request a new one.";
+      return;
+    }
     if (!hash.get("access_token")) return;
     state.recovery = hash.get("type") === "recovery";
     saveSession({ access_token: hash.get("access_token"), refresh_token: hash.get("refresh_token"), expires_at: Math.floor(Date.now() / 1000) + Number(hash.get("expires_in") || 3600) });
@@ -60,7 +65,9 @@
   }
 
   async function authRequest(path, body, method = "POST") {
-    const options = { method, headers: { apikey: state.config.supabaseAnonKey, authorization: `Bearer ${state.session?.access_token || ""}`, "content-type": "application/json" } };
+    const headers = { apikey: state.config.supabaseAnonKey, "content-type": "application/json" };
+    if (state.session?.access_token) headers.authorization = `Bearer ${state.session.access_token}`;
+    const options = { method, headers };
     if (method !== "GET" && method !== "HEAD") options.body = JSON.stringify(body);
     return fetch(`${state.config.supabaseUrl}/auth/v1/${path}`, options);
   }
@@ -175,8 +182,21 @@
 
   $("reset-button").addEventListener("click", async () => {
     if (!$("email").reportValidity()) return;
-    const response = await authRequest("recover", { email: $("email").value, redirect_to: `${location.origin}/members.html` });
-    $("auth-message").textContent = response.ok ? "Check your email for the password-reset link." : "Unable to send the reset email.";
+    const button = $("reset-button");
+    button.disabled = true;
+    $("auth-message").textContent = "Sending password-reset email…";
+    try {
+      const redirectTo = `${location.origin}/members.html`;
+      const response = await authRequest(`recover?redirect_to=${encodeURIComponent(redirectTo)}`, { email: $("email").value });
+      const payload = await response.json().catch(() => ({}));
+      $("auth-message").textContent = response.ok
+        ? "Check your email for the password-reset link. The link may take a few minutes to arrive."
+        : payload.msg || payload.error_description || "Unable to send the reset email. Please wait a minute and try again.";
+    } catch {
+      $("auth-message").textContent = "Unable to send the reset email. Please check your connection and try again.";
+    } finally {
+      button.disabled = false;
+    }
   });
 
   $("password-form").addEventListener("submit", async (event) => {
