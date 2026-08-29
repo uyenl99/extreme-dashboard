@@ -84,6 +84,15 @@
     $("trades-table").innerHTML = table([{key:"closedAt",label:"Closed",render:date},{key:"symbol",label:"Symbol"},{key:"side",label:"Side",render:(v)=>String(v)==="1"?"Long":String(v)==="2"?"Short":escapeHtml(v)},{key:"quantity",label:"Quantity"},{key:"openPrice",label:"Open",render:money},{key:"closePrice",label:"Close",render:money},{key:"profitLoss",label:"P/L",render:(v)=>`<span class="${Number(v)>=0?"positive":"negative"}">${money(v)}</span>`}], data.trades);
   }
 
+  function showMemberDirectory() {
+    const today = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+    $("current-date").textContent = today;
+    $("detail-current-date").textContent = `Current date: ${today}`;
+    show("strategies-home");
+    show("strategy-directory");
+    show("strategy-detail", false);
+  }
+
   async function renderMemberView(data) {
     const today = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
     $("current-date").textContent = today;
@@ -99,39 +108,40 @@
       document.close();
       return true;
     }
-    show("strategy-directory", !showDetail);
-    show("strategy-detail", showDetail);
+    showMemberDirectory();
     return false;
   }
 
   async function loadStrategiesHome() {
-    show("loading"); show("auth-panel", false); show("activate-panel", false); show("password-panel", false); show("strategies-home", false); showMemberNavigationPending();
-    if (!state.session) { showMemberNavigation(false); show("loading", false); show("auth-panel"); return; }
-    if (state.recovery) { showMemberNavigation(true); show("loading", false); show("password-panel"); return; }
+    const strategy = new URLSearchParams(location.search).get("strategy") || "";
+    const showDirectoryImmediately = Boolean(state.session && !state.recovery && !strategy);
+    show("auth-panel", false); show("activate-panel", false); show("password-panel", false);
+    if (showDirectoryImmediately) { showMemberNavigation(true); showMemberDirectory(); }
+    else { show("strategies-home", false); showMemberNavigationPending(); }
+    if (!state.session) { showMemberNavigation(false); show("auth-panel"); return; }
+    if (state.recovery) { showMemberNavigation(true); show("strategies-home", false); show("password-panel"); return; }
     const userResponse = await authRequest("user", {}, "GET");
-    if (!userResponse.ok) { saveSession(null); showMemberNavigation(false); show("loading", false); show("auth-panel"); return; }
+    if (!userResponse.ok) { saveSession(null); showMemberNavigation(false); show("strategies-home", false); show("auth-panel"); return; }
     await userResponse.json();
     showMemberNavigation(true);
-    const strategy = new URLSearchParams(location.search).get("strategy") || "";
 
     // Protected strategy pages perform their access check in /api/member-page.
     if (strategy) {
       showMemberNavigation(true);
       const documentReplaced = await renderMemberView(null);
       if (documentReplaced) return;
-      show("loading", false); show("strategies-home");
+      show("strategies-home");
       return;
     }
 
     const response = await api("/api/member-access");
-    show("loading", false);
-    if (response.status === 401) { saveSession(null); showMemberNavigation(false); show("auth-panel"); return; }
+    if (response.status === 401) { saveSession(null); showMemberNavigation(false); show("strategies-home", false); show("auth-panel"); return; }
     if (response.status === 403) {
-      saveSession(null); showMemberNavigation(false); show("auth-panel");
+      saveSession(null); showMemberNavigation(false); show("strategies-home", false); show("auth-panel");
       $("auth-message").textContent = "This email does not have an active subscription. Subscribe before signing in.";
       return;
     }
-    if (!response.ok) { show("auth-panel"); $("auth-message").textContent = "Member data is temporarily unavailable."; return; }
+    if (!response.ok) { show("strategies-home", false); show("auth-panel"); $("auth-message").textContent = "Member data is temporarily unavailable."; return; }
     showMemberNavigation(true);
     await response.json();
     const documentReplaced = await renderMemberView(null);
@@ -205,19 +215,32 @@
   $("nav-signout-button").addEventListener("click", () => { saveSession(null); location.href = "members.html"; });
 
   (async () => {
-    state.config = await fetch("/api/public-config").then((r) => r.json()); readCallback();
+    readCallback();
     if (!state.session) { try { saveSession(JSON.parse(localStorage.getItem("eti_member_session"))); } catch {} }
-    if (!state.config.supabaseUrl || !state.config.supabaseAnonKey) { showMemberNavigation(false); show("loading", false); show("auth-panel"); $("auth-message").textContent = "Member accounts are being configured."; return; }
     const query = new URLSearchParams(location.search);
     const checkoutSessionId = query.get("checkout") === "success" ? query.get("session_id") : "";
+    if (state.session && !state.recovery && !query.get("strategy")) {
+      showMemberNavigation(true);
+      showMemberDirectory();
+    }
+    state.config = await fetch("/api/public-config").then((r) => r.json());
+    if (!state.config.supabaseUrl || !state.config.supabaseAnonKey) {
+      if (state.session && !state.recovery && !query.get("strategy")) return;
+      showMemberNavigation(false); show("auth-panel"); $("auth-message").textContent = "Member accounts are being configured."; return;
+    }
     if (checkoutSessionId && !state.session) {
       const checkout = await fetch(`/api/checkout-status?session_id=${encodeURIComponent(checkoutSessionId)}`);
       if (checkout.ok) {
         const result = await checkout.json(); state.checkoutEmail = result.email;
-        $("checkout-email").textContent = result.email; showMemberNavigation(false); show("loading", false); show("auth-panel", false); show("activate-panel"); return;
+        $("checkout-email").textContent = result.email; showMemberNavigation(false); show("auth-panel", false); show("activate-panel"); return;
       }
       $("auth-message").textContent = "We could not verify that subscription. Please contact support if you completed payment.";
     }
     await loadStrategiesHome();
-  })().catch(() => { showMemberNavigation(false); show("loading", false); show("auth-panel"); $("auth-message").textContent = "Member sign-in is temporarily unavailable."; });
+  })().catch(() => {
+    if (state.session && !state.recovery && !new URLSearchParams(location.search).get("strategy")) {
+      showMemberNavigation(true); showMemberDirectory(); return;
+    }
+    showMemberNavigation(false); show("strategies-home", false); show("auth-panel"); $("auth-message").textContent = "Member sign-in is temporarily unavailable.";
+  });
 })();
