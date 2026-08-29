@@ -103,7 +103,7 @@
   function renderAuthenticatedNavigation(nav) {
     const homeLink = findLink(nav, "Home");
     const strategiesLink = findLink(nav, "Strategies");
-    if (homeLink) homeLink.href = MEMBER_DIRECTORY_URL;
+    if (homeLink) homeLink.href = "/index.html";
     if (strategiesLink) strategiesLink.href = MEMBER_DIRECTORY_URL;
 
     findLink(nav, "Login")?.remove();

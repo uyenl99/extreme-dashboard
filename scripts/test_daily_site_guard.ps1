@@ -121,7 +121,7 @@ Assert-Contains "members.html" @(
     'members.html?strategy=momentum-stocks',
     'members.html?strategy=mean-reversion',
     'id="nav-signout-button"',
-    '<script src="member.js?v=home14" defer></script>',
+    '<script src="member.js?v=home15" defer></script>',
     '<a href="risk-disclosure.html">Risk Disclosure</a>',
     '<a href="hypothetical-performance.html">Hypothetical Performance Disclosure</a>'
 )
@@ -131,11 +131,13 @@ Assert-Contains "member.js" @(
     'function showMemberDirectory()',
     'showMemberNavigation(true)',
     'showMemberNavigationPending()',
+    '$("member-home-link").href = "index.html"',
     '$("member-strategies-link").href = visible ? MEMBER_DIRECTORY_URL : "strategies.html"'
 )
 Assert-Contains "site-auth-nav.js" @(
     'const SESSION_KEY = "eti_member_session"',
     'const MEMBER_DIRECTORY_URL = "/members.html?view=strategies&nav=13"',
+    'homeLink.href = "/index.html"',
     'findLink(nav, "Login")?.remove()',
     'billing.textContent = "Manage billing"',
     'signOut.textContent = "Sign out"',
@@ -144,6 +146,7 @@ Assert-Contains "site-auth-nav.js" @(
 )
 Assert-Contains "api/member-page.js" @(
     'const MEMBER_DIRECTORY_URL = "members.html?view=strategies&nav=13"',
+    '<a href="index.html">Home</a>',
     'localStorage.removeItem("eti_member_session")',
     'Manage billing',
     'Sign out'
@@ -151,9 +154,11 @@ Assert-Contains "api/member-page.js" @(
 Assert-NotContains "members.html" @('<a id="member-login-link"')
 Assert-NotContains "members.html" @('Loading strategies')
 Assert-NotContains "member.js" @('show("loading"')
+Assert-NotContains "member.js" @('history.pushState')
+Assert-NotContains "member.js" @('openMemberStrategy')
 Assert-Contains "index.html" @(
     '<a href="members.html">Login</a>',
-    '<script src="/site-auth-nav.js?v=2"></script>',
+    '<script src="/site-auth-nav.js?v=3"></script>',
     '<h1>Two decades of trading experience. A new generation of systematic research.</h1>',
     '<a class="button secondary" href="extreme-os.html">Review the Extreme OS record</a>',
     '<small>THE NEW RESEARCH PRIORITY</small>',
@@ -163,7 +168,7 @@ Assert-Contains "index.html" @(
 )
 Assert-Contains "strategies.html" @(
     '<a href="members.html">Login</a>',
-    '<script src="/site-auth-nav.js?v=2"></script>',
+    '<script src="/site-auth-nav.js?v=3"></script>',
     '<h1>Trading Strategies</h1>',
     '<h2>Extreme OS</h2>',
     '<h2>MoMoEtf1</h2>',
@@ -186,7 +191,7 @@ foreach ($publicPage in @(
     "subscribe.html",
     "terms.html"
 )) {
-    Assert-Contains $publicPage @('<script src="/site-auth-nav.js?v=2"></script>')
+    Assert-Contains $publicPage @('<script src="/site-auth-nav.js?v=3"></script>')
 }
 foreach ($memberPage in @(
     "api/_member-content/extreme-os.html",
@@ -195,7 +200,7 @@ foreach ($memberPage in @(
     "api/_member-content/momentum2.html",
     "api/_member-content/momentum-stocks.html"
 )) {
-    Assert-Contains $memberPage @('<script src="/site-auth-nav.js?v=2"></script>')
+    Assert-Contains $memberPage @('<script src="/site-auth-nav.js?v=3"></script>')
 }
 foreach ($memberPage in @(
     "api/_member-content/momentum.html",
@@ -203,7 +208,7 @@ foreach ($memberPage in @(
     "api/_member-content/momentum-stocks.html"
 )) {
     Assert-Contains $memberPage @(
-        '<script src="/site-auth-nav.js?v=2"></script>',
+        '<script src="/site-auth-nav.js?v=3"></script>',
         'metric-value positive',
         'metric-value negative'
     )
