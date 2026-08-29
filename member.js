@@ -21,6 +21,12 @@
     $("member-home-link").textContent = "Home";
   }
 
+  function showMemberNavigationPending() {
+    show("nav-signout-button", false);
+    show("billing-button", false);
+    show("member-login-link", false);
+  }
+
   function readCallback() {
     const hash = new URLSearchParams(location.hash.slice(1));
     if (!hash.get("access_token")) return;
@@ -89,12 +95,13 @@
   }
 
   async function loadStrategiesHome() {
-    show("loading"); show("auth-panel", false); show("activate-panel", false); show("password-panel", false); show("strategies-home", false); showMemberNavigation(false);
-    if (!state.session) { show("loading", false); show("auth-panel"); return; }
-    if (state.recovery) { show("loading", false); show("password-panel"); return; }
+    show("loading"); show("auth-panel", false); show("activate-panel", false); show("password-panel", false); show("strategies-home", false); showMemberNavigationPending();
+    if (!state.session) { showMemberNavigation(false); show("loading", false); show("auth-panel"); return; }
+    if (state.recovery) { showMemberNavigation(true); show("loading", false); show("password-panel"); return; }
     const userResponse = await authRequest("user", {}, "GET");
-    if (!userResponse.ok) { saveSession(null); show("loading", false); show("auth-panel"); return; }
+    if (!userResponse.ok) { saveSession(null); showMemberNavigation(false); show("loading", false); show("auth-panel"); return; }
     await userResponse.json();
+    showMemberNavigation(true);
     const strategy = new URLSearchParams(location.search).get("strategy") || "";
 
     // Protected strategy pages perform their access check in /api/member-page.
@@ -190,17 +197,17 @@
   (async () => {
     state.config = await fetch("/api/public-config").then((r) => r.json()); readCallback();
     if (!state.session) { try { saveSession(JSON.parse(localStorage.getItem("eti_member_session"))); } catch {} }
-    if (!state.config.supabaseUrl || !state.config.supabaseAnonKey) { show("loading", false); show("auth-panel"); $("auth-message").textContent = "Member accounts are being configured."; return; }
+    if (!state.config.supabaseUrl || !state.config.supabaseAnonKey) { showMemberNavigation(false); show("loading", false); show("auth-panel"); $("auth-message").textContent = "Member accounts are being configured."; return; }
     const query = new URLSearchParams(location.search);
     const checkoutSessionId = query.get("checkout") === "success" ? query.get("session_id") : "";
     if (checkoutSessionId && !state.session) {
       const checkout = await fetch(`/api/checkout-status?session_id=${encodeURIComponent(checkoutSessionId)}`);
       if (checkout.ok) {
         const result = await checkout.json(); state.checkoutEmail = result.email;
-        $("checkout-email").textContent = result.email; show("loading", false); show("auth-panel", false); show("activate-panel"); return;
+        $("checkout-email").textContent = result.email; showMemberNavigation(false); show("loading", false); show("auth-panel", false); show("activate-panel"); return;
       }
       $("auth-message").textContent = "We could not verify that subscription. Please contact support if you completed payment.";
     }
     await loadStrategiesHome();
-  })().catch(() => { show("loading", false); show("auth-panel"); $("auth-message").textContent = "Member sign-in is temporarily unavailable."; });
+  })().catch(() => { showMemberNavigation(false); show("loading", false); show("auth-panel"); $("auth-message").textContent = "Member sign-in is temporarily unavailable."; });
 })();

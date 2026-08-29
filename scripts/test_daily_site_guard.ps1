@@ -129,6 +129,7 @@ Assert-Contains "member.js" @(
     'location.replace("members.html")',
     'show("strategy-directory", !showDetail)',
     'showMemberNavigation(true)',
+    'showMemberNavigationPending()',
     '$("member-strategies-link").href = visible ? "members.html" : "strategies.html"'
 )
 Assert-Contains "api/member-page.js" @(
