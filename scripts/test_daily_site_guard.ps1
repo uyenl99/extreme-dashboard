@@ -121,14 +121,14 @@ Assert-Contains "members.html" @(
     'members.html?strategy=momentum-stocks',
     'members.html?strategy=mean-reversion',
     'id="nav-signout-button"',
-    'id="loading" class="member-loading" aria-live="polite" hidden',
+    '<script src="member.js?v=home14" defer></script>',
     '<a href="risk-disclosure.html">Risk Disclosure</a>',
     '<a href="hypothetical-performance.html">Hypothetical Performance Disclosure</a>'
 )
 Assert-Contains "member.js" @(
     'const MEMBER_DIRECTORY_URL = "members.html?view=strategies&nav=13"',
     'location.replace(MEMBER_DIRECTORY_URL)',
-    'show("strategy-directory", !showDetail)',
+    'function showMemberDirectory()',
     'showMemberNavigation(true)',
     'showMemberNavigationPending()',
     '$("member-strategies-link").href = visible ? MEMBER_DIRECTORY_URL : "strategies.html"'
@@ -149,6 +149,8 @@ Assert-Contains "api/member-page.js" @(
     'Sign out'
 )
 Assert-NotContains "members.html" @('<a id="member-login-link"')
+Assert-NotContains "members.html" @('Loading strategies')
+Assert-NotContains "member.js" @('show("loading"')
 Assert-Contains "index.html" @(
     '<a href="members.html">Login</a>',
     '<script src="/site-auth-nav.js?v=2"></script>',
