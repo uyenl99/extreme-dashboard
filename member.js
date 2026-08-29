@@ -25,7 +25,7 @@
       $("member-login-slot").append(loginLink);
     }
     if (loginLink) loginLink.hidden = visible;
-    $("member-home-link").href = visible ? MEMBER_DIRECTORY_URL : "index.html";
+    $("member-home-link").href = "index.html";
     $("member-strategies-link").href = visible ? MEMBER_DIRECTORY_URL : "strategies.html";
     $("member-home-link").textContent = "Home";
   }
@@ -147,32 +147,6 @@
     const documentReplaced = await renderMemberView(null);
     if (!documentReplaced) show("strategies-home");
   }
-
-  async function openMemberStrategy(strategy) {
-    const destination = new URL("members.html", location.href);
-    destination.searchParams.set("strategy", strategy);
-    history.pushState(null, "", destination.pathname + destination.search);
-    try {
-      const documentReplaced = await renderMemberView(null);
-      if (documentReplaced) return;
-      show("strategies-home");
-      window.scrollTo({ top: 0, behavior: "auto" });
-    } catch (error) {
-      history.replaceState(null, "", MEMBER_DIRECTORY_URL);
-      show("strategies-home");
-      show("strategy-directory");
-      show("strategy-detail", false);
-      alert(error.message || "Member strategy page is temporarily unavailable.");
-    }
-  }
-
-  document.querySelectorAll(".home-btn[href*='strategy=']").forEach((link) => {
-    link.addEventListener("click", (event) => {
-      event.preventDefault();
-      const strategy = new URL(link.href, location.href).searchParams.get("strategy");
-      if (strategy) openMemberStrategy(strategy);
-    });
-  });
 
   $("login-form").addEventListener("submit", async (event) => {
     event.preventDefault(); const button = event.submitter; button.disabled = true;
