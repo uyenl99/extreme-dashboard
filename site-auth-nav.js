@@ -100,11 +100,7 @@
     }
   }
 
-  function renderAuthenticatedNavigation() {
-    if (!readSession()) return;
-    const nav = document.querySelector("nav.site-nav, body > nav:first-of-type");
-    if (!nav) return;
-
+  function renderAuthenticatedNavigation(nav) {
     const homeLink = findLink(nav, "Home");
     const strategiesLink = findLink(nav, "Strategies");
     if (homeLink) homeLink.href = MEMBER_DIRECTORY_URL;
@@ -143,10 +139,40 @@
     }
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  let navigationObserver;
+  let navigationApplied = false;
+
+  function applyNavigationWhenReady() {
+    if (navigationApplied) return true;
+    const nav = document.querySelector("nav.site-nav, body > nav:first-of-type");
+    if (!nav) return false;
+
+    // Wait until the parser has completed the menu. Otherwise the observer can
+    // run after <nav> opens but before the Login/About/Contact links exist.
+    if (!["Home", "Strategies", "About", "Contact"].every((label) => findLink(nav, label))) {
+      return false;
+    }
+
     try {
-      renderAuthenticatedNavigation();
+      if (readSession()) renderAuthenticatedNavigation(nav);
     } finally {
+      navigationApplied = true;
+      root.classList.remove("auth-nav-pending");
+      navigationObserver?.disconnect();
+    }
+    return true;
+  }
+
+  // This observer runs as soon as the parser creates the complete navigation,
+  // before large charts and tables finish parsing and before the first paint.
+  navigationObserver = new MutationObserver(() => applyNavigationWhenReady());
+  navigationObserver.observe(root, { childList: true, subtree: true });
+  applyNavigationWhenReady();
+
+  // Fallback for malformed or future pages without the standard menu.
+  document.addEventListener("DOMContentLoaded", () => {
+    if (!applyNavigationWhenReady()) {
+      navigationObserver.disconnect();
       root.classList.remove("auth-nav-pending");
     }
   }, { once: true });
