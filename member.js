@@ -5,7 +5,7 @@
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const date = (value) => value ? new Date(value).toLocaleString() : "—";
   const money = (value) => value == null ? "—" : Number(value).toLocaleString(undefined, { style: "currency", currency: "USD" });
-  const MEMBER_DIRECTORY_URL = "members.html?view=strategies&nav=12";
+  const MEMBER_DIRECTORY_URL = "members.html?view=strategies&nav=13";
 
   function saveSession(session) {
     state.session = session;
