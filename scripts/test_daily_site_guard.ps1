@@ -121,7 +121,7 @@ Assert-Contains "members.html" @(
     'members.html?strategy=momentum-stocks',
     'members.html?strategy=mean-reversion',
     'id="nav-signout-button"',
-    '<script src="member.js?v=home15" defer></script>',
+    '<script src="member.js?v=home16" defer></script>',
     '<a href="risk-disclosure.html">Risk Disclosure</a>',
     '<a href="hypothetical-performance.html">Hypothetical Performance Disclosure</a>'
 )
@@ -132,7 +132,9 @@ Assert-Contains "member.js" @(
     'showMemberNavigation(true)',
     'showMemberNavigationPending()',
     '$("member-home-link").href = "index.html"',
-    '$("member-strategies-link").href = visible ? MEMBER_DIRECTORY_URL : "strategies.html"'
+    '$("member-strategies-link").href = visible ? MEMBER_DIRECTORY_URL : "strategies.html"',
+    'recover?redirect_to=${encodeURIComponent(redirectTo)}',
+    'This password-reset link is invalid or expired. Request a new one.'
 )
 Assert-Contains "site-auth-nav.js" @(
     'const SESSION_KEY = "eti_member_session"',
@@ -158,6 +160,7 @@ Assert-NotContains "member.js" @('history.pushState')
 Assert-NotContains "member.js" @('openMemberStrategy')
 Assert-Contains "index.html" @(
     '<a href="members.html">Login</a>',
+    'location.replace("/members.html"+location.hash)',
     '<script src="/site-auth-nav.js?v=3"></script>',
     '<h1>Two decades of trading experience. A new generation of systematic research.</h1>',
     '<a class="button secondary" href="extreme-os.html">Review the Extreme OS record</a>',
