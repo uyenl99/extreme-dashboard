@@ -5,6 +5,7 @@ from pathlib import Path
 
 from strategy_faq import FAQ_CSS, render_faq
 from metric_style import metric_class
+from strategy_card import update_member_live_card
 
 PUBLIC_DELAY_HOURS = 96
 RECENT_TRADE_LIMIT = 20
@@ -684,6 +685,18 @@ def generate_strategy_member_page(
     print(f"Generated {output_file}")
 
 
+def update_extreme_os_member_card():
+    summary = json.loads(Path("data/performance_summary.json").read_text(encoding="utf-8"))
+    update_member_live_card(
+        Path("members.html"),
+        "Extreme OS",
+        summary.get("annual_return", "N/A"),
+        summary.get("sharpe_ratio", "N/A"),
+        summary.get("max_drawdown", "N/A"),
+        summary.get("max_drawdown_since_2013", "N/A"),
+    )
+
+
 # ============================================================
 # MEMBERS DASHBOARD
 # ============================================================
@@ -817,6 +830,7 @@ if args.extreme_os_only:
         "api/_member-content/extreme-os.html",
         "#",
     )
+    update_extreme_os_member_card()
     print("Done.")
     raise SystemExit(0)
 
@@ -848,5 +862,6 @@ generate_strategy_member_page(
     "api/_member-content/extreme-os.html",
     "#",
 )
+update_extreme_os_member_card()
 
 print("Done.")

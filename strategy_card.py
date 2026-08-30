@@ -48,3 +48,23 @@ def update_member_backtest_card(
         "</p>"
     )
     _update_card_stats(path, title, "home-stats", stats)
+
+
+def update_member_live_card(
+    path: Path,
+    title: str,
+    cagr: str,
+    sharpe: str,
+    max_drawdown: str,
+    max_drawdown_since_2013: str,
+):
+    """Keep the authenticated live-strategy directory card synchronized."""
+    stats = (
+        '<p class="home-stats">'
+        f'<span class="positive">{cagr} CAGR</span>'
+        f'<span class="positive">{sharpe} Sharpe Ratio</span>'
+        f'<span class="negative">{max_drawdown} Max DD</span>'
+        f'<span class="negative">{max_drawdown_since_2013} Max DD Since 2013</span>'
+        "</p>"
+    )
+    _update_card_stats(path, title, "home-stats", stats)
