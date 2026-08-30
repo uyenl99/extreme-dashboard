@@ -1,4 +1,14 @@
 (() => {
+  window.va = window.va || function () {
+    (window.vaq = window.vaq || []).push(arguments);
+  };
+  if (!document.querySelector('script[src="/_vercel/insights/script.js"]')) {
+    const analyticsScript = document.createElement("script");
+    analyticsScript.defer = true;
+    analyticsScript.src = "/_vercel/insights/script.js";
+    document.head.appendChild(analyticsScript);
+  }
+
   const SESSION_KEY = "eti_member_session";
   const MEMBER_DIRECTORY_URL = "/members.html?view=strategies&nav=13";
   const root = document.documentElement;
