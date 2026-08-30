@@ -490,7 +490,7 @@ def page_template(title, body):
 <style>
 {CSS}
 </style>
-<script src="/site-auth-nav.js?v=4"></script>
+<script src="/site-auth-nav.js?v=5"></script>
 </head>
 
 <body>
