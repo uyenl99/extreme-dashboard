@@ -9,6 +9,28 @@
     document.head.appendChild(analyticsScript);
   }
 
+  const ga4Hosts = new Set(["extremetradinginc.com", "www.extremetradinginc.com"]);
+  if (ga4Hosts.has(window.location.hostname)) {
+    const ga4Id = "G-H3TCFHTVRV";
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () {
+      window.dataLayer.push(arguments);
+    };
+
+    if (!document.querySelector(`script[src*="googletagmanager.com/gtag/js?id=${ga4Id}"]`)) {
+      const ga4Script = document.createElement("script");
+      ga4Script.async = true;
+      ga4Script.src = `https://www.googletagmanager.com/gtag/js?id=${ga4Id}`;
+      document.head.appendChild(ga4Script);
+    }
+
+    if (!window.__etiGa4Configured) {
+      window.gtag("js", new Date());
+      window.gtag("config", ga4Id);
+      window.__etiGa4Configured = true;
+    }
+  }
+
   const SESSION_KEY = "eti_member_session";
   const MEMBER_DIRECTORY_URL = "/members.html?view=strategies&nav=13";
   const root = document.documentElement;
