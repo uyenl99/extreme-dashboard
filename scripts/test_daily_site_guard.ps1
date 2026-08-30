@@ -161,7 +161,7 @@ Assert-NotContains "member.js" @('openMemberStrategy')
 Assert-Contains "index.html" @(
     '<a href="members.html">Login</a>',
     'location.replace("/members.html"+location.hash)',
-    '<script src="/site-auth-nav.js?v=3"></script>',
+    '<script src="/site-auth-nav.js?v=4"></script>',
     '<h1>Two decades of trading experience. A new generation of systematic research.</h1>',
     '<a class="button secondary" href="extreme-os.html">Review the Extreme OS record</a>',
     '<small>THE NEW RESEARCH PRIORITY</small>',
@@ -171,7 +171,7 @@ Assert-Contains "index.html" @(
 )
 Assert-Contains "strategies.html" @(
     '<a href="members.html">Login</a>',
-    '<script src="/site-auth-nav.js?v=3"></script>',
+    '<script src="/site-auth-nav.js?v=4"></script>',
     '<h1>Trading Strategies</h1>',
     '<h2>Extreme OS</h2>',
     '<h2>MoMoEtf1</h2>',
@@ -194,7 +194,7 @@ foreach ($publicPage in @(
     "subscribe.html",
     "terms.html"
 )) {
-    Assert-Contains $publicPage @('<script src="/site-auth-nav.js?v=3"></script>')
+    Assert-Contains $publicPage @('<script src="/site-auth-nav.js?v=4"></script>')
 }
 foreach ($memberPage in @(
     "api/_member-content/extreme-os.html",
@@ -203,7 +203,7 @@ foreach ($memberPage in @(
     "api/_member-content/momentum2.html",
     "api/_member-content/momentum-stocks.html"
 )) {
-    Assert-Contains $memberPage @('<script src="/site-auth-nav.js?v=3"></script>')
+    Assert-Contains $memberPage @('<script src="/site-auth-nav.js?v=4"></script>')
 }
 foreach ($memberPage in @(
     "api/_member-content/momentum.html",
@@ -211,7 +211,7 @@ foreach ($memberPage in @(
     "api/_member-content/momentum-stocks.html"
 )) {
     Assert-Contains $memberPage @(
-        '<script src="/site-auth-nav.js?v=3"></script>',
+        '<script src="/site-auth-nav.js?v=4"></script>',
         'metric-value positive',
         'metric-value negative'
     )
