@@ -43,10 +43,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "$PREVIEW_BRANCH"
-          if git diff --quiet -- data/performance_summary.json performance-details.html extreme-os.html api/_member-content/extreme-os.html; then
+          if git diff --quiet -- data/performance_summary.json performance-details.html extreme-os.html members.html api/_member-content/extreme-os.html; then
             echo "Collective2 files are current; creating the shared branch from main."
           else
-            git add data/performance_summary.json performance-details.html extreme-os.html api/_member-content/extreme-os.html
+            git add data/performance_summary.json performance-details.html extreme-os.html members.html api/_member-content/extreme-os.html
             git commit -m "Stage Collective2 daily update"
           fi
           git push --force-with-lease -u origin "$PREVIEW_BRANCH"

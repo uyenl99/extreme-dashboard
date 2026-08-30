@@ -170,6 +170,23 @@ annual_return = ((current_equity / start_equity) ** (1 / elapsed_years) - 1) * 1
 running_peak = df["EquityWithCosts"].cummax()
 max_drawdown = ((df["EquityWithCosts"] / running_peak) - 1).min() * 100
 
+daily_returns = pd.to_numeric(df["EquityWithCosts"], errors="coerce").pct_change(fill_method=None).dropna()
+daily_volatility = daily_returns.std(ddof=1)
+sharpe_ratio = (
+    (daily_returns.mean() / daily_volatility) * (252 ** 0.5)
+    if len(daily_returns) > 1 and pd.notna(daily_volatility) and daily_volatility > 0
+    else 0.0
+)
+
+equity_since_2013 = df.loc[
+    df["Date"] >= pd.Timestamp("2013-01-01"),
+    "EquityWithCosts",
+]
+if equity_since_2013.empty:
+    raise RuntimeError("Collective2 equity history does not include 2013 or later")
+peak_since_2013 = equity_since_2013.cummax()
+max_drawdown_since_2013 = ((equity_since_2013 / peak_since_2013) - 1).min() * 100
+
 start_date = df["Date"].min().strftime("%Y-%m-%d")
 last_date = df["Date"].max().strftime("%Y-%m-%d")
 
@@ -594,7 +611,9 @@ Path("data/performance_summary.json").write_text(
         "current_equity": f"${current_equity:,.0f}",
         "total_return": f"{total_return:.1f}%",
         "annual_return": f"{annual_return:.1f}%",
+        "sharpe_ratio": f"{sharpe_ratio:.2f}",
         "max_drawdown": f"{max_drawdown:.1f}%",
+        "max_drawdown_since_2013": f"{max_drawdown_since_2013:.1f}%",
         "number_of_trades": f"{number_of_trades:,}",
         "win_trades_pct": f"{win_trades_pct:.1f}%",
         "start_date": str(start_date),
