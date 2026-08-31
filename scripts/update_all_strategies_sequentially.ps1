@@ -133,6 +133,31 @@ function Wait-ForRun([string]$RunId) {
     throw "Timed out waiting for Collective2 workflow."
 }
 
+function Wait-ForVercelCheckRegistration([string]$PullRequestUrl) {
+    for ($attempt = 1; $attempt -le 60; $attempt++) {
+        $savedPreference = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        $json = & $gh pr view $PullRequestUrl --repo $repo --json statusCheckRollup 2>$null
+        $exitCode = $LASTEXITCODE
+        $ErrorActionPreference = $savedPreference
+        if ($exitCode -eq 0) {
+            $state = $json | ConvertFrom-Json
+            $vercelChecks = @($state.statusCheckRollup | Where-Object {
+                $_.context -eq "Vercel" -or $_.name -eq "Vercel"
+            })
+            if ($vercelChecks.Count -gt 0) {
+                Write-Host "Vercel preview check registered."
+                return
+            }
+        }
+        if ($attempt -eq 1 -or $attempt % 6 -eq 0) {
+            Write-Host "Waiting for Vercel preview check registration (attempt $attempt of 60)..."
+        }
+        Start-Sleep -Seconds 5
+    }
+    throw "Timed out waiting for the Vercel preview check to register: $PullRequestUrl"
+}
+
 Write-RunStatus -Status "Running" -Stage $currentStage -Message "Daily strategy batch started." -PullRequestUrl $null
 Start-Transcript -Path $log -Append
 try {
@@ -218,9 +243,10 @@ try {
         if ($LASTEXITCODE -eq 0) { $prUrl = "$created".Trim() } else { Start-Sleep -Seconds 10 }
     }
     if (-not $prUrl) { throw "All jobs finished, but the shared PR could not be created." }
-    Set-RunStage -Name "Wait for preview checks" -Message "Preview PR created; waiting for required checks."
+    Set-RunStage -Name "Wait for preview checks" -Message "Preview PR created; waiting for Vercel check registration and completion."
     & $gh pr ready $prUrl --repo $repo
     if ($LASTEXITCODE -ne 0) { throw "Could not mark the daily update PR ready: $prUrl" }
+    Wait-ForVercelCheckRegistration $prUrl
     & $gh pr checks $prUrl --repo $repo --watch --interval 10 --fail-fast
     if ($LASTEXITCODE -ne 0) { throw "Daily update preview checks failed; production was not changed: $prUrl" }
     Set-RunStage -Name "Merge daily update" -Message "Preview checks passed; validating and merging the daily update."
