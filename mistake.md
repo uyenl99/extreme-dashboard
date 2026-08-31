@@ -93,6 +93,13 @@ This file records automation failures so they are not repeated. A calculation is
 - Fix: Define the bundled Python executable explicitly and validate it with every other required dependency before starting the batch.
 - Prevention: Preflight all executables and helper scripts before dispatching any expensive calculation, and exercise new native-command invocations under Windows PowerShell 5.1.
 
+## 2026-08-31 — Vercel check registration race
+
+- Impact: All five strategy jobs completed and PR #100 was valid, but the runner stopped before merging, so production was not updated automatically.
+- Cause: The runner invoked `gh pr checks --watch` immediately after creating the PR. GitHub had not registered any Vercel check yet, so the command returned failure. The Vercel check appeared and passed six seconds later.
+- Fix: Poll the PR check rollup until the actual `Vercel` check is registered, with a five-minute bound, before starting the existing pass/fail watch.
+- Prevention: Treat an empty check rollup as pending registration, not failure, and wait for the required deployment check by name rather than accepting any first-arriving check.
+
 ## Required release checklist
 
 1. Test with the exact Task Scheduler user, environment, executable, and PowerShell version.
