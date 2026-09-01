@@ -185,7 +185,7 @@ try {
         & $git -C $webRoot checkout -B $previewBranch "origin/$previewBranch"
         if ($LASTEXITCODE -ne 0) { throw "Could not check out the shared preview branch." }
     }
-    Invoke-Stage "Mean Reversion 5x5 next-day MOO backtest" {
+    Invoke-Stage "Mean Reversion 5x5 walk-forward next-day MOO backtest" {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $meanReversionUpdate -NoPublish -TargetCheckout $webRoot
     }
     Invoke-Stage "Momentum ETF1, ETF2, and SP" {
@@ -244,7 +244,7 @@ try {
 
     Set-RunStage -Name "Create preview PR"
     for ($attempt = 1; $attempt -le 12 -and -not $prUrl; $attempt++) {
-        $created = & $gh pr create --repo $repo --draft --base main --head $previewBranch --title "Daily strategy batch update" --body "All five daily jobs completed: Collective2, Mean Reversion 5x5 next-day MOO backtest, Momentum ETF1, Momentum ETF2, and Momentum SP. This PR is published automatically only after the Vercel preview check passes." 2>&1
+        $created = & $gh pr create --repo $repo --draft --base main --head $previewBranch --title "Daily strategy batch update" --body "All five daily jobs completed: Collective2, Mean Reversion 5x5 walk-forward next-day MOO backtest, Momentum ETF1, Momentum ETF2, and Momentum SP. This PR is published automatically only after the Vercel preview check passes." 2>&1
         if ($LASTEXITCODE -eq 0) { $prUrl = "$created".Trim() } else { Start-Sleep -Seconds 10 }
     }
     if (-not $prUrl) { throw "All jobs finished, but the shared PR could not be created." }

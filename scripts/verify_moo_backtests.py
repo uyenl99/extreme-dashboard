@@ -138,13 +138,39 @@ def verify_momo_sp() -> int:
 
 
 def verify_mean_reversion() -> int:
-    output = MEAN_REVERSION / "output_long_short_5x5_next_open"
+    output = MEAN_REVERSION / "output_long_short_5x5_walk_forward_next_open"
     signals = pd.read_csv(output / "all_signals.csv", parse_dates=["date", "signal_date"])
     trades = pd.read_csv(output / "trades.csv", parse_dates=["entry_date", "exit_date"])
+    selections = pd.read_csv(output / "cluster_walk_forward_selection.csv")
     if not np.allclose(signals["trade_close"], signals["open"], rtol=0, atol=TOLERANCE):
         raise AssertionError("Mean Reversion trade_close differs from the daily open")
     if not (signals["signal_date"] < signals["date"]).all():
         raise AssertionError("Mean Reversion contains a signal that was not shifted to a later session")
+    for row in selections.itertuples(index=False):
+        expected_end = f"{int(row.selection_year) - 1}-12-31"
+        if row.training_end != expected_end:
+            raise AssertionError(
+                f"Mean Reversion selection {row.selection_year} used {row.training_end}, expected {expected_end}"
+            )
+        year_rows = signals[signals["date"].dt.year == int(row.selection_year)]
+        actual = set(
+            zip(
+                year_rows["cluster_lookback_days"].astype(int),
+                year_rows["cluster_threshold"].astype(float),
+                year_rows["max_per_cluster"].astype(int),
+            )
+        )
+        expected = {
+            (
+                int(row.cluster_lookback_days),
+                float(row.cluster_threshold),
+                int(row.max_per_cluster),
+            )
+        }
+        if actual != expected:
+            raise AssertionError(
+                f"Mean Reversion execution year {row.selection_year} uses {actual}, expected {expected}"
+            )
     lookup = signals.set_index(["date", "ticker"])["open"]
     for row in trades.itertuples(index=False):
         if abs(float(row.entry_price) - float(lookup.at[(row.entry_date, row.ticker)])) > TOLERANCE:

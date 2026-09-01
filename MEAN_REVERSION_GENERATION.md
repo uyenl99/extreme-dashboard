@@ -10,7 +10,7 @@ website output, and known backtest limitations.
 The production Mean Reversion backtest is calculated by:
 
 ```powershell
-C:\junk\stocks\RevMurphy\main_long_short_next_open.py
+C:\junk\stocks\RevMurphy\main_long_short_walk_forward.py
 ```
 
 The Web repository runs it through:
@@ -45,9 +45,9 @@ checked, and merged.
 The scheduled updater currently runs the equivalent of:
 
 ```powershell
-python main_long_short_next_open.py `
+python main_long_short_walk_forward.py `
   --end YYYY-MM-DD `
-  --output-dir C:\junk\stocks\RevMurphy\output_long_short_5x5_next_open `
+  --output-dir C:\junk\stocks\RevMurphy\output_long_short_5x5_walk_forward_next_open `
   --no-force-final-exit `
   --max-tickers 0 `
   --long-positions 5 `
@@ -61,9 +61,9 @@ Parameters not shown in that command retain these current defaults:
 | Long position limit | 5 |
 | Short position limit | 5 |
 | Total short-book target | 20% of strategy equity |
-| Maximum positions per correlation cluster | 1 |
-| Correlation lookback | 126 trading days |
-| Absolute-correlation threshold | 0.70 |
+| Maximum positions per correlation cluster | Selected annually from 1 or 2 |
+| Correlation lookback | Selected annually from 60, 126, or 252 trading days |
+| Absolute-correlation threshold | Selected annually from 0.60, 0.70, 0.80, or 0.90 |
 | Minimum overlapping observations | 60 trading days |
 | Volume filter | Off |
 | CVaR filter | Off |
@@ -84,20 +84,24 @@ The Mean Reversion portion of the daily batch is:
 4. Calculate completed-bar indicators and long/short signals for every ticker.
 5. Build monthly point-in-time correlation clusters using only data available
    before each applicable month.
-6. Shift each completed daily-bar signal to the next trading session.
-7. Simulate entries and exits at that next session's opening price.
-8. Preserve positions that remain open on the final results date.
-9. Write trades, equity, benchmark, return, summary, and cluster files.
-10. Generate separate public and protected member Mean Reversion pages.
-11. Include the completed pages in the shared daily strategy pull request.
-12. Run the publication guard and Vercel preview checks before merging.
+6. Evaluate cluster candidates with next-session MOO fills and select each
+   calendar year's parameters using executions ending no later than the prior
+   December 31.
+7. Shift each completed daily-bar signal to the next trading session.
+8. Simulate entries and exits at that next session's opening price.
+9. Preserve positions that remain open on the final results date.
+10. Write trades, equity, benchmark, return, summary, and cluster files.
+11. Generate separate public and protected member Mean Reversion pages.
+12. Include the completed pages in the shared daily strategy pull request.
+13. Run the publication guard and Vercel preview checks before merging.
 
 ## Main Scripts
 
-### `main_long_short_next_open.py`
+### `main_long_short_walk_forward.py`
 
 This is the production backtest entry point. It selects the universe, loads
-daily data, creates signals, applies point-in-time correlation clusters, shifts
+daily data, creates signals, constructs point-in-time cluster candidates,
+selects each execution year's configuration from prior years only, shifts
 signals to the next open, runs the long/short portfolio simulation, and writes
 the output files.
 
@@ -284,20 +288,21 @@ The production configuration allows up to five long and five short positions.
 
 At each entry decision:
 
-- each long target is one-fifth of current strategy equity, approximately 20%;
+- the long book targets 80% of strategy equity, so each of five long slots
+  targets approximately 16%;
 - the entire short book targets 20% of current strategy equity; and
 - each of five short slots therefore targets approximately 4% of equity.
 
 If all slots are filled, the intended gross exposure is approximately:
 
 ```text
-100% long + 20% short = 120% gross exposure
+80% long + 20% short = 100% gross exposure
 ```
 
 and intended net exposure is approximately:
 
 ```text
-100% long - 20% short = 80% net long
+80% long - 20% short = 60% net long
 ```
 
 Actual exposure can be lower when too few candidates qualify, positions exit,
@@ -306,20 +311,22 @@ entry.
 
 ## Correlation Clusters
 
-The model limits the combined long and short portfolio to one open position per
-correlation cluster.
+The model selects a cap of one or two combined long/short positions per
+correlation cluster independently for each execution year.
 
 For each calendar month, the cluster map:
 
 1. uses daily returns strictly before the first day of that month;
-2. uses the most recent 126 trading days;
+2. uses the annually selected 60, 126, or 252 trading-day lookback;
 3. requires at least 60 overlapping observations;
 4. uses absolute return correlation; and
-5. links stocks when correlation is at least 0.70.
+5. links stocks using the annually selected 0.60, 0.70, 0.80, or 0.90 threshold.
 
 The point-in-time monthly maps prevent the backtest from using future
-correlations to decide which historical trades were allowed. The maps are
-saved in `ticker_clusters.csv` with their effective month.
+correlations to decide which historical trades were allowed. Parameter
+selection is expanding walk-forward: the configuration applied to a year is
+ranked only on results through the preceding December 31. The chosen annual
+parameters and all candidate scores are saved with the output.
 
 ## Optional Filters
 
@@ -363,7 +370,7 @@ refreshed backtest; it is not a separate intraday alert feed.
 Production results are written under:
 
 ```text
-C:\junk\stocks\RevMurphy\output_long_short_5x5_next_open
+C:\junk\stocks\RevMurphy\output_long_short_5x5_walk_forward_next_open
 ```
 
 Important files include:
@@ -382,7 +389,9 @@ Important files include:
 - `yearly_returns.csv`: completed strategy return by year.
 - `summary_stats.csv`: trade count, win rate, average trade return, CAGR,
   drawdown, volatility, Sharpe ratio, and final equity.
-- `ticker_clusters.csv`: point-in-time monthly correlation-cluster history.
+- `cluster_walk_forward_selection.csv`: the prior-only configuration chosen for
+  each execution year.
+- `cluster_walk_forward_scores.csv`: every candidate's training-period score.
 - `equity_plot.png`: strategy, benchmarks, and drawdown plot written by the
   backtest.
 
@@ -436,8 +445,9 @@ The current index universe is a static snapshot rather than point-in-time S&P
 500 and Nasdaq-100 membership. Historical results can therefore contain
 survivorship bias and universe-membership look-ahead bias.
 
-Correlation clusters are point-in-time and do not use future returns, but that
-does not correct the static-universe limitation.
+Correlation clusters and their annual parameter selections are point-in-time
+and do not use future returns, but that does not correct the static-universe
+limitation.
 
 The backtest also depends on vendor-adjusted historical OHLCV data. Vendor
 corrections, corporate-action adjustments, ticker changes, and missing history
@@ -458,7 +468,7 @@ Signal: after a completed daily bar
 Entry or exit: next regular market open
 Maximum positions: 5 long and 5 short
 Sizing: about 20% per long and 4% per short at entry
-Cluster cap: one combined open position per point-in-time cluster
+Cluster parameters: selected annually from prior results only
 ```
 
 The latest MOO table reports the newest simulated execution event in the
