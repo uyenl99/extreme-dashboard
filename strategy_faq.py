@@ -67,17 +67,17 @@ FAQS = {
     },
     "mean-reversion": {
         "public": [
-            ("What is Mean Reversion?", "It is a systematic long-only equity strategy designed to trade short-term price dislocations and subsequent reversals."),
+            ("What is Mean Reversion?", "It is a systematic equity strategy designed to trade temporary price dislocations and subsequent reversals."),
             ("When are signals executed in the backtest?", "Signals use completed daily bars and simulated entries and exits fill at the next market open."),
-            ("How is the model portfolio constructed?", "The model can hold up to five long positions. It uses equal target sizing of approximately 20% of strategy equity per position and does not use correlation clustering."),
+            ("How is the model portfolio constructed?", "The model can hold up to five positions. It uses equal target sizing of approximately 20% of strategy equity per position and does not use correlation clustering."),
             ("Why might there be no order on a trading day?", "No position may have met an exit rule and available portfolio slots may already be full. A new data date does not require a new trade."),
             ("What are the main risks?", "Long positions can lose money, and a five-position portfolio can be concentrated. Opening gaps, liquidity, and real fills can differ materially from a backtest."),
         ],
         "member": [
             ("What should I check first?", "Review Latest MOO Orders, then Open Positions. An empty order table means the model currently has no new order to execute."),
             ("What does MOO mean?", "Market-on-open: the model assumes execution at the next regular market open after a completed-bar signal."),
-            ("How are positions sized?", "The strategy is 100% long when all five slots are filled. Each new position targets approximately 20% of current strategy equity. Actual weights can differ as prices and total equity change after entry."),
-            ("Does the strategy use short positions or correlation clusters?", "No. This selected version is long-only and does not restrict candidates using correlation clusters."),
+            ("How are positions sized?", "The strategy is fully invested when all five slots are filled. Each new position targets approximately 20% of current strategy equity. Actual weights can differ as prices and total equity change after entry."),
+            ("Does the strategy use correlation clusters?", "No. This selected version does not restrict candidates using correlation clusters."),
             ("Why can the results date advance without a new order?", "Open positions are still marked to the latest close even when no entry or exit condition is triggered."),
             ("Can I copy the backtest exactly?", "Not necessarily. Opening prices, slippage, fees, liquidity, account size, and order timing can produce different results."),
         ],
