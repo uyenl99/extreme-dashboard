@@ -11,6 +11,7 @@ $workflow = "update-performance.yml"
 $webRoot = Split-Path -Parent $PSScriptRoot
 $meanReversionUpdate = Join-Path $webRoot "scripts\update_mean_reversion_daily.ps1"
 $momentumUpdate = Join-Path $webRoot "scripts\update_momentum_weekdays.ps1"
+$mooVerifier = Join-Path $webRoot "scripts\verify_moo_backtests.py"
 $publicationGuard = Join-Path $webRoot "scripts\test_daily_site_guard.ps1"
 $logRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\logs"
 $statusRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
@@ -30,6 +31,7 @@ foreach ($requiredPath in @(
     $python,
     $meanReversionUpdate,
     $momentumUpdate,
+    $mooVerifier,
     $publicationGuard,
     (Join-Path $webRoot "inject_position_calculator.py")
 )) {
@@ -188,6 +190,9 @@ try {
     }
     Invoke-Stage "Momentum ETF1, ETF2, and SP" {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $momentumUpdate -NoPublish
+    }
+    Invoke-Stage "Verify all backtests use MOO prices" {
+        & $python $mooVerifier
     }
 
     Set-RunStage -Name "Prepare generated site files"

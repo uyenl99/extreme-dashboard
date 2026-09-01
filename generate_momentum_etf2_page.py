@@ -1,5 +1,6 @@
 import argparse
 import html
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -106,12 +107,14 @@ def allocation_history(monthly_backtest, limit=20):
     return display.sort_index(ascending=False).head(limit).reset_index(drop=True)
 
 
-def current_month_panel(monthly_backtest, daily):
+def current_month_panel(daily, alert):
     latest_day = pd.to_datetime(daily.index).max()
     current_period = latest_day.to_period("M")
-    row = monthly_backtest.loc[str(current_period)]
-    holding = str(row["held"])
-    month_return = float(row["strategy_return"])
+    current_days = daily.loc[pd.PeriodIndex(daily.index, freq="M") == current_period]
+    start_wealth = float(current_days["strategy_wealth"].iloc[0])
+    end_wealth = float(current_days["strategy_wealth"].iloc[-1])
+    month_return = end_wealth / start_wealth - 1
+    holding = str(alert["current_holding"])
     return_class = "positive" if month_return > 0 else "negative" if month_return < 0 else "muted"
     return (
         '<section class="panel" id="current-month"><h2>Current Partial Month</h2>'
@@ -124,18 +127,13 @@ def current_month_panel(monthly_backtest, daily):
     )
 
 
-def latest_alert_table(monthly_backtest, daily):
+def latest_alert_table(daily, alert):
     latest_day = pd.to_datetime(daily.index).max()
-    signals = monthly_backtest.copy()
-    signals.index = pd.PeriodIndex(signals.index.astype(str), freq="M")
-    signal_month = latest_day.to_period("M")
-    row = signals.loc[signal_month]
-    previous_holding = signals["signal_holding"].shift(1).loc[signal_month]
     frame = pd.DataFrame([{
-        "Signal": str(signal_month),
-        "Holding": row["signal_holding"],
-        "Execution": f"{signal_month + 1} open",
-        "Changed": "Yes" if row["signal_holding"] != previous_holding else "No",
+        "Signal": str(alert["signal_month_end"]),
+        "Holding": alert["next_holding"],
+        "Execution": f'{alert["effective_month"]} open',
+        "Changed": "Yes" if bool(alert["allocation_changed"]) else "No",
         "Status": f"Preliminary through {latest_day:%Y-%m-%d}",
     }])
     return table(frame)
@@ -146,6 +144,7 @@ def render(source, audience, chart_src):
     monthly = pd.read_csv(source / "monthly_pnl_by_year.csv")
     monthly_backtest = pd.read_csv(source / "monthly_backtest.csv", index_col=0)
     daily = pd.read_csv(source / "daily_drawdown.csv", index_col=0, parse_dates=True)
+    alert = json.loads((source / "latest_alert.json").read_text(encoding="utf-8"))
     strategy = summary.iloc[:, 0]
     spy = summary.iloc[:, 1]
     start_equity = 100000.0
@@ -170,10 +169,10 @@ def render(source, audience, chart_src):
     if audience == "member":
         allocations = allocation_history(monthly_backtest)
         protected = (
-            current_month_panel(monthly_backtest, daily)
+            current_month_panel(daily, alert)
             + '<section class="panel enlarged-table"><h2>Latest Alert</h2>'
             + '<p class="subtle">The current-month signal is preliminary until month end and may change before execution.</p>'
-            + latest_alert_table(monthly_backtest, daily)
+            + latest_alert_table(daily, alert)
             + '</section>'
             + '<section class="panel enlarged-table"><h2>Latest 20 Historical Trades</h2>'
             + table(allocations, ("Return", "SPY"))
