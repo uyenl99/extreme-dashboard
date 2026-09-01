@@ -100,6 +100,20 @@ This file records automation failures so they are not repeated. A calculation is
 - Fix: Poll the PR check rollup until the actual `Vercel` check is registered, with a five-minute bound, before starting the existing pass/fail watch.
 - Prevention: Treat an empty check rollup as pending registration, not failure, and wait for the required deployment check by name rather than accepting any first-arriving check.
 
+## 2026-08-31 — Momentum backtests labeled closes as MOO prices
+
+- Impact: Momentum ETF1, Momentum ETF2, and Momentum Stocks advertised first-session MOO execution while their published historical returns were calculated from closes. Momentum Stocks also admitted non-SPY calendar dates, including the 2024 Labor Day market holiday, and eight output periods contained missing returns.
+- Cause: ETF1 named the first daily close `monthly_open`; ETF2 used month-end adjusted-close returns; Momentum Stocks selected next-session dates from a union calendar and passed its close-only matrix into execution calculations.
+- Fix: Backfilled adjusted daily opens for ETF1, derived adjusted opens for ETF2, loaded the existing Massive/Polygon open fields for Momentum Stocks, restricted stock execution dates to the SPY trading calendar, required complete opening prices for selected holdings, and reran all four backtests. Mean Reversion was confirmed already using next-session opens.
+- Prevention: The shared daily batch now runs `scripts/verify_moo_backtests.py` before publication. It independently reconciles every monthly return and every Mean Reversion trade against source opening prices and fails the batch on a mismatch, missing return, same-day signal, or close-price fallback.
+
+## 2026-08-31 — ETF2 and Momentum Stocks charts stopped at the last completed rebalance
+
+- Impact: Both plots ended on August 3 even though current prices and alerts were available through August 31.
+- Cause: Their daily equity files intentionally contained only completed open-to-open periods. ETF2 did not append the open-to-current-close partial month, and the Momentum Stocks month-end preview lost the active August allocation when the new September signal replaced the completed July signal.
+- Fix: Append a separate partial-month mark from the active portfolio's MOO entry to the latest close, keep the next-month alert separate, and derive the active Momentum Stocks signal independently from the last executable membership date.
+- Prevention: The MOO verifier now checks that both public and protected member Plotly payloads end on the same date as their latest current-price mark.
+
 ## Required release checklist
 
 1. Test with the exact Task Scheduler user, environment, executable, and PowerShell version.

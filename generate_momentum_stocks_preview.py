@@ -24,13 +24,20 @@ def main():
     import update_v2a_live as live
 
     signal_path = root / "output_pit_v2a_live" / "latest_signal.json"
-    completed = json.loads(signal_path.read_text(encoding="utf-8"))
     membership = pd.read_csv(live.MEMBERSHIP_FILE, parse_dates=["date"])
     membership_date = membership["date"].max().normalize()
     latest_date = live.latest_completed_price_date()
-    members = sorted(
-        membership.loc[membership["date"].eq(membership_date), "ticker"].unique()
-    )
+    signal_dates = sorted(pd.Timestamp(value).normalize() for value in membership["date"].unique())
+    executable_dates = [
+        signal_date for signal_date in signal_dates
+        if pd.bdate_range(signal_date + pd.Timedelta(days=1), periods=1)[0] <= latest_date
+    ]
+    if not executable_dates:
+        raise RuntimeError("No completed signal has an executable MOO session")
+    current_signal_date = executable_dates[-1]
+    members = sorted(membership.loc[
+        membership["date"].isin([membership_date, current_signal_date]), "ticker"
+    ].unique())
 
     clean_prices, clean_audit = live.clean_live_prices(members, latest_date)
     momentum = clean_prices.pct_change(live.v2a.pit_v2.LOOKBACK_DAYS).iloc[-1]
@@ -53,11 +60,28 @@ def main():
     execution_date = pd.bdate_range(next_month, periods=1)[0]
     preview["execution_date"] = f"{execution_date:%Y-%m-%d}"
     preview["preliminary"] = True
-    current_holdings = completed.get("holdings") or [completed.get("defensive_holding")]
+    current_membership = membership.loc[
+        membership["date"].eq(current_signal_date)
+    ].copy()
+    current_signal = live.live_signal(
+        clean_prices,
+        current_membership,
+        cap_data,
+        current_signal_date,
+        latest_date,
+    )
+    current_holdings = current_signal.get("holdings") or [current_signal.get("defensive_holding")]
     current_holdings = [ticker for ticker in current_holdings if ticker]
-    requested_entry = pd.Timestamp(completed.get("execution_date"))
-    price_dates = clean_prices.index[
-        (clean_prices.index >= requested_entry) & (clean_prices.index <= latest_date)
+    current_closes, current_opens, _ = live.v2a.pit_v2.load_price_frames(current_holdings)
+    price_dates = current_closes.index[
+        (current_closes.index > current_signal_date)
+        & (current_closes.index <= latest_date)
+    ]
+    requested_entry = pd.bdate_range(
+        current_signal_date + pd.Timedelta(days=1), periods=1
+    )[0]
+    price_dates = price_dates[
+        (price_dates >= requested_entry) & (price_dates <= latest_date)
     ]
     if price_dates.empty:
         raise RuntimeError(
@@ -66,15 +90,18 @@ def main():
         )
     entry_date = price_dates[0]
     current_price_date = price_dates[-1]
-    missing_holdings = [ticker for ticker in current_holdings if ticker not in clean_prices]
+    missing_holdings = [
+        ticker for ticker in current_holdings
+        if ticker not in current_closes or ticker not in current_opens
+    ]
     if missing_holdings:
         raise RuntimeError(
             "Current allocation is missing price history for: "
             + ", ".join(missing_holdings)
         )
     holding_returns = (
-        clean_prices.loc[current_price_date, current_holdings]
-        / clean_prices.loc[entry_date, current_holdings]
+        current_closes.loc[current_price_date, current_holdings]
+        / current_opens.loc[entry_date, current_holdings]
         - 1
     )
     if holding_returns.isna().any():
@@ -82,17 +109,19 @@ def main():
         raise RuntimeError(
             "Current allocation cannot be marked for: " + ", ".join(missing_returns)
         )
-    spy = live.yahoo_series("SPY", entry_date, current_price_date).dropna()
-    if spy.empty:
-        raise RuntimeError("SPY history is unavailable for the current allocation period")
+    spy_partial_return = (
+        current_closes.at[current_price_date, "SPY"]
+        / current_opens.at[entry_date, "SPY"]
+        - 1
+    )
     preview["current_allocation"] = {
-        "signal_date": completed.get("signal_date"),
+        "signal_date": f"{current_signal_date:%Y-%m-%d}",
         "execution_date": f"{entry_date:%Y-%m-%d}",
-        "regime": completed.get("regime"),
+        "regime": current_signal.get("regime"),
         "holdings": current_holdings,
         "latest_price_date": f"{current_price_date:%Y-%m-%d}",
         "partial_return": float(holding_returns.mean()),
-        "spy_partial_return": float(spy.iloc[-1] / spy.iloc[0] - 1),
+        "spy_partial_return": float(spy_partial_return),
     }
 
     signal_path.write_text(json.dumps(preview, indent=2), encoding="utf-8")
