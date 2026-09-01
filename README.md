@@ -6,20 +6,20 @@ After running RevMurphy, generate the public page from its compact CSV outputs:
 
 ```powershell
 python generate_mean_reversion_page.py `
-  --source ../RevMurphy/output_long_short_live `
-  --alert-source ../RevMurphy/output_live_alerts
+  --source ../RevMurphy/output_long_only_5x0_100_no_cluster_next_open
 ```
 
-This writes `mean-reversion.html` with the latest alert and latest 20 trades,
-including entry and exit prices. The page clearly identifies the results as a
-simulated backtest and does not import the large `all_signals.csv` file.
+This writes the public Mean Reversion page from the selected five-position,
+100%-long, no-cluster, next-session MOO backtest. Generate the member page with
+the same source and `--audience member`.
 
 ### Automatic Mean Reversion updates
 
-`scripts/update_mean_reversion_daily.ps1` refreshes the RevMurphy backtest and
-live alerts, regenerates the page and strategy-card metrics, and creates or
-updates a draft pull request so Vercel provides a preview before production is
-changed. A Windows scheduled task runs it daily at 12:30 PM local Pacific time.
+`scripts/update_mean_reversion_daily.ps1` refreshes the RevMurphy backtest,
+regenerates the public/member pages and strategy-card metrics, and contributes
+the results to the shared daily pull request so Vercel provides a preview
+before production is changed. The sequential weekday batch starts at 3:00 PM
+Pacific.
 The PC must be on and online, and `POLYGON_API_KEY` must be available as a user
 environment variable.
 

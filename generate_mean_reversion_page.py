@@ -28,8 +28,8 @@ def parse_args():
     parser.add_argument(
         "--source",
         type=Path,
-        default=Path("../RevMurphy/output_long_short_live"),
-        help="Directory containing the live RevMurphy output CSV files.",
+        default=Path("../RevMurphy/output_long_only_5x0_100_no_cluster_next_open"),
+        help="Directory containing the production long-only RevMurphy output CSV files.",
     )
     parser.add_argument(
         "--output",
@@ -449,7 +449,7 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
 <div class="navlinks"><a href="index.html">Home</a><a href="strategies.html">Strategies</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a></div>
 </nav>
 <main class="container">
-<section class="hero"><div class="eyebrow">Next-day MOO long/short strategy</div><h1>Mean Reversion</h1><p>Systematic equity strategy seeking short-term price dislocations and subsequent reversion while managing long and short exposure. Signals use completed daily bars and simulated entries and exits fill at the next market open.</p><p class="subtle">Cluster parameters applied to each calendar year are selected using simulated results ending no later than the preceding year-end.</p><p class="subtle">Backtest period: {summary.start_date} through {summary.end_date} · Starting equity: ${equity.iloc[0]['equity']:,.0f}</p><p class="subtle">Dashboard updated: {generated_at}</p>{render_faq("mean-reversion", audience)}</section>
+<section class="hero"><div class="eyebrow">Next-day MOO long-only strategy</div><h1>Mean Reversion</h1><p>Systematic long-only equity strategy seeking short-term price dislocations and subsequent reversion. Signals use completed daily bars, and simulated entries and exits fill at the next market open.</p><p class="subtle">The model holds up to five positions, targets 20% of strategy equity per position, and does not use correlation clustering.</p><p class="subtle">Backtest period: {summary.start_date} through {summary.end_date} · Starting equity: ${equity.iloc[0]['equity']:,.0f}</p><p class="subtle">Dashboard updated: {generated_at}</p>{render_faq("mean-reversion", audience)}</section>
 <section class="metrics">{metric_html}</section>
 {protected_sections if audience == "member" else ""}
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">Mean Reversion and SPY equity with drawdowns, shown from 2019 through {equity['date'].max():%Y-%m-%d}.</p><div class="chart">{chart_html}</div></section>
