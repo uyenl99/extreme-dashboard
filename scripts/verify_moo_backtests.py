@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+import re
 import sys
 
 import numpy as np
@@ -15,6 +17,7 @@ ETF1 = STOCKS / "DualMom"
 ETF2 = STOCKS / "inflationcompass"
 MOMO_SP = STOCKS / "MomoSp" / "pit_version"
 MEAN_REVERSION = STOCKS / "RevMurphy"
+WEB = Path(__file__).resolve().parents[1]
 TOLERANCE = 1e-8
 
 
@@ -153,12 +156,51 @@ def verify_mean_reversion() -> int:
     return len(trades)
 
 
+def verify_current_chart_dates() -> int:
+    """Ensure partial-month chart endpoints match the latest available marks."""
+    etf2_prices = pd.read_csv(
+        ETF2 / "output" / "adjusted_close_prices.csv", index_col=0, parse_dates=True
+    )
+    etf2_date = f"{pd.Timestamp(etf2_prices.index.max()):%Y-%m-%d}"
+    stock_signal = json.loads(
+        (MOMO_SP / "output_pit_v2a_live" / "latest_signal.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    current = stock_signal.get("current_allocation")
+    if not current or not current.get("latest_price_date"):
+        raise AssertionError("Momentum Stocks alert is missing current_allocation")
+    stock_date = str(current["latest_price_date"])
+
+    pages = (
+        (WEB / "momentum2.html", "momoetf2-equity-chart", etf2_date),
+        (WEB / "api" / "_member-content" / "momentum2.html", "momoetf2-equity-chart", etf2_date),
+        (WEB / "momentum-stocks.html", "momentum-stocks-equity-chart", stock_date),
+        (
+            WEB / "api" / "_member-content" / "momentum-stocks.html",
+            "momentum-stocks-equity-chart",
+            stock_date,
+        ),
+    )
+    for page, chart_id, endpoint in pages:
+        text = page.read_text(encoding="utf-8")
+        chart = re.search(
+            rf'Plotly\.newPlot\(\s*"{re.escape(chart_id)}"(?P<body>.*?)</script>',
+            text,
+            re.DOTALL,
+        )
+        if not chart or endpoint not in chart.group("body"):
+            raise AssertionError(f"{page.name} chart does not reach {endpoint}")
+    return len(pages)
+
+
 def main() -> None:
     checks = {
         "Momentum ETF1 monthly periods": verify_etf1(),
         "Momentum ETF2 monthly periods": verify_etf2(),
         "Momentum Stocks monthly periods": verify_momo_sp(),
         "Mean Reversion trades": verify_mean_reversion(),
+        "Current public/member chart endpoints": verify_current_chart_dates(),
     }
     for label, count in checks.items():
         print(f"PASS {label}: {count:,}")

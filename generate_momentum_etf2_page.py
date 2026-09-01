@@ -107,13 +107,65 @@ def allocation_history(monthly_backtest, limit=20):
     return display.sort_index(ascending=False).head(limit).reset_index(drop=True)
 
 
-def current_month_panel(daily, alert):
+def extend_daily_to_partial(daily, close_prices, open_prices, alert):
+    """Append the current holding's open-to-latest-close mark without closing the month."""
+    original_index_name = daily.index.name
+    latest_day = pd.Timestamp(close_prices.index.max())
+    current_period = latest_day.to_period("M")
+    period_days = close_prices.index[
+        pd.PeriodIndex(close_prices.index, freq="M") == current_period
+    ]
+    if period_days.empty:
+        return daily, None, None
+    entry_date = pd.Timestamp(period_days[0])
+    if entry_date < pd.Timestamp(daily.index.max()):
+        return daily, None, None
+
+    holding = str(alert["current_holding"])
+    weights = {"XLP": 0.5, "IEF": 0.5} if holding == "XLP/IEF" else {holding: 1.0}
+    missing = [
+        ticker for ticker in (*weights, "SPY")
+        if ticker not in close_prices or ticker not in open_prices
+    ]
+    if missing:
+        raise ValueError("Missing current-month prices for: " + ", ".join(missing))
+
+    base_strategy = float(daily.iloc[-1]["strategy_wealth"])
+    base_spy = float(daily.iloc[-1]["spy_wealth"])
+    additions = []
+    for day in period_days:
+        strategy_growth = sum(
+            weight * close_prices.at[day, ticker] / open_prices.at[entry_date, ticker]
+            for ticker, weight in weights.items()
+        )
+        spy_growth = close_prices.at[day, "SPY"] / open_prices.at[entry_date, "SPY"]
+        additions.append({
+            "date": day,
+            "holding": holding,
+            "strategy_wealth": base_strategy * strategy_growth,
+            "spy_wealth": base_spy * spy_growth,
+            "switched": False,
+        })
+    extended = (
+        pd.concat([daily.reset_index(names="date"), pd.DataFrame(additions)], ignore_index=True)
+        .drop_duplicates("date", keep="last")
+        .set_index("date")
+        .sort_index()
+    )
+    extended.index.name = original_index_name
+    extended["strategy_return"] = extended["strategy_wealth"].pct_change()
+    extended["spy_return"] = extended["spy_wealth"].pct_change()
+    for name in ("strategy", "spy"):
+        extended[f"{name}_drawdown"] = (
+            extended[f"{name}_wealth"] / extended[f"{name}_wealth"].cummax() - 1
+        )
+    return extended, strategy_growth - 1, spy_growth - 1
+
+
+def current_month_panel(daily, alert, partial_return):
     latest_day = pd.to_datetime(daily.index).max()
     current_period = latest_day.to_period("M")
-    current_days = daily.loc[pd.PeriodIndex(daily.index, freq="M") == current_period]
-    start_wealth = float(current_days["strategy_wealth"].iloc[0])
-    end_wealth = float(current_days["strategy_wealth"].iloc[-1])
-    month_return = end_wealth / start_wealth - 1
+    month_return = float(partial_return) if partial_return is not None else 0.0
     holding = str(alert["current_holding"])
     return_class = "positive" if month_return > 0 else "negative" if month_return < 0 else "muted"
     return (
@@ -144,7 +196,12 @@ def render(source, audience, chart_src):
     monthly = pd.read_csv(source / "monthly_pnl_by_year.csv")
     monthly_backtest = pd.read_csv(source / "monthly_backtest.csv", index_col=0)
     daily = pd.read_csv(source / "daily_drawdown.csv", index_col=0, parse_dates=True)
+    close_prices = pd.read_csv(source / "adjusted_close_prices.csv", index_col=0, parse_dates=True)
+    open_prices = pd.read_csv(source / "adjusted_open_prices.csv", index_col=0, parse_dates=True)
     alert = json.loads((source / "latest_alert.json").read_text(encoding="utf-8"))
+    daily, partial_return, _ = extend_daily_to_partial(
+        daily, close_prices, open_prices, alert
+    )
     strategy = summary.iloc[:, 0]
     spy = summary.iloc[:, 1]
     start_equity = 100000.0
@@ -169,7 +226,7 @@ def render(source, audience, chart_src):
     if audience == "member":
         allocations = allocation_history(monthly_backtest)
         protected = (
-            current_month_panel(daily, alert)
+            current_month_panel(daily, alert, partial_return)
             + '<section class="panel enlarged-table"><h2>Latest Alert</h2>'
             + '<p class="subtle">The current-month signal is preliminary until month end and may change before execution.</p>'
             + latest_alert_table(daily, alert)
