@@ -114,6 +114,28 @@ This file records automation failures so they are not repeated. A calculation is
 - Fix: Append a separate partial-month mark from the active portfolio's MOO entry to the latest close, keep the next-month alert separate, and derive the active Momentum Stocks signal independently from the last executable membership date.
 - Prevention: The MOO verifier now checks that both public and protected member Plotly payloads end on the same date as their latest current-price mark.
 
+## 2026-08-31 — Mean Reversion cluster parameters were selected with future information
+
+- Impact: The published Mean Reversion configuration reported 23.6% CAGR and a
+  1.62 Sharpe ratio, but its 126-day/0.70/one-per-cluster setting had been
+  chosen from a full-history grid whose simulations entered on the same close
+  that generated each signal.
+- Cause: `cluster_grid_search.py` and `cluster_subperiod_test.py` passed
+  unshifted completed-bar signals directly to the portfolio engine. Production
+  later used MOO prices, but retained the parameter setting selected by the
+  invalid same-close test. MOO order sizing also marked existing positions at
+  the not-yet-known session close.
+- Fix: Shift every exploratory cluster test to next-session MOO, mark existing
+  positions at the current open when sizing MOO orders, and select each
+  execution year's cluster lookback, threshold, and cap using results ending
+  no later than the prior December 31. The corrected walk-forward run reports
+  15.2% CAGR, -19.1% max drawdown, and a 1.15 Sharpe ratio through August 31.
+- Prevention: Persist annual selection and candidate-score files, independently
+  verify their training cutoffs and execution-year parameters, and never
+  promote a full-sample parameter-grid winner into production. The separate
+  static-universe survivorship limitation remains disclosed and must not be
+  mistaken for a resolved issue.
+
 ## Required release checklist
 
 1. Test with the exact Task Scheduler user, environment, executable, and PowerShell version.

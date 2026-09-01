@@ -138,13 +138,20 @@ def verify_momo_sp() -> int:
 
 
 def verify_mean_reversion() -> int:
-    output = MEAN_REVERSION / "output_long_short_5x5_next_open"
+    output = MEAN_REVERSION / "output_long_only_5x0_100_no_cluster_next_open"
     signals = pd.read_csv(output / "all_signals.csv", parse_dates=["date", "signal_date"])
     trades = pd.read_csv(output / "trades.csv", parse_dates=["entry_date", "exit_date"])
+    equity = pd.read_csv(output / "equity_curve.csv")
     if not np.allclose(signals["trade_close"], signals["open"], rtol=0, atol=TOLERANCE):
         raise AssertionError("Mean Reversion trade_close differs from the daily open")
     if not (signals["signal_date"] < signals["date"]).all():
         raise AssertionError("Mean Reversion contains a signal that was not shifted to a later session")
+    if set(trades["side"].dropna().str.lower()) != {"long"}:
+        raise AssertionError("Mean Reversion production output must be long-only")
+    if int(equity["long_positions"].max()) > 5 or int(equity["short_positions"].max()) != 0:
+        raise AssertionError("Mean Reversion production output is not the 5x0 portfolio")
+    if "cluster" in signals.columns:
+        raise AssertionError("Mean Reversion production signals unexpectedly contain cluster assignments")
     lookup = signals.set_index(["date", "ticker"])["open"]
     for row in trades.itertuples(index=False):
         if abs(float(row.entry_price) - float(lookup.at[(row.entry_date, row.ticker)])) > TOLERANCE:

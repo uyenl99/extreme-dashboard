@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $revMurphyRoot = "C:\junk\stocks\RevMurphy"
-$backtestOutput = Join-Path $revMurphyRoot "output_long_short_5x5_next_open"
+$backtestOutput = Join-Path $revMurphyRoot "output_long_only_5x0_100_no_cluster_next_open"
 $automationRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
 $checkout = if ($TargetCheckout) { $TargetCheckout } else { Join-Path $automationRoot "extreme-dashboard" }
 $logDirectory = Join-Path $automationRoot "logs"
@@ -15,7 +15,7 @@ $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\
 $gh = "C:\Program Files\GitHub CLI\gh.exe"
 $previewBranch = "automation/mean-reversion-daily-preview"
 $today = Get-Date -Format "yyyy-MM-dd"
-$modeTag = "moo-backtest"
+$modeTag = "long-only-5x0-no-cluster-moo-backtest"
 $Publish = -not $NoPublish
 $log = Join-Path $logDirectory "mean-reversion-$modeTag-$today.log"
 $commandLog = Join-Path $logDirectory "mean-reversion-$modeTag-$today-commands.log"
@@ -62,8 +62,8 @@ try {
 
     Push-Location $revMurphyRoot
     try {
-        & $python "main_long_short_next_open.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0 --long-positions 5 --short-positions 5 --long-gross-ratio 0.80 --short-gross-ratio 0.20 2>&1 | Tee-Object -FilePath $commandLog -Append
-        if ($LASTEXITCODE -ne 0) { throw "Mean Reversion next-day MOO 5x5 backtest refresh failed." }
+        & $python "main_long_short_next_open.py" --end $today --output-dir $backtestOutput --no-force-final-exit --max-tickers 0 --long-positions 5 --long-only --long-gross-ratio 1.0 --max-per-cluster 0 2>&1 | Tee-Object -FilePath $commandLog -Append
+        if ($LASTEXITCODE -ne 0) { throw "Mean Reversion long-only next-day MOO 5x0 backtest refresh failed." }
     }
     finally { Pop-Location }
 
