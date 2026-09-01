@@ -197,7 +197,7 @@ def verify_current_chart_dates() -> int:
             re.DOTALL,
         )
         if not chart or endpoint not in chart.group("body"):
-            raise AssertionError(f"{page.name} chart does not reach {endpoint}")
+            raise AssertionError(f"{page} chart does not reach {endpoint}")
     return len(pages)
 
 

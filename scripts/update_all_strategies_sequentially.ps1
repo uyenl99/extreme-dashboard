@@ -191,10 +191,6 @@ try {
     Invoke-Stage "Momentum ETF1, ETF2, and SP" {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $momentumUpdate -NoPublish
     }
-    Invoke-Stage "Verify all backtests use MOO prices" {
-        & $python $mooVerifier
-    }
-
     Set-RunStage -Name "Prepare generated site files"
     $generatedMemberRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\member-pages"
     $memberContentRoot = Join-Path $webRoot "api\_member-content"
@@ -213,6 +209,14 @@ try {
     $memberPagePaths = @($memberPages.Values | ForEach-Object { Join-Path $memberContentRoot $_ })
     & $python (Join-Path $webRoot "inject_position_calculator.py") @memberPagePaths
     if ($LASTEXITCODE -ne 0) { throw "Position calculator injection failed." }
+
+    # Verify only after the freshly generated private member pages have been
+    # copied into api/_member-content. Running this earlier compares today's
+    # public pages with yesterday's protected member pages and can reject an
+    # otherwise valid batch at a month boundary.
+    Invoke-Stage "Verify all backtests use MOO prices" {
+        & $python $mooVerifier
+    }
 
     Set-RunStage -Name "Commit generated results"
     & $git -C $webRoot add -- mean-reversion.html strategies.html members.html momentum.html momentum2.html inflation-compass momentum-stocks.html api/_member-content position-calculator.js

@@ -136,6 +136,13 @@ This file records automation failures so they are not repeated. A calculation is
   static-universe survivorship limitation remains disclosed and must not be
   mistaken for a resolved issue.
 
+## 2026-09-01 — Member chart verification ran before member-page staging
+
+- Impact: All five daily calculations completed, but the batch stopped before creating its shared preview PR, so production was not updated.
+- Cause: The MOO verifier compared today's public ETF2 chart with the prior day's protected member chart because newly generated private member pages were copied into `api/_member-content` only after verification. At the September month boundary, the public chart reached September 1 while the stale protected copy ended August 31.
+- Fix: Stage and inject all newly generated member pages before running the MOO and chart-endpoint verifier. Verification failures now report the full page path so public and protected files are distinguishable.
+- Prevention: Every release guard must inspect the exact staged artifacts that will be committed, never a mixture of newly generated and previously published files.
+
 ## Required release checklist
 
 1. Test with the exact Task Scheduler user, environment, executable, and PowerShell version.
