@@ -7,6 +7,7 @@ $ErrorActionPreference = "Stop"
 
 $revMurphyRoot = "C:\junk\stocks\RevMurphy"
 $backtestOutput = Join-Path $revMurphyRoot "output_long_only_5x0_100_no_cluster_next_open"
+$dailyPriceRoot = Join-Path (Split-Path -Parent $revMurphyRoot) "shared_data\daily"
 $automationRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
 $checkout = if ($TargetCheckout) { $TargetCheckout } else { Join-Path $automationRoot "extreme-dashboard" }
 $logDirectory = Join-Path $automationRoot "logs"
@@ -29,6 +30,7 @@ try {
     if (-not (Test-Path $python)) { throw "Python runtime not found: $python" }
     if (-not (Test-Path $git)) { throw "Git executable not found: $git" }
     if (-not (Test-Path $gh)) { throw "GitHub CLI not found: $gh" }
+    if (-not (Test-Path $dailyPriceRoot)) { throw "Daily price cache not found: $dailyPriceRoot" }
     if (-not $env:POLYGON_API_KEY) {
         throw "POLYGON_API_KEY is not available to the scheduled task user."
     }
@@ -69,9 +71,9 @@ try {
 
     Push-Location $checkout
     try {
-        & $python "generate_mean_reversion_page.py" --source $backtestOutput --output "mean-reversion.html" --audience public --members-page (Join-Path $checkout "members.html") 2>&1 | Tee-Object -FilePath $commandLog -Append
+        & $python "generate_mean_reversion_page.py" --source $backtestOutput --price-source $dailyPriceRoot --output "mean-reversion.html" --audience public --members-page (Join-Path $checkout "members.html") 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion public page generation failed." }
-        & $python "generate_mean_reversion_page.py" --source $backtestOutput --output $privateMeanReversionPage --audience member --members-page (Join-Path $checkout "members.html") 2>&1 | Tee-Object -FilePath $commandLog -Append
+        & $python "generate_mean_reversion_page.py" --source $backtestOutput --price-source $dailyPriceRoot --output $privateMeanReversionPage --audience member --members-page (Join-Path $checkout "members.html") 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion member page generation failed." }
         Write-Output "Private Mean Reversion member page: $privateMeanReversionPage"
 

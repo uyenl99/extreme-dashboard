@@ -44,6 +44,15 @@ def parse_args():
         help="Directory containing dated Mean Reversion live-alert CSV files.",
     )
     parser.add_argument(
+        "--price-source",
+        type=Path,
+        default=None,
+        help=(
+            "Directory containing per-ticker daily price CSV files. Defaults to "
+            "the shared_data/daily directory beside the RevMurphy project."
+        ),
+    )
+    parser.add_argument(
         "--strategies-page",
         type=Path,
         default=Path("strategies.html"),
@@ -218,6 +227,54 @@ def format_positions(positions):
 def read_optional_csv(path):
     if not path.is_file() or path.stat().st_size == 0:
         return pd.DataFrame()
+
+
+def add_current_marks(trades, price_source, results_through):
+    """Attach latest-close marks and unrealized P/L to open trades."""
+    marked = trades.copy()
+    marked["current_price_date"] = pd.NaT
+    marked["current_price"] = pd.NA
+    marked["current_pnl_dollars"] = pd.NA
+    marked["current_return_pct"] = pd.NA
+    open_mask = marked["status"].fillna("").astype(str).str.lower().eq("open")
+    results_through = pd.Timestamp(results_through).normalize()
+
+    for ticker in marked.loc[open_mask, "ticker"].dropna().astype(str).unique():
+        price_path = price_source / f"{ticker}.csv"
+        if not price_path.is_file():
+            raise FileNotFoundError(f"Missing current-price history for {ticker}: {price_path}")
+        prices = pd.read_csv(price_path, usecols=["date", "close"], parse_dates=["date"])
+        prices["close"] = pd.to_numeric(prices["close"], errors="coerce")
+        prices = prices.loc[
+            prices["date"].notna()
+            & prices["close"].notna()
+            & prices["date"].le(results_through)
+        ].sort_values("date")
+        if prices.empty:
+            raise ValueError(
+                f"No valid close for open position {ticker} through {results_through:%Y-%m-%d}"
+            )
+
+        latest = prices.iloc[-1]
+        ticker_mask = open_mask & marked["ticker"].astype(str).eq(ticker)
+        side_multiplier = marked.loc[ticker_mask, "side"].astype(str).str.lower().map(
+            {"long": 1.0, "short": -1.0}
+        )
+        if side_multiplier.isna().any():
+            raise ValueError(f"Unsupported side for open position {ticker}")
+        current_price = float(latest["close"])
+        pnl = (
+            (current_price - pd.to_numeric(marked.loc[ticker_mask, "entry_price"]))
+            * pd.to_numeric(marked.loc[ticker_mask, "shares"])
+            * side_multiplier
+        )
+        entry_notional = pd.to_numeric(marked.loc[ticker_mask, "entry_notional"]).abs()
+        marked.loc[ticker_mask, "current_price_date"] = latest["date"]
+        marked.loc[ticker_mask, "current_price"] = current_price
+        marked.loc[ticker_mask, "current_pnl_dollars"] = pnl
+        marked.loc[ticker_mask, "current_return_pct"] = pnl / entry_notional
+
+    return marked
     try:
         return pd.read_csv(path)
     except pd.errors.EmptyDataError:
@@ -266,21 +323,29 @@ def build_moo_order_tables(trades, total_equity, results_through):
     holdings = data[~closed].sort_values(["side", "entry_date", "ticker"])
     for row in holdings.itertuples(index=False):
         side = str(row.side).title()
-        position_value = abs(float(row.entry_notional))
+        current_price = float(row.current_price)
+        position_value = abs(float(row.shares) * current_price)
         weight = position_value / total_equity if total_equity else 0.0
+        pnl = float(row.current_pnl_dollars)
+        trade_return = float(row.current_return_pct)
+        pnl_css = "positive" if pnl > 0 else "negative" if pnl < 0 else "muted"
         position_rows.append(
             f"<tr><td>{html.escape(str(row.ticker))}</td>"
             f'<td><span class="side {side.lower()}">{side}</span></td>'
             f"<td>{row.entry_date:%Y-%m-%d}</td><td>{float(row.shares):,.2f}</td>"
-            f"<td>${float(row.entry_price):,.2f}</td><td>${position_value:,.0f}</td>"
+            f"<td>${float(row.entry_price):,.2f}</td><td>{row.current_price_date:%Y-%m-%d}</td>"
+            f"<td>${current_price:,.2f}</td><td>${position_value:,.0f}</td>"
+            f'<td class="{pnl_css}">${pnl:,.0f}</td>'
+            f'<td class="{pnl_css}">{trade_return * 100:.2f}%</td>'
             f"<td>{weight * 100:.2f}%</td></tr>"
         )
     if not position_rows:
-        position_rows.append('<tr><td colspan="7" class="muted">No open positions.</td></tr>')
+        position_rows.append('<tr><td colspan="11" class="muted">No open positions.</td></tr>')
     positions = (
-        f'<p class="subtle">Total strategy equity: ${total_equity:,.0f}</p>'
+        f'<p class="subtle">Total strategy equity: ${total_equity:,.0f}. Open-position P/L is unrealized and marked to the latest available daily close.</p>'
         '<div class="table-wrap"><table><thead><tr><th>Ticker</th><th>Direction</th>'
-        '<th>Entry Date</th><th>Shares</th><th>Entry Price</th><th>Entry Position Value</th>'
+        '<th>Entry Date</th><th>Shares</th><th>Entry Price</th><th>Mark Date</th>'
+        '<th>Current Price</th><th>Current Position Value</th><th>Current P/L</th><th>Current Return</th>'
         f'<th>Position Size (% Equity)</th></tr></thead><tbody>{"".join(position_rows)}</tbody></table></div>'
     )
     return orders, positions
@@ -377,26 +442,38 @@ def build_trade_table(trades, limit=20):
     rows = []
     for item in recent.itertuples(index=False):
         is_closed = str(item.status).lower() == "closed"
-        css = "positive" if is_closed and item.pnl_dollars >= 0 else "negative" if is_closed else "muted"
         side_css = "long" if str(item.side).lower() == "long" else "short"
         exit_date = item.exit_date.strftime("%Y-%m-%d") if is_closed else "—"
         exit_price = f"${float(item.exit_price):,.2f}" if is_closed else "—"
-        pnl = f"${float(item.pnl_dollars):,.0f}" if is_closed else "—"
-        trade_return = f"{float(item.return_pct) * 100:.2f}%" if is_closed else "—"
+        mark_date = "—" if is_closed else item.current_price_date.strftime("%Y-%m-%d")
+        current_price = "—" if is_closed else f"${float(item.current_price):,.2f}"
+        pnl_value = float(item.pnl_dollars) if is_closed else float(item.current_pnl_dollars)
+        return_value = float(item.return_pct) if is_closed else float(item.current_return_pct)
+        css = "positive" if pnl_value > 0 else "negative" if pnl_value < 0 else "muted"
+        pnl = f"${pnl_value:,.0f}"
+        trade_return = f"{return_value * 100:.2f}%"
         rows.append(
             f"<tr><td>{html.escape(str(item.ticker))}</td>"
             f'<td><span class="side {side_css}">{html.escape(str(item.side).title())}</span></td>'
             f"<td>{item.entry_date:%Y-%m-%d}</td><td>${float(item.entry_price):,.2f}</td>"
             f"<td>{exit_date}</td><td>{exit_price}</td>"
+            f"<td>{mark_date}</td><td>{current_price}</td>"
             f'<td class="{css}">{pnl}</td><td class="{css}">{trade_return}</td>'
             f"<td>{html.escape(str(item.status).title())}</td></tr>"
         )
-    return f'<div class="table-wrap"><table><thead><tr><th>Ticker</th><th>Side</th><th>Entry Date</th><th>Entry Price</th><th>Exit Date</th><th>Exit Price</th><th>P/L</th><th>Return</th><th>Status</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
+    return (
+        '<p class="subtle">Open-trade P/L is unrealized and marked to the latest available daily close; closed-trade P/L is realized.</p>'
+        '<div class="table-wrap"><table><thead><tr><th>Ticker</th><th>Side</th>'
+        '<th>Entry Date</th><th>Entry Price</th><th>Exit Date</th><th>Exit Price</th>'
+        '<th>Mark Date</th><th>Current Price</th><th>P/L</th><th>Return</th><th>Status</th>'
+        f'</tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
+    )
 
 
-def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, alert_source, audience="public"):
+def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, alert_source, price_source, audience="public"):
     generated_at = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M %p %Z")
     if audience == "member":
+        trades = add_current_marks(trades, price_source, equity.iloc[-1]["date"])
         moo_orders, latest_positions = build_moo_order_tables(
             trades, float(equity.iloc[-1]["equity"]), equity.iloc[-1]["date"]
         )
@@ -465,9 +542,10 @@ def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, aler
 def main():
     args = parse_args()
     summary, equity, benchmarks, monthly, trades, daily_trades = load_results(args.source)
+    price_source = args.price_source or args.source.parent.parent / "shared_data" / "daily"
     page = render_page(
             summary, equity, benchmarks, monthly, trades, daily_trades,
-            args.alert_source, args.audience,
+            args.alert_source, price_source, args.audience,
     )
     if args.audience == "public":
         forbidden = (
