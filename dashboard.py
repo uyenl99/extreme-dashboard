@@ -81,7 +81,10 @@ def download_spy_equity(start_date, end_date, starting_equity):
     timestamps = result.get("timestamp") or []
     indicators = result.get("indicators", {})
     adjusted = (indicators.get("adjclose") or [{}])[0].get("adjclose")
-    closes = adjusted or (indicators.get("quote") or [{}])[0].get("close") or []
+    raw_closes = (indicators.get("quote") or [{}])[0].get("close") or []
+    adjusted_series = pd.Series(adjusted or [], dtype="float64").reindex(range(len(timestamps)))
+    raw_series = pd.Series(raw_closes, dtype="float64").reindex(range(len(timestamps)))
+    closes = adjusted_series.fillna(raw_series)
     spy = pd.DataFrame({
         "Date": (
             pd.to_datetime(timestamps, unit="s", utc=True)
@@ -89,7 +92,7 @@ def download_spy_equity(start_date, end_date, starting_equity):
             .tz_localize(None)
             .normalize()
         ),
-        "SPY_Close": closes,
+        "SPY_Close": closes.to_numpy(),
     }).dropna()
     spy = spy.sort_values("Date").drop_duplicates("Date", keep="last")
     if spy.empty:
