@@ -101,7 +101,13 @@ def download_spy_equity(start_date, end_date, starting_equity):
 spy_daily = download_spy_equity(df["Date"].min(), df["Date"].max(), df["EquityWithCosts"].iloc[0])
 chart_data = df[["Date", "EquityWithCosts"]].merge(spy_daily, on="Date", how="inner")
 if chart_data.empty or chart_data["Date"].max() < df["Date"].max():
-    raise RuntimeError("SPY comparison data does not reach the latest Collective2 equity date")
+    c2_date = df["Date"].max()
+    spy_date = spy_daily["Date"].max() if not spy_daily.empty else None
+    chart_date = chart_data["Date"].max() if not chart_data.empty else None
+    raise RuntimeError(
+        "SPY comparison data does not reach the latest Collective2 equity date: "
+        f"C2={c2_date}, SPY={spy_date}, merged={chart_date}"
+    )
 
 monthly_url = "https://api4-general.collective2.com/Strategies/GetStrategyHistoricalEquity"
 monthly_params = {
