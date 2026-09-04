@@ -13,6 +13,7 @@ Path("data").mkdir(exist_ok=True)
 API_KEY = os.environ["C2_API_KEY"]
 STRATEGY_ID = 13202557
 REQUEST_TIMEOUT_SECONDS = 30
+MARKET_TIMEZONE = "America/New_York"
 
 parser = argparse.ArgumentParser(
     description="Refresh Collective2 performance and optional trade data."
@@ -53,7 +54,14 @@ if not data.get("Results") or not data["Results"][0].get("DailyEquity"):
     raise RuntimeError("Collective2 returned no daily equity history")
 daily = data["Results"][0]["DailyEquity"]
 df = pd.DataFrame(daily)
-df["Date"] = pd.to_datetime(df["Date"])
+df["Date"] = (
+    pd.to_datetime(df["Date"], errors="coerce", utc=True)
+    .dt.tz_convert(MARKET_TIMEZONE)
+    .dt.tz_localize(None)
+    .dt.normalize()
+)
+if df["Date"].isna().any():
+    raise RuntimeError("Collective2 returned an invalid daily equity timestamp")
 
 def download_spy_equity(start_date, end_date, starting_equity):
     """Download daily SPY closes without requiring another paid API key."""
@@ -75,7 +83,12 @@ def download_spy_equity(start_date, end_date, starting_equity):
     adjusted = (indicators.get("adjclose") or [{}])[0].get("adjclose")
     closes = adjusted or (indicators.get("quote") or [{}])[0].get("close") or []
     spy = pd.DataFrame({
-        "Date": pd.to_datetime(timestamps, unit="s", utc=True).tz_convert(None).normalize(),
+        "Date": (
+            pd.to_datetime(timestamps, unit="s", utc=True)
+            .tz_convert(MARKET_TIMEZONE)
+            .tz_localize(None)
+            .normalize()
+        ),
         "SPY_Close": closes,
     }).dropna()
     spy = spy.sort_values("Date").drop_duplicates("Date", keep="last")
@@ -85,7 +98,6 @@ def download_spy_equity(start_date, end_date, starting_equity):
     return spy[["Date", "SPY_Equity"]]
 
 
-df["Date"] = df["Date"].dt.tz_localize(None).dt.normalize()
 spy_daily = download_spy_equity(df["Date"].min(), df["Date"].max(), df["EquityWithCosts"].iloc[0])
 chart_data = df[["Date", "EquityWithCosts"]].merge(spy_daily, on="Date", how="inner")
 if chart_data.empty or chart_data["Date"].max() < df["Date"].max():
