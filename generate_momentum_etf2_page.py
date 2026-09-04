@@ -10,6 +10,7 @@ from metric_style import metric_class
 from strategy_benchmark import yearly_returns_by_year
 from strategy_card import update_backtest_card, update_member_backtest_card
 from strategy_chart import build_equity_drawdown_chart
+from strategy_positions import calculate_open_positions, render_open_positions_table
 
 
 def parse_args():
@@ -107,7 +108,7 @@ def allocation_history(monthly_backtest, limit=20):
     return display.sort_index(ascending=False).head(limit).reset_index(drop=True)
 
 
-def extend_daily_to_partial(daily, close_prices, open_prices, alert):
+def extend_daily_to_partial(daily, close_prices, open_prices, alert, start_equity):
     """Append the current holding's open-to-latest-close mark without closing the month."""
     original_index_name = daily.index.name
     latest_day = pd.Timestamp(close_prices.index.max())
@@ -116,10 +117,10 @@ def extend_daily_to_partial(daily, close_prices, open_prices, alert):
         pd.PeriodIndex(close_prices.index, freq="M") == current_period
     ]
     if period_days.empty:
-        return daily, None, None
+        return daily, None, None, []
     entry_date = pd.Timestamp(period_days[0])
     if entry_date < pd.Timestamp(daily.index.max()):
-        return daily, None, None
+        return daily, None, None, []
 
     holding = str(alert["current_holding"])
     weights = {"XLP": 0.5, "IEF": 0.5} if holding == "XLP/IEF" else {holding: 1.0}
@@ -159,23 +160,24 @@ def extend_daily_to_partial(daily, close_prices, open_prices, alert):
         extended[f"{name}_drawdown"] = (
             extended[f"{name}_wealth"] / extended[f"{name}_wealth"].cummax() - 1
         )
-    return extended, strategy_growth - 1, spy_growth - 1
+    positions = calculate_open_positions(
+        list(weights),
+        f"{entry_date:%Y-%m-%d}",
+        {ticker: open_prices.at[entry_date, ticker] for ticker in weights},
+        {ticker: close_prices.at[latest_day, ticker] for ticker in weights},
+        start_equity,
+        weights,
+    )
+    return extended, strategy_growth - 1, spy_growth - 1, positions
 
 
-def current_month_panel(daily, alert, partial_return):
+def current_month_panel(daily, positions):
     latest_day = pd.to_datetime(daily.index).max()
-    current_period = latest_day.to_period("M")
-    month_return = float(partial_return) if partial_return is not None else 0.0
-    holding = str(alert["current_holding"])
-    return_class = "positive" if month_return > 0 else "negative" if month_return < 0 else "muted"
     return (
         '<section class="panel" id="current-month"><h2>Current Partial Month</h2>'
         f'<p class="subtle">Mark-to-market through {latest_day:%Y-%m-%d}; this is an incomplete-month estimate.</p>'
-        '<div class="metrics">'
-        f'<div class="metric"><div class="metric-label">Current Month Return</div><div class="metric-value {return_class}">{pct(month_return)}</div></div>'
-        f'<div class="metric"><div class="metric-label">Holding</div><div class="metric-value positive">{html.escape(holding)}</div></div>'
-        f'<div class="metric"><div class="metric-label">Effective Month</div><div class="metric-value">{current_period}</div></div>'
-        '</div></section>'
+        f'{render_open_positions_table(positions)}'
+        '<p class="subtle">Shares and dollar values use model equity at entry and assume fractional shares.</p></section>'
     )
 
 
@@ -199,12 +201,13 @@ def render(source, audience, chart_src):
     close_prices = pd.read_csv(source / "adjusted_close_prices.csv", index_col=0, parse_dates=True)
     open_prices = pd.read_csv(source / "adjusted_open_prices.csv", index_col=0, parse_dates=True)
     alert = json.loads((source / "latest_alert.json").read_text(encoding="utf-8"))
-    daily, partial_return, _ = extend_daily_to_partial(
-        daily, close_prices, open_prices, alert
+    start_equity = 100000.0
+    entry_equity = float(daily.iloc[-1]["strategy_wealth"]) * start_equity
+    daily, partial_return, _, positions = extend_daily_to_partial(
+        daily, close_prices, open_prices, alert, entry_equity
     )
     strategy = summary.iloc[:, 0]
     spy = summary.iloc[:, 1]
-    start_equity = 100000.0
     start_date = pd.to_datetime(daily.index).min().strftime("%Y-%m-%d")
     end_date = pd.to_datetime(daily.index).max().strftime("%Y-%m-%d")
     active_months = int(monthly[["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]].count(axis=1).sum())
@@ -226,7 +229,7 @@ def render(source, audience, chart_src):
     if audience == "member":
         allocations = allocation_history(monthly_backtest)
         protected = (
-            current_month_panel(daily, alert, partial_return)
+            current_month_panel(daily, positions)
             + '<section class="panel enlarged-table"><h2>Latest Alert</h2>'
             + '<p class="subtle">The current-month signal is preliminary until month end and may change before execution.</p>'
             + latest_alert_table(daily, alert)

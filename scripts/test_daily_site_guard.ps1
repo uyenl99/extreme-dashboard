@@ -219,10 +219,24 @@ foreach ($memberPage in @(
         'metric-value negative'
     )
 }
-Assert-Contains "api/_member-content/momentum.html" @('<h2>Current Partial Month</h2>')
+foreach ($memberPage in @(
+    "api/_member-content/momentum.html",
+    "api/_member-content/momentum2.html",
+    "api/_member-content/momentum-stocks.html"
+)) {
+    Assert-Contains $memberPage @(
+        '<h2>Current Partial Month</h2>',
+        '<th>Ticker</th>',
+        '<th>Entry Date</th>',
+        '<th>Shares</th>',
+        '<th>Entry Price</th>',
+        '<th>Current Price</th>',
+        '<th>Position Value</th>',
+        '<th>Open P/L</th>',
+        '<th>Open P/L %</th>'
+    )
+}
 Assert-Contains "api/_member-content/momentum-stocks.html" @(
-    '<h2>Current Partial Month</h2>',
-    '<div class="metric-label">Current Month Return</div>',
     'title="Partial month-to-date through',
     ' open</td>'
 )

@@ -9,6 +9,7 @@ from metric_style import metric_class
 from strategy_benchmark import yearly_returns_by_year
 from strategy_card import update_backtest_card, update_member_backtest_card
 from strategy_chart import build_equity_drawdown_chart
+from strategy_positions import calculate_open_positions, render_open_positions_table
 
 
 REQUIRED_FILES = (
@@ -17,6 +18,7 @@ REQUIRED_FILES = (
     "dual_momentum_results.csv",
     "monthly_return_table.csv",
     "next_entry_alert.txt",
+    "partial_month_slots.csv",
 )
 
 
@@ -78,6 +80,7 @@ def load_results(source):
     monthly = pd.read_csv(source / "monthly_return_table.csv")
     partial_path = source / "partial_month_return.csv"
     partial = pd.read_csv(partial_path).iloc[0] if partial_path.is_file() else None
+    partial_slots = pd.read_csv(source / "partial_month_slots.csv")
 
     for frame, column, label in (
         (daily, "Date", "daily_equity_entries_exits"),
@@ -89,7 +92,7 @@ def load_results(source):
     result = summary.iloc[0]
     daily = extend_daily_to_partial(daily, result, partial, source)
     alert = parse_alert(source / "next_entry_alert.txt")
-    return result, daily, allocations, monthly, alert, partial
+    return result, daily, allocations, monthly, alert, partial, partial_slots
 
 
 def pct(value, decimals=2):
@@ -271,26 +274,25 @@ def build_allocation_table(allocations, partial=None, limit=20):
     )
 
 
-def current_partial_month_panel(partial):
+def current_partial_month_panel(partial, partial_slots, portfolio_equity):
     if partial is None:
         return ""
-    risk_off = str(partial.get("risk_off", "")).strip().lower() in ("true", "1", "yes")
-    regime = "Risk Off" if risk_off else "Risk On"
-    return_value = float(partial["partial_return"])
-    return_class = "positive" if return_value > 0 else "negative" if return_value < 0 else "muted"
+    positions = calculate_open_positions(
+        partial_slots["ticker"].tolist(),
+        partial["entry_day"],
+        partial_slots.set_index("ticker")["entry_price"].to_dict(),
+        partial_slots.set_index("ticker")["latest_price"].to_dict(),
+        portfolio_equity,
+    )
     return (
         '<section class="panel" id="current-month"><h2>Current Partial Month</h2>'
         f'<p class="subtle">Mark-to-market through {html.escape(str(partial["latest_day"]))}; this is an incomplete-month estimate.</p>'
-        '<div class="metrics">'
-        f'<div class="metric"><div class="metric-label">Current Month Return</div><div class="metric-value {return_class}">{pct(return_value)}</div></div>'
-        f'<div class="metric"><div class="metric-label">Holdings</div><div class="metric-value positive">{html.escape(str(partial["holdings"]))}</div></div>'
-        f'<div class="metric"><div class="metric-label">Regime</div><div class="metric-value">{regime}</div></div>'
-        f'<div class="metric"><div class="metric-label">Entry Day</div><div class="metric-value">{html.escape(str(partial["entry_day"]))}</div></div>'
-        '</div></section>'
+        f'{render_open_positions_table(positions)}'
+        '<p class="subtle">Shares and dollar values use model equity at entry and assume fractional shares.</p></section>'
     )
 
 
-def render_page(summary, daily, allocations, monthly, alert, partial=None, audience="public"):
+def render_page(summary, daily, allocations, monthly, alert, partial=None, partial_slots=None, audience="public"):
     chart_html = build_chart(daily)
     start_date = daily["Date"].min().strftime("%Y-%m-%d")
     end_date = daily["Date"].max().strftime("%Y-%m-%d")
@@ -313,7 +315,7 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None, audie
     member_sections = ""
     if audience == "member":
         member_sections = (
-            current_partial_month_panel(partial)
+            current_partial_month_panel(partial, partial_slots, float(summary.final))
             + f'<section class="panel"><h2>Latest Alert</h2>{build_alert_table(alert, ("Signal", "Regime", "Holdings", "Execution"))}</section>'
             f'<section class="panel"><h2>Latest 20 Historical Trades</h2>{build_allocation_table(allocations, partial)}</section>'
         )
@@ -368,9 +370,9 @@ def validate_public_page(page):
 
 def main():
     args = parse_args()
-    summary, daily, allocations, monthly, alert, partial = load_results(args.source)
+    summary, daily, allocations, monthly, alert, partial, partial_slots = load_results(args.source)
     page = render_page(
-        summary, daily, allocations, monthly, alert, partial, audience=args.audience
+        summary, daily, allocations, monthly, alert, partial, partial_slots, audience=args.audience
     )
     if args.audience == "public":
         validate_public_page(page)
