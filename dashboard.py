@@ -94,6 +94,21 @@ def download_spy_equity(start_date, end_date, starting_equity):
         ),
         "SPY_Close": closes.to_numpy(),
     }).dropna()
+    meta = result.get("meta", {})
+    meta_price = pd.to_numeric(meta.get("regularMarketPrice"), errors="coerce")
+    meta_time = pd.to_numeric(meta.get("regularMarketTime"), errors="coerce")
+    if pd.notna(meta_price) and pd.notna(meta_time):
+        meta_date = (
+            pd.to_datetime(meta_time, unit="s", utc=True)
+            .tz_convert(MARKET_TIMEZONE)
+            .tz_localize(None)
+            .normalize()
+        )
+        if pd.Timestamp(start_date) <= meta_date <= pd.Timestamp(end_date):
+            spy = pd.concat(
+                [spy, pd.DataFrame([{"Date": meta_date, "SPY_Close": float(meta_price)}])],
+                ignore_index=True,
+            )
     spy = spy.sort_values("Date").drop_duplicates("Date", keep="last")
     if spy.empty:
         raise RuntimeError("Yahoo Finance returned no usable SPY closes")
