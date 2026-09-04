@@ -28,6 +28,8 @@ def format_quantity(value):
 
 
 def format_price(value):
+    if pd.isna(value):
+        return "&mdash;"
     return f"{float(value):,.2f}"
 
 
@@ -186,12 +188,19 @@ def build_open_positions_table():
     table = open_df[["OpenedDate", "Symbol", "Quantity", "AvgPx"]].copy()
     quantity = pd.to_numeric(table["Quantity"], errors="coerce").fillna(0)
     entry_price = pd.to_numeric(table["AvgPx"], errors="coerce").fillna(0)
-    quotes = {
-        symbol: latest_market_quote(symbol)
-        for symbol in table["Symbol"].dropna().astype(str).unique()
-    }
-    current_price = table["Symbol"].astype(str).map(lambda symbol: quotes[symbol][0])
-    quote_time = table["Symbol"].astype(str).map(lambda symbol: quotes[symbol][1])
+    quotes = {}
+    for symbol in table["Symbol"].dropna().astype(str).unique():
+        try:
+            quotes[symbol] = latest_market_quote(symbol)
+        except (requests.RequestException, RuntimeError, ValueError) as exc:
+            print(f"Warning: unable to retrieve a current quote for {symbol}: {exc}")
+            quotes[symbol] = (float("nan"), pd.NaT)
+    current_price = table["Symbol"].astype(str).map(
+        lambda symbol: quotes.get(symbol, (float("nan"), pd.NaT))[0]
+    )
+    quote_time = table["Symbol"].astype(str).map(
+        lambda symbol: quotes.get(symbol, (float("nan"), pd.NaT))[1]
+    )
     unrealized_pnl = (current_price - entry_price) * quantity
     entry_value = quantity.abs() * entry_price
     unrealized_return = unrealized_pnl / entry_value.where(entry_value.ne(0))
@@ -199,7 +208,9 @@ def build_open_positions_table():
     table["OpenedDate"] = to_market_time(table["OpenedDate"]).dt.strftime("%Y-%m-%d %H:%M")
     table["Quantity"] = quantity.abs().map(format_quantity)
     table["AvgPx"] = entry_price.map(format_price)
-    table["Quote Time (ET)"] = quote_time.map(lambda value: value.strftime("%Y-%m-%d %H:%M"))
+    table["Quote Time (ET)"] = quote_time.map(
+        lambda value: "&mdash;" if pd.isna(value) else value.strftime("%Y-%m-%d %H:%M")
+    )
     table["Current Price"] = current_price.map(format_price)
     table["Position Value"] = (quantity.abs() * current_price).map(format_price)
     table["P/L"] = unrealized_pnl.map(format_pnl)
