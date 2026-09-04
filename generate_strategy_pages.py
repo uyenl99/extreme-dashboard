@@ -1,7 +1,9 @@
 import argparse
 import json
 import pandas as pd
+import requests
 from pathlib import Path
+from urllib.parse import quote
 
 from strategy_faq import FAQ_CSS, render_faq
 from metric_style import metric_class
@@ -26,6 +28,8 @@ def format_quantity(value):
 
 
 def format_price(value):
+    if pd.isna(value):
+        return "&mdash;"
     return f"{float(value):,.2f}"
 
 
@@ -35,6 +39,36 @@ def format_pnl(value):
     amount = float(value)
     css_class = "pnl-pos" if amount >= 0 else "pnl-neg"
     return f'<span class="{css_class}">${amount:,.2f}</span>'
+
+
+def format_return(value):
+    if pd.isna(value):
+        return "&mdash;"
+    amount = float(value)
+    css_class = "pnl-pos" if amount >= 0 else "pnl-neg"
+    return f'<span class="{css_class}">{amount * 100:,.2f}%</span>'
+
+
+def latest_market_quote(symbol):
+    """Return Yahoo's latest regular-market price and timestamp for a stock."""
+    yahoo_symbol = str(symbol).strip().replace(".", "-")
+    response = requests.get(
+        f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(yahoo_symbol, safe='')}",
+        params={"range": "5d", "interval": "1d"},
+        headers={"User-Agent": "Mozilla/5.0 ExtremeTradingDashboard/1.0"},
+        timeout=30,
+    )
+    response.raise_for_status()
+    results = response.json().get("chart", {}).get("result")
+    if not results:
+        raise RuntimeError(f"Yahoo Finance returned no quote for {symbol}")
+    meta = results[0].get("meta", {})
+    price = pd.to_numeric(meta.get("regularMarketPrice"), errors="coerce")
+    timestamp = pd.to_numeric(meta.get("regularMarketTime"), errors="coerce")
+    if pd.isna(price) or pd.isna(timestamp):
+        raise RuntimeError(f"Yahoo Finance returned an incomplete quote for {symbol}")
+    quote_time = pd.to_datetime(timestamp, unit="s", utc=True).tz_convert(MARKET_TIMEZONE)
+    return float(price), quote_time
 
 
 def collective2_disclosure():
@@ -153,17 +187,43 @@ def build_open_positions_table():
         return "<p>No open positions.</p>"
     table = open_df[["OpenedDate", "Symbol", "Quantity", "AvgPx"]].copy()
     quantity = pd.to_numeric(table["Quantity"], errors="coerce").fillna(0)
-    price = pd.to_numeric(table["AvgPx"], errors="coerce").fillna(0)
+    entry_price = pd.to_numeric(table["AvgPx"], errors="coerce").fillna(0)
+    quotes = {}
+    for symbol in table["Symbol"].dropna().astype(str).unique():
+        try:
+            quotes[symbol] = latest_market_quote(symbol)
+        except (requests.RequestException, RuntimeError, ValueError) as exc:
+            print(f"Warning: unable to retrieve a current quote for {symbol}: {exc}")
+            quotes[symbol] = (float("nan"), pd.NaT)
+    current_price = table["Symbol"].astype(str).map(
+        lambda symbol: quotes.get(symbol, (float("nan"), pd.NaT))[0]
+    )
+    quote_time = table["Symbol"].astype(str).map(
+        lambda symbol: quotes.get(symbol, (float("nan"), pd.NaT))[1]
+    )
+    unrealized_pnl = (current_price - entry_price) * quantity
+    entry_value = quantity.abs() * entry_price
+    unrealized_return = unrealized_pnl / entry_value.where(entry_value.ne(0))
     table.insert(2, "Direction", quantity.apply(lambda value: "Long" if value >= 0 else "Short"))
     table["OpenedDate"] = to_market_time(table["OpenedDate"]).dt.strftime("%Y-%m-%d %H:%M")
     table["Quantity"] = quantity.abs().map(format_quantity)
-    table["AvgPx"] = price.map(format_price)
-    table["Position Value"] = (quantity.abs() * price).map(format_price)
-    table.columns = ["Open Time (ET)", "Symbol", "Direction", "Qty", "Entry", "Position Value"]
+    table["AvgPx"] = entry_price.map(format_price)
+    table["Quote Time (ET)"] = quote_time.map(
+        lambda value: "&mdash;" if pd.isna(value) else value.strftime("%Y-%m-%d %H:%M")
+    )
+    table["Current Price"] = current_price.map(format_price)
+    table["Position Value"] = (quantity.abs() * current_price).map(format_price)
+    table["P/L"] = unrealized_pnl.map(format_pnl)
+    table["Return"] = unrealized_return.map(format_return)
+    table.columns = [
+        "Open Time (ET)", "Symbol", "Direction", "Qty", "Entry",
+        "Quote Time (ET)", "Current Price", "Position Value", "P/L", "Return",
+    ]
     return table.to_html(
         index=False,
         classes="trade-table",
-        index_names=False
+        index_names=False,
+        escape=False,
     )
 
 def build_open_orders_table():
@@ -203,7 +263,6 @@ def build_recent_closed_table(df, limit=RECENT_TRADE_LIMIT):
         [
             "Open Time ET",
             "Symbol",
-            "Description",
             "OpenSide",
             "Qty Open",
             "Avg Price Open",
@@ -216,7 +275,6 @@ def build_recent_closed_table(df, limit=RECENT_TRADE_LIMIT):
     closed_df.columns = [
         "Open Time (ET)",
         "Symbol",
-        "Description",
         "Side",
         "Qty",
         "Entry",
@@ -656,6 +714,8 @@ def generate_strategy_member_page(
 <section class="panel">
 
 <h2>Open Positions</h2>
+
+<p class="subtle">P/L is unrealized and estimated from the latest available market quote.</p>
 
 {build_open_positions_table()}
 

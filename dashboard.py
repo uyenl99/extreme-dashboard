@@ -13,6 +13,7 @@ Path("data").mkdir(exist_ok=True)
 API_KEY = os.environ["C2_API_KEY"]
 STRATEGY_ID = 13202557
 REQUEST_TIMEOUT_SECONDS = 30
+MARKET_TIMEZONE = "America/New_York"
 
 parser = argparse.ArgumentParser(
     description="Refresh Collective2 performance and optional trade data."
@@ -53,7 +54,14 @@ if not data.get("Results") or not data["Results"][0].get("DailyEquity"):
     raise RuntimeError("Collective2 returned no daily equity history")
 daily = data["Results"][0]["DailyEquity"]
 df = pd.DataFrame(daily)
-df["Date"] = pd.to_datetime(df["Date"])
+df["Date"] = (
+    pd.to_datetime(df["Date"], errors="coerce", utc=True)
+    .dt.tz_convert(MARKET_TIMEZONE)
+    .dt.tz_localize(None)
+    .dt.normalize()
+)
+if df["Date"].isna().any():
+    raise RuntimeError("Collective2 returned an invalid daily equity timestamp")
 
 def download_spy_equity(start_date, end_date, starting_equity):
     """Download daily SPY closes without requiring another paid API key."""
@@ -73,11 +81,34 @@ def download_spy_equity(start_date, end_date, starting_equity):
     timestamps = result.get("timestamp") or []
     indicators = result.get("indicators", {})
     adjusted = (indicators.get("adjclose") or [{}])[0].get("adjclose")
-    closes = adjusted or (indicators.get("quote") or [{}])[0].get("close") or []
+    raw_closes = (indicators.get("quote") or [{}])[0].get("close") or []
+    adjusted_series = pd.Series(adjusted or [], dtype="float64").reindex(range(len(timestamps)))
+    raw_series = pd.Series(raw_closes, dtype="float64").reindex(range(len(timestamps)))
+    closes = adjusted_series.fillna(raw_series)
     spy = pd.DataFrame({
-        "Date": pd.to_datetime(timestamps, unit="s", utc=True).tz_convert(None).normalize(),
-        "SPY_Close": closes,
+        "Date": (
+            pd.to_datetime(timestamps, unit="s", utc=True)
+            .tz_convert(MARKET_TIMEZONE)
+            .tz_localize(None)
+            .normalize()
+        ),
+        "SPY_Close": closes.to_numpy(),
     }).dropna()
+    meta = result.get("meta", {})
+    meta_price = pd.to_numeric(meta.get("regularMarketPrice"), errors="coerce")
+    meta_time = pd.to_numeric(meta.get("regularMarketTime"), errors="coerce")
+    if pd.notna(meta_price) and pd.notna(meta_time):
+        meta_date = (
+            pd.to_datetime(meta_time, unit="s", utc=True)
+            .tz_convert(MARKET_TIMEZONE)
+            .tz_localize(None)
+            .normalize()
+        )
+        if pd.Timestamp(start_date) <= meta_date <= pd.Timestamp(end_date):
+            spy = pd.concat(
+                [spy, pd.DataFrame([{"Date": meta_date, "SPY_Close": float(meta_price)}])],
+                ignore_index=True,
+            )
     spy = spy.sort_values("Date").drop_duplicates("Date", keep="last")
     if spy.empty:
         raise RuntimeError("Yahoo Finance returned no usable SPY closes")
@@ -85,11 +116,16 @@ def download_spy_equity(start_date, end_date, starting_equity):
     return spy[["Date", "SPY_Equity"]]
 
 
-df["Date"] = df["Date"].dt.tz_localize(None).dt.normalize()
 spy_daily = download_spy_equity(df["Date"].min(), df["Date"].max(), df["EquityWithCosts"].iloc[0])
 chart_data = df[["Date", "EquityWithCosts"]].merge(spy_daily, on="Date", how="inner")
 if chart_data.empty or chart_data["Date"].max() < df["Date"].max():
-    raise RuntimeError("SPY comparison data does not reach the latest Collective2 equity date")
+    c2_date = df["Date"].max()
+    spy_date = spy_daily["Date"].max() if not spy_daily.empty else None
+    chart_date = chart_data["Date"].max() if not chart_data.empty else None
+    raise RuntimeError(
+        "SPY comparison data does not reach the latest Collective2 equity date: "
+        f"C2={c2_date}, SPY={spy_date}, merged={chart_date}"
+    )
 
 monthly_url = "https://api4-general.collective2.com/Strategies/GetStrategyHistoricalEquity"
 monthly_params = {
