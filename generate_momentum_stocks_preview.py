@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from strategy_positions import calculate_open_positions
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -114,6 +116,14 @@ def main():
         / current_opens.at[entry_date, "SPY"]
         - 1
     )
+    summary = pd.read_csv(live.OUTPUT / "summary.csv").iloc[0]
+    positions = calculate_open_positions(
+        current_holdings,
+        f"{entry_date:%Y-%m-%d}",
+        current_opens.loc[entry_date, current_holdings].to_dict(),
+        current_closes.loc[current_price_date, current_holdings].to_dict(),
+        float(summary["final_equity"]),
+    )
     preview["current_allocation"] = {
         "signal_date": f"{current_signal_date:%Y-%m-%d}",
         "execution_date": f"{entry_date:%Y-%m-%d}",
@@ -122,6 +132,7 @@ def main():
         "latest_price_date": f"{current_price_date:%Y-%m-%d}",
         "partial_return": float(holding_returns.mean()),
         "spy_partial_return": float(spy_partial_return),
+        "positions": positions,
     }
 
     signal_path.write_text(json.dumps(preview, indent=2), encoding="utf-8")

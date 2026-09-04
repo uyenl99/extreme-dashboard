@@ -9,6 +9,7 @@ from strategy_faq import FAQ_CSS, render_faq
 from metric_style import metric_class
 from strategy_card import update_backtest_card, update_member_backtest_card
 from strategy_chart import build_equity_drawdown_chart
+from strategy_positions import render_open_positions_table
 
 from generate_momentum_page import (
     build_alert_table,
@@ -92,6 +93,7 @@ def load_alert(path):
         "Latest Price Date": current.get("latest_price_date") or signal.get("latest_price_date", "—"),
         "Partial Return": current.get("partial_return"),
         "SPY Partial Return": current.get("spy_partial_return"),
+        "Positions": current.get("positions") or [],
     }
 
 
@@ -214,23 +216,11 @@ def build_allocation_table(allocations, current=None, limit=20):
 
 
 def current_partial_month_panel(current):
-    partial_return = current.get("Partial Return")
-    if partial_return is None:
-        return_text, return_class = "—", "muted"
-    else:
-        partial_return = float(partial_return)
-        return_text = pct(partial_return)
-        return_class = "positive" if partial_return > 0 else "negative" if partial_return < 0 else "muted"
-    regime = str(current.get("Regime", "—")).replace("_", " ").title()
     return (
         '<section class="panel" id="current-month"><h2>Current Partial Month</h2>'
         f'<p class="subtle">Mark-to-market through {html.escape(str(current.get("Latest Price Date", "—")))}; this is an incomplete-month estimate.</p>'
-        '<div class="metrics">'
-        f'<div class="metric"><div class="metric-label">Current Month Return</div><div class="metric-value {return_class}">{return_text}</div></div>'
-        f'<div class="metric"><div class="metric-label">Holdings</div><div class="metric-value positive">{html.escape(str(current.get("Holdings", "—")))}</div></div>'
-        f'<div class="metric"><div class="metric-label">Regime</div><div class="metric-value">{html.escape(regime)}</div></div>'
-        f'<div class="metric"><div class="metric-label">Entry Day</div><div class="metric-value">{html.escape(str(current.get("Execution", "—")))}</div></div>'
-        '</div></section>'
+        f'{render_open_positions_table(current.get("Positions", []))}'
+        '<p class="subtle">Shares and dollar values use model equity at entry and assume fractional shares.</p></section>'
     )
 
 
