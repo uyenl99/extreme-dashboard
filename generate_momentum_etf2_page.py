@@ -108,7 +108,7 @@ def allocation_history(monthly_backtest, limit=20):
     return display.sort_index(ascending=False).head(limit).reset_index(drop=True)
 
 
-def extend_daily_to_partial(daily, close_prices, open_prices, alert, start_equity):
+def extend_daily_to_partial(daily, close_prices, open_prices, alert, start_equity, monthly_backtest=None):
     """Append the current holding's open-to-latest-close mark without closing the month."""
     original_index_name = daily.index.name
     latest_day = pd.Timestamp(close_prices.index.max())
@@ -131,7 +131,14 @@ def extend_daily_to_partial(daily, close_prices, open_prices, alert, start_equit
     if missing:
         raise ValueError("Missing current-month prices for: " + ", ".join(missing))
 
-    base_strategy = float(daily.iloc[-1]["strategy_wealth"])
+    cost_fraction = 0.0
+    if monthly_backtest is not None:
+        prior = monthly_backtest.iloc[-1]
+        old = {"XLP": .5, "IEF": .5} if prior["held"] == "XLP/IEF" else {prior["held"]: 1.0}
+        drift = {t: w * open_prices.at[entry_date,t] / open_prices.at[pd.Timestamp(prior["entry_date"]),t] for t,w in old.items()}
+        previous = {t:v/sum(drift.values()) for t,v in drift.items()}
+        cost_fraction = .0005 * sum(abs(weights.get(t,0)-previous.get(t,0)) for t in set(weights)|set(previous))
+    base_strategy = float(daily.iloc[-1]["strategy_wealth"]) * (1-cost_fraction)
     base_spy = float(daily.iloc[-1]["spy_wealth"])
     additions = []
     for day in period_days:
@@ -165,10 +172,10 @@ def extend_daily_to_partial(daily, close_prices, open_prices, alert, start_equit
         f"{entry_date:%Y-%m-%d}",
         {ticker: open_prices.at[entry_date, ticker] for ticker in weights},
         {ticker: close_prices.at[latest_day, ticker] for ticker in weights},
-        start_equity,
+        start_equity * (1-cost_fraction),
         weights,
     )
-    return extended, strategy_growth - 1, spy_growth - 1, positions
+    return extended, (1-cost_fraction)*strategy_growth - 1, spy_growth - 1, positions
 
 
 def current_month_panel(daily, positions):
@@ -204,7 +211,7 @@ def render(source, audience, chart_src):
     start_equity = 100000.0
     entry_equity = float(daily.iloc[-1]["strategy_wealth"]) * start_equity
     daily, partial_return, _, positions = extend_daily_to_partial(
-        daily, close_prices, open_prices, alert, entry_equity
+        daily, close_prices, open_prices, alert, entry_equity, monthly_backtest
     )
     strategy = summary.iloc[:, 0]
     spy = summary.iloc[:, 1]
@@ -251,7 +258,7 @@ def render(source, audience, chart_src):
     page = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MoMoEtf2 Backtest - Extreme Trading Inc.</title>
 <style>*{{box-sizing:border-box}}body{{margin:0;background:#0f172a;color:#e5e7eb;font-family:Arial,Helvetica,sans-serif}}nav{{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;background:#111827}}nav a{{color:white;text-decoration:none;margin-left:20px}}a{{color:#60a5fa}}.container{{width:95%;max-width:1400px;margin:auto;padding:30px 20px 60px}}.hero,.panel{{background:#111827;border:1px solid #374151;border-radius:12px;padding:26px;margin-bottom:22px}}.eyebrow{{color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold}}h1{{margin:8px 0 10px}}h2{{margin-top:0}}.subtle,.muted{{color:#94a3b8}}.metrics{{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:22px 0}}.metric{{background:#111827;border:1px solid #374151;border-radius:10px;padding:18px}}.metric-label{{color:#94a3b8;font-size:13px}}.metric-value{{font-size:24px;font-weight:700;margin-top:6px}}.chart{{overflow:hidden}}.positive{{color:#22c55e}}.negative{{color:#f87171}}.table-wrap{{overflow-x:auto}}table{{width:100%;border-collapse:collapse;background:#111827}}th,td{{border:1px solid #374151;padding:7px 9px;text-align:right;font-size:12px;white-space:nowrap}}.enlarged-table th,.enlarged-table td{{font-size:15px}}th{{background:#1f2937;color:white}}th:first-child,td:first-child{{text-align:left}}.disclaimer{{font-size:13px;line-height:1.6;color:#94a3b8}}footer{{text-align:center;padding:30px;color:#94a3b8}}@media(max-width:800px){{nav{{align-items:flex-start;padding:16px;gap:12px}}nav div:last-child{{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}}nav a{{margin-left:8px;font-size:12px}}.metrics{{grid-template-columns:repeat(2,1fr)}}.container{{padding:20px 10px}}}}@media(max-width:480px){{.metrics{{grid-template-columns:1fr}}}}{FAQ_CSS}</style><script src="/site-auth-nav.js?v=5"></script></head><body>
 <nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="strategies.html">Strategies</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a></div></nav><main class="container">
-<section class="hero"><div class="eyebrow">Backtested tactical ETF allocation model</div><h1>MoMoEtf2</h1><p>Tactical asset allocation model that adjusts monthly across major market exposures using proprietary market-environment and risk-management signals. Subscribers receive current model allocations and update alerts.</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: {currency(start_equity)}</p>{render_faq("momentum2", audience)}</section>
+<section class="hero"><div class="eyebrow">Backtested tactical ETF allocation model</div><h1>MoMoEtf2</h1><p>Tactical asset allocation model that adjusts monthly across major market exposures using proprietary market-environment and risk-management signals. Subscribers receive current model allocations and update alerts.</p><p class="subtle">Strategy results include transaction costs of 5 bps (0.05%) on each purchase and each sale, including initial purchases. Open positions are not liquidated solely at the end of the backtest.</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: {currency(start_equity)}</p>{render_faq("momentum2", audience)}</section>
 <section class="metrics">{metrics_html}</section>
 {before_results}
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">MoMoEtf2 and SPY equity with drawdowns through {end_date}.</p><div class="chart">{chart_html}</div></section>

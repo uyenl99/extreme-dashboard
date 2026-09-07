@@ -71,7 +71,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2 dependency install failed." }
     Push-Location $inflationRoot
     try {
-        & $python "inflation_compass.py"
+        & $python "inflation_compass.py" --cost-bps 5
         if ($LASTEXITCODE -ne 0) { throw "Momentum ETF2 refresh failed." }
     }
     finally { Pop-Location }
