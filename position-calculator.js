@@ -7,7 +7,16 @@
   const headers = Array.from(source.querySelectorAll("thead th")).map((cell) => cell.textContent.trim());
   let positions = [];
   const holdingLabel = headers.includes("Holdings") ? "Holdings" : headers.includes("Holding") ? "Holding" : "";
-  if (holdingLabel) {
+  if (source.dataset.modelWeights) {
+    // Models such as HAA can combine several defensive slots in one ETF.
+    try {
+      const weights = JSON.parse(source.dataset.modelWeights);
+      const entries = Object.entries(weights);
+      const total = entries.reduce((sum, [, weight]) => sum + Number(weight), 0);
+      if (!entries.length || Math.abs(total - 1) > 1e-6 || entries.some(([ticker, weight]) => !/^[A-Z0-9.-]+$/.test(ticker) || !Number.isFinite(weight) || weight <= 0)) return;
+      positions = entries.map(([ticker, weight]) => ({ ticker, weight }));
+    } catch { return; }
+  } else if (holdingLabel) {
     const index = headers.indexOf(holdingLabel);
     const cell = source.querySelector(`tbody tr td:nth-child(${index + 1})`);
     const tickers = (cell?.textContent || "").split(",").map((ticker) => ticker.trim()).filter(Boolean);
