@@ -168,7 +168,7 @@ def main():
         "ETF1, Hybrid Asset Allocation (HAA), and Mean Reversion each start with $10,000, "
         "for $30,000 total. Each strategy compounds independently; there is no rebalancing between strategies. "
         "The curves are rebased at the first shared observation and stop at the latest shared session. "
-        "HAA uses the exact-ETF series net of 5-basis-point trading costs; Mean Reversion uses the "
+        "Each strategy includes 5 bps (0.05%) on buys and 5 bps on sells. The combined curve adds no further trading fee. HAA uses the exact-ETF series; Mean Reversion uses the "
         "production long-only 5-position, next-day market-on-open model. "
         "SPY and 60/40 start with the same $30,000. Sharpe uses daily returns, 252 sessions per year, and a zero "
         "risk-free rate. First and last calendar periods may be partial. "

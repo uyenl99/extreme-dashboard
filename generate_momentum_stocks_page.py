@@ -9,7 +9,7 @@ from strategy_faq import FAQ_CSS, render_faq
 from metric_style import metric_class
 from strategy_card import update_backtest_card, update_member_backtest_card
 from strategy_chart import build_equity_drawdown_chart
-from strategy_positions import render_open_positions_table
+from strategy_positions import render_open_positions_table, calculate_open_positions
 
 from generate_momentum_page import (
     build_alert_table,
@@ -124,6 +124,19 @@ def load_results(source, alert_source):
             raise ValueError(f"{label}.csv dates must be valid and sorted")
 
     result = summary.iloc[0]
+    if current.get("Partial Return") is not None:
+        previous = json.loads(allocations.iloc[-1]["end_weights"])
+        holdings = [t.strip() for t in current["Holdings"].split(",") if t.strip()]
+        target = {t: 1 / len(holdings) for t in holdings}
+        cost_fraction = .0005 * sum(abs(target.get(t,0)-previous.get(t,0)) for t in set(target)|set(previous))
+        current["Partial Return"] = (1-cost_fraction)*(1+float(current["Partial Return"]))-1
+        positions = current.get("Positions", [])
+        if positions:
+            current["Positions"] = calculate_open_positions(
+                holdings, current["Execution"],
+                {p["ticker"]: p["entry_price"] for p in positions},
+                {p["ticker"]: p["current_price"] for p in positions},
+                float(result.final_equity) * (1-cost_fraction))
     daily = extend_daily_to_partial(daily, result, current)
     return result, daily, allocations, monthly, alert, current
 
@@ -276,7 +289,7 @@ def render_page(summary, daily, allocations, monthly, alert, current, audience="
 <div class="navlinks"><a href="index.html">Home</a><a href="strategies.html">Strategies</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a></div>
 </nav>
 <main class="container">
-<section class="hero"><div class="eyebrow">Backtested stock allocation model</div><h1>MoMo Stocks</h1><p>Systematic stock allocation model that adjusts monthly across selected equity opportunities using proprietary trend, quality, and risk-management signals. Subscribers receive current model allocations and update alerts.</p><p class="subtle">Backtest period: {summary.start} through {daily['date'].max():%Y-%m-%d} · Starting equity: ${INITIAL_EQUITY:,.0f}</p>{render_faq("momentum-stocks", audience)}</section>
+<section class="hero"><div class="eyebrow">Backtested stock allocation model</div><h1>MoMo Stocks</h1><p>Systematic stock allocation model that adjusts monthly across selected equity opportunities using proprietary trend, quality, and risk-management signals. Subscribers receive current model allocations and update alerts.</p><p class="subtle">Strategy results include transaction costs of 5 bps (0.05%) on each purchase and each sale, including initial purchases. Open positions are not liquidated solely at the end of the backtest.</p><p class="subtle">Backtest period: {summary.start} through {daily['date'].max():%Y-%m-%d} · Starting equity: ${INITIAL_EQUITY:,.0f}</p>{render_faq("momentum-stocks", audience)}</section>
 <section class="metrics">{metric_html}</section>
 {protected_sections if audience == "member" else ""}
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">MoMo Stocks and SPY equity with drawdowns through {daily['date'].max():%Y-%m-%d}.</p><div class="chart">{chart_html}</div></section>

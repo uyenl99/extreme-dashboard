@@ -1,0 +1,82 @@
+--- a/DualMom/momo5.py
++++ b/DualMom/momo5.py
+@@ -37,6 +37,7 @@
+ SKIP = 1
+ N_HOLD = 3
+ INIT_CAP = 100_000.0
++TRANSACTION_COST_BPS = 5.0
+ # Optional first execution month. None preserves the original full-cache run.
+ BACKTEST_START = None
+ 
+@@ -141,6 +142,7 @@
+     high_water = INIT_CAP
+     records = []
+     daily_rows = []
++    previous_end_weights = {}
+ 
+     for i in range(len(months) - 2):
+         sig_mo = months[i]
+@@ -178,8 +180,15 @@
+             continue
+ 
+         start_value = port_value
+-        port_ret = float(np.mean(hld_rets))
++        gross_return = float(np.mean(hld_rets))
++        target = {h: holdings.count(h) / len(holdings) for h in set(holdings)}
++        names = set(target) | set(previous_end_weights)
++        buy_turnover = sum(max(target.get(h, 0) - previous_end_weights.get(h, 0), 0) for h in names)
++        sell_turnover = sum(max(previous_end_weights.get(h, 0) - target.get(h, 0), 0) for h in names)
++        cost_fraction = TRANSACTION_COST_BPS / 10000 * (buy_turnover + sell_turnover)
++        port_ret = (1 - cost_fraction) * (1 + gross_return) - 1
+         port_value *= 1 + port_ret
++        previous_end_weights = {h: target[h] * exits[h] / entries[h] / (1 + gross_return) for h in target}
+ 
+         spy_ret = monthly_open.loc[exit_mo, BENCHMARK] / monthly_open.loc[exec_mo, BENCHMARK] - 1
+         spy_value *= 1 + spy_ret
+@@ -194,7 +203,7 @@
+             for h in holdings:
+                 entry = entries[h]
+                 day_rets.append(daily_close.loc[day, h] / entry - 1 if entry > 0 else 0.0)
+-            equity = start_value * (1 + float(np.mean(day_rets)))
++            equity = start_value * (1 - cost_fraction) * (1 + float(np.mean(day_rets)))
+             high_water = max(high_water, equity)
+             spy_equity = (spy_value / (1 + spy_ret)) * (daily_close.loc[day, BENCHMARK] / spy_entry)
+             daily_rows.append(
+@@ -224,6 +233,12 @@
+                 "realized_vol": vf["realized_vol"],
+                 "vix_ma": vf["vix_ma"],
+                 "port_ret": port_ret,
++                "gross_return": gross_return,
++                "cost_bps_per_side": TRANSACTION_COST_BPS,
++                "buy_turnover": buy_turnover,
++                "sell_turnover": sell_turnover,
++                "transaction_cost": start_value * cost_fraction,
++                "cost_fraction": cost_fraction,
+                 "spy_ret": spy_ret,
+                 "port_value": port_value,
+                 "spy_value": spy_value,
+@@ -399,6 +414,16 @@
+ 
+     slot_returns = [row["return"] for row in rows if pd.notna(row["return"])]
+     partial_return = float(np.mean(slot_returns)) if slot_returns else np.nan
++    completed, _ = run_backtest(daily_close, monthly_close, monthly_open, mom, vol_filter)
++    previous = {}
++    if not completed.empty:
++        last = completed.iloc[-1]
++        old_holdings = [last.h1, last.h2, last.h3]
++        raw = {h: old_holdings.count(h) / len(old_holdings) * monthly_open.loc[exec_mo, h] / monthly_open.loc[completed.index[-1], h] for h in set(old_holdings)}
++        previous = {h: v / sum(raw.values()) for h, v in raw.items()}
++    target = {h: holdings.count(h) / len(holdings) for h in set(holdings)}
++    turnover = sum(abs(target.get(h, 0) - previous.get(h, 0)) for h in set(target) | set(previous))
++    partial_return = (1 - turnover * TRANSACTION_COST_BPS / 10000) * (1 + partial_return) - 1
+ 
+     return {
+         "signal_month": sig_mo,
+@@ -410,6 +435,7 @@
+         "realized_vol": vf["realized_vol"],
+         "vix_ma": vf["vix_ma"],
+         "partial_return": partial_return,
++        "cost_fraction": turnover * TRANSACTION_COST_BPS / 10000,
+         "slots": rows,
+     }
+ 

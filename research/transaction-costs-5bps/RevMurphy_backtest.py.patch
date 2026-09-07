@@ -1,0 +1,75 @@
+--- a/RevMurphy/backtest.py
++++ b/RevMurphy/backtest.py
+@@ -8,7 +8,7 @@
+ 
+ TRADE_COLUMNS = [
+     "ticker", "side", "sleeve", "cluster", "entry_date", "entry_price", "shares", "entry_notional",
+-    "entry_qpi", "entry_ibs", "entry_rsi2", "entry_ret_3d",
++    "entry_cost", "exit_cost", "entry_qpi", "entry_ibs", "entry_rsi2", "entry_ret_3d",
+     "exit_date", "exit_price", "exit_ibs", "exit_rsi2",
+     "pnl_dollars", "return_pct", "holding_days", "status",
+ ]
+@@ -360,7 +360,7 @@
+     positions = {}
+     trades = []
+     equity_rows = []
+-    cost_rate = config.ROUND_TRIP_COST_BPS / 10000.0
++    cost_rate = config.TRANSACTION_COST_BPS / 10000.0
+ 
+     for date in dates:
+         day = rows_by_date[date]
+@@ -382,17 +382,19 @@
+                     exit_multiplier = 1.0 - float(exit_slippage_bps) / 10000.0 if is_long else 1.0 + float(exit_slippage_bps) / 10000.0
+                     exit_price *= exit_multiplier
+                 exit_notional = pos["shares"] * exit_price
+-                trade_cost = pos["entry_notional"] * cost_rate
++                exit_cost = exit_notional * cost_rate
++                trade_cost = pos["entry_cost"] + exit_cost
+                 if is_long:
+                     pnl = exit_notional - pos["entry_notional"] - trade_cost
+-                    cash += exit_notional - trade_cost
++                    cash += exit_notional - exit_cost
+                 else:
+                     pnl = pos["entry_notional"] - exit_notional - trade_cost
+-                    cash -= exit_notional + trade_cost
++                    cash -= exit_notional + exit_cost
+                 trades.append({
+                     **pos,
+                     "exit_date": date,
+                     "exit_price": exit_price,
++                    "exit_cost": exit_cost,
+                     "exit_ibs": row["ibs"],
+                     "exit_rsi2": row["rsi2"],
+                     "pnl_dollars": pnl,
+@@ -471,7 +473,7 @@
+                     else allocation
+                 )
+                 if side == "long":
+-                    entry_notional = min(entry_notional, cash)
++                    entry_notional = min(entry_notional, cash / (1 + cost_rate))
+                 entry_price = _row_price(row)
+                 if side == "long" and long_entry_limit_bps:
+                     entry_price *= 1.0 - float(long_entry_limit_bps) / 10000.0
+@@ -480,11 +482,12 @@
+                         continue
+                 if entry_notional <= 0 or entry_price <= 0:
+                     continue
++                entry_cost = entry_notional * cost_rate
+                 shares = entry_notional / entry_price
+                 if side == "long":
+-                    cash -= entry_notional
++                    cash -= entry_notional + entry_cost
+                 else:
+-                    cash += entry_notional
++                    cash += entry_notional - entry_cost
+                 position_key = f"{side}:{ticker}"
+                 positions[position_key] = {
+                     "ticker": ticker,
+@@ -495,6 +498,7 @@
+                     "entry_price": entry_price,
+                     "shares": shares,
+                     "entry_notional": entry_notional,
++                    "entry_cost": entry_cost,
+                     "entry_qpi": row["qpi"] if side == "long" else row.get("short_qpi", np.nan),
+                     "entry_ibs": row["ibs"],
+                     "entry_rsi2": row["rsi2"],

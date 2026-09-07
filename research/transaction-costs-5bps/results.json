@@ -1,0 +1,48 @@
+{
+  "cost_bps_per_side": 5,
+  "combined_additional_cost_bps": 0,
+  "results": [
+    {
+      "strategy": "ETF1",
+      "cagr": "29.0%",
+      "sharpe": "1.42",
+      "max_drawdown": "-18.9%",
+      "final_equity": "$1,034,523"
+    },
+    {
+      "strategy": "ETF2",
+      "cagr": "21.4%",
+      "sharpe": "1.22",
+      "max_drawdown": "-24.1%",
+      "final_equity": "$10,609,757"
+    },
+    {
+      "strategy": "HAA",
+      "cagr": "12.00%",
+      "sharpe": "1.14",
+      "max_drawdown": "-15.00%",
+      "final_equity": "$338,077"
+    },
+    {
+      "strategy": "Momentum Stocks",
+      "cagr": "45.0%",
+      "sharpe": "1.28",
+      "max_drawdown": "-42.7%",
+      "final_equity": "$2,835,518"
+    },
+    {
+      "strategy": "Mean Reversion",
+      "cagr": "26.9%",
+      "sharpe": "1.39",
+      "max_drawdown": "-21.0%",
+      "final_equity": "$1,113,058"
+    },
+    {
+      "strategy": "Combined Portfolio",
+      "cagr": "25.75%",
+      "sharpe": "1.70",
+      "max_drawdown": "-12.04%",
+      "final_equity": "$244,792"
+    }
+  ]
+}

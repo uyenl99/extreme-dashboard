@@ -196,6 +196,9 @@ try {
     Invoke-Stage "Hybrid Asset Allocation (HAA)" {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $haaUpdate -WebRoot $webRoot
     }
+    Invoke-Stage "Verify 5-bps buy and sell costs" {
+        & $python (Join-Path $webRoot "scripts\verify_transaction_costs.py")
+    }
     Invoke-Stage "Combined Portfolio results" {
         $combinedCode = "import runpy,sys; sys.path.insert(0,r'$webRoot'); sys.path.insert(0,r'C:\junk\stocks\DualMom\.python_packages'); runpy.run_path(r'$webRoot\generate_combined_portfolio_page.py',run_name='__main__')"
         & $python -c $combinedCode

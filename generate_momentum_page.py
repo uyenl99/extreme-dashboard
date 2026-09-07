@@ -315,7 +315,7 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None, parti
     member_sections = ""
     if audience == "member":
         member_sections = (
-            current_partial_month_panel(partial, partial_slots, float(summary.final))
+            (current_partial_month_panel(partial, partial_slots, float(summary.final) * (1-float(partial.get("cost_fraction",0)))) if partial is not None else "")
             + f'<section class="panel"><h2>Latest Alert</h2>{build_alert_table(alert, ("Signal", "Regime", "Holdings", "Execution"))}</section>'
             f'<section class="panel"><h2>Latest 20 Historical Trades</h2>{build_allocation_table(allocations, partial)}</section>'
         )
@@ -342,7 +342,7 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None, parti
 <div class="navlinks"><a href="index.html">Home</a><a href="strategies.html">Strategies</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a></div>
 </nav>
 <main class="container">
-<section class="hero"><div class="eyebrow">Backtested ETF allocation model</div><h1>MoMoEtf1</h1><p>Systematic ETF allocation model that adjusts monthly across major market exposures using proprietary trend and risk-management signals. Subscribers receive current model allocations and update alerts.</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: ${daily.iloc[0]["Equity"]:,.0f}</p>{render_faq("momentum", audience)}</section>
+<section class="hero"><div class="eyebrow">Backtested ETF allocation model</div><h1>MoMoEtf1</h1><p>Systematic ETF allocation model that adjusts monthly across major market exposures using proprietary trend and risk-management signals. Subscribers receive current model allocations and update alerts.</p><p class="subtle">Strategy results include transaction costs of 5 bps (0.05%) on each purchase and each sale, including initial purchases. Open positions are not liquidated solely at the end of the backtest.</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: ${daily.iloc[0]["Equity"]:,.0f}</p>{render_faq("momentum", audience)}</section>
 <section class="metrics">{metric_html}</section>
 {member_sections if audience == "member" else ""}
 <section class="panel"><h2>Equity Curve</h2><p class="subtle">MoMoEtf1 and SPY equity with drawdowns through {end_date}.</p><div class="chart">{chart_html}</div></section>

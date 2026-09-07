@@ -1,0 +1,33 @@
+--- a/MomoSp/momo_sp_v2.py
++++ b/MomoSp/momo_sp_v2.py
+@@ -1,3 +1,4 @@
++import json
+ #!/usr/bin/env python3
+ """MOMO-SP V2: monthly top 10 with 10-month momentum and defensive rotation."""
+ 
+@@ -16,7 +17,7 @@
+ momo_sp.REBALANCE_FREQUENCY = "monthly"
+ momo_sp.PERIODS_PER_YEAR = 12
+ momo_sp.OUTPUT_DIR = Path(__file__).resolve().parent / "output_momo_sp_v2"
+-TRANSACTION_COST_RATE = 0.0002
++TRANSACTION_COST_RATE = 0.0005
+ 
+ 
+ def target_for_signal(
+@@ -307,7 +308,7 @@
+ def apply_transaction_costs(
+     results: pd.DataFrame, execution_prices: pd.DataFrame
+ ) -> tuple[pd.DataFrame, pd.DataFrame]:
+-    """Apply 2 bps to actual dollars bought and sold at each rebalance."""
++    """Apply 5 bps to actual dollars bought and sold at each rebalance."""
+     adjusted = results.copy()
+     equity = momo_sp.INIT_CAP
+     previous_end_weights: dict[str, float] = {}
+@@ -353,6 +354,7 @@
+             )
+             for ticker in tickers
+         }
++        adjusted.at[entry_date, "end_weights"] = json.dumps(previous_end_weights)
+         cost_rows.append(
+             {
+                 "entry_date": entry_date,

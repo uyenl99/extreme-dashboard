@@ -55,7 +55,7 @@ def verify_etf1() -> int:
                 ]
             )
         )
-    assert_close(results["port_ret"], pd.Series(expected), "ETF1 strategy return")
+    assert_close(results["port_ret"], (1-results["cost_fraction"])*(1+pd.Series(expected))-1, "ETF1 net strategy return")
     expected_spy = pd.Series(
         [
             monthly_open.at[row.exit_date, "SPY"]
@@ -90,7 +90,7 @@ def verify_etf2() -> int:
                 ]
             )
         )
-    assert_close(results["strategy_return"], pd.Series(expected), "ETF2 strategy return")
+    assert_close(results["strategy_return"], (1-results["cost_fraction"])*(1+pd.Series(expected))-1, "ETF2 net strategy return")
     expected_spy = pd.Series(
         [
             opens.at[row.exit_date, "SPY"] / opens.at[row.entry_date, "SPY"] - 1
