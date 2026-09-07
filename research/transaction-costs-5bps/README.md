@@ -6,6 +6,8 @@ The rerun uses existing production price, membership, capitalization, and next-o
 
 The engine patches in this folder document the changes applied to the adjacent local DualMom, inflationcompass, MomoSp, and RevMurphy projects. HAA already applies 5 bps per traded dollar. Keep those engine changes when moving or reinstalling the scheduled backtests. Mean Reversion now deducts entry fees immediately, deducts exit fees from actual exit proceeds, and reserves cash for entry costs. Public/member current-month marks also include the current rebalance fee.
 
+The weekday scheduled task fetches production main before each run. `scripts/verify_backtest_versions.py` checks the five modified external engine files against `engine_versions.json` (SHA-256 with normalized line endings) before any backtests run. Intentional future engine changes require validation and an updated manifest. The transaction-cost audit checks freshly generated HAA data in this checkout. Combined Portfolio runs after all components and their cost audit, using explicit source paths, then refreshes its results page and both public/member strategy cards. Its generated page is included in the daily publication allowlist.
+
 Validation: independently replayed ETF1 and ETF2 target/drift turnover against MOO prices; checked every Momentum Stocks buy/sell fee; reconciled 1,322 Mean Reversion entry fees, 1,317 exit fees, realized P&L, and every daily cash balance; reconciled HAA net/gross curves to its fee ledger; passed execution-price checks and seven combined-portfolio tests. The shared daily batch runs `scripts/verify_transaction_costs.py` before building combined results.
 
 | Strategy | CAGR | Sharpe | Max drawdown |

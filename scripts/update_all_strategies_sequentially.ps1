@@ -177,6 +177,9 @@ try {
     & $git -C $webRoot reset --hard origin/main
     if ($LASTEXITCODE -ne 0) { throw "Could not synchronize main." }
 
+    Invoke-Stage "Verify approved backtest engine versions" {
+        & $python (Join-Path $webRoot "scripts\verify_backtest_versions.py")
+    }
     Invoke-Stage "Collective2" {
         $dispatch = & $gh workflow run $workflow --repo $repo --ref main 2>&1
         $match = [regex]::Match("$dispatch", 'actions/runs/(\d+)')
@@ -200,7 +203,7 @@ try {
         & $python (Join-Path $webRoot "scripts\verify_transaction_costs.py")
     }
     Invoke-Stage "Combined Portfolio results" {
-        $combinedCode = "import runpy,sys; sys.path.insert(0,r'$webRoot'); sys.path.insert(0,r'C:\junk\stocks\DualMom\.python_packages'); runpy.run_path(r'$webRoot\generate_combined_portfolio_page.py',run_name='__main__')"
+        $combinedCode = "import runpy,sys; sys.path.insert(0,r'$webRoot'); sys.path.insert(0,r'C:\junk\stocks\DualMom\.python_packages'); sys.argv=['generate_combined_portfolio_page.py','--etf1-source',r'C:\junk\stocks\DualMom\output_momo5','--mean-reversion-source',r'C:\junk\stocks\RevMurphy\output_long_only_5x0_100_no_cluster_next_open']; runpy.run_path(r'$webRoot\generate_combined_portfolio_page.py',run_name='__main__')"
         & $python -c $combinedCode
     }
     Set-RunStage -Name "Prepare generated site files"

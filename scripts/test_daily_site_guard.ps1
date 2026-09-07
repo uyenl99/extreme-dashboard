@@ -59,6 +59,7 @@ function Assert-SectionRowCount([string]$Path, [string]$Heading, [int]$ExpectedR
 $allowedPaths = @(
     '^api/_member-content/(extreme-os|mean-reversion|momentum|momentum2|momentum-stocks|haa)\.html$',
     '^haa\.html$',
+    '^combined-portfolio\.html$',
     '^data/haa/[a-zA-Z0-9_]+\.(csv|json)$',
     '^data/performance_summary\.json$',
     '^extreme-os\.html$',
@@ -187,7 +188,9 @@ Assert-Contains "strategies.html" @(
     '<h2>MoMoEtf2</h2>',
     '<h2>Hybrid Asset Allocation (HAA)</h2>',
     '<h2>MoMo Stocks</h2>',
-    '<h2>Mean Reversion</h2>'
+    '<h2>Mean Reversion</h2>',
+    '<h2>Combined Portfolio</h2>',
+    'href="combined-portfolio.html"'
 )
 foreach ($publicPage in @(
     "about.html",
@@ -264,6 +267,8 @@ foreach ($memberPage in @(
 }
 
 
+Assert-Contains "combined-portfolio.html" @('Combined Portfolio', 'Drawdown', 'Monthly', '5 bps')
+Assert-Contains "members.html" @('href="combined-portfolio.html"')
 Assert-NotContains "haa.html" @('data-model-weights', 'id="current-month"', '<h2>Latest Alert</h2>')
 Assert-Contains "api/_member-content/haa.html" @('data-model-weights', 'id="current-month"', '<h2>Latest Alert</h2>')
 
