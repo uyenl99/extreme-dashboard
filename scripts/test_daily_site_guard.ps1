@@ -57,7 +57,9 @@ function Assert-SectionRowCount([string]$Path, [string]$Heading, [int]$ExpectedR
 }
 
 $allowedPaths = @(
-    '^api/_member-content/(extreme-os|mean-reversion|momentum|momentum2|momentum-stocks)\.html$',
+    '^api/_member-content/(extreme-os|mean-reversion|momentum|momentum2|momentum-stocks|haa)\.html$',
+    '^haa\.html$',
+    '^data/haa/[a-zA-Z0-9_]+\.(csv|json)$',
     '^data/performance_summary\.json$',
     '^extreme-os\.html$',
     '^performance-details\.html$',
@@ -118,6 +120,7 @@ Assert-Contains "members.html" @(
     'members.html?strategy=extreme-os',
     'members.html?strategy=momentum',
     'members.html?strategy=momentum2',
+    'members.html?strategy=haa',
     'members.html?strategy=momentum-stocks',
     'members.html?strategy=mean-reversion',
     'Sharpe Ratio</span><span class="negative">',
@@ -179,6 +182,7 @@ Assert-Contains "strategies.html" @(
     '<h2>Extreme OS</h2>',
     '<h2>MoMoEtf1</h2>',
     '<h2>MoMoEtf2</h2>',
+    '<h2>Hybrid Asset Allocation (HAA)</h2>',
     '<h2>MoMo Stocks</h2>',
     '<h2>Mean Reversion</h2>'
 )
@@ -190,6 +194,7 @@ foreach ($publicPage in @(
     "mean-reversion.html",
     "momentum.html",
     "momentum2.html",
+    "haa.html",
     "momentum-stocks.html",
     "privacy.html",
     "refund-cancellation.html",
@@ -204,6 +209,7 @@ foreach ($memberPage in @(
     "api/_member-content/mean-reversion.html",
     "api/_member-content/momentum.html",
     "api/_member-content/momentum2.html",
+    "api/_member-content/haa.html",
     "api/_member-content/momentum-stocks.html"
 )) {
     Assert-Contains $memberPage @('<script src="/site-auth-nav.js?v=5"></script>')
@@ -253,5 +259,9 @@ foreach ($memberPage in @(
 )) {
     Assert-SectionRowCount $memberPage "Latest 20 Historical Trades" 20
 }
+
+
+Assert-NotContains "haa.html" @('data-model-weights', 'id="current-month"', '<h2>Latest Alert</h2>')
+Assert-Contains "api/_member-content/haa.html" @('data-model-weights', 'id="current-month"', '<h2>Latest Alert</h2>')
 
 Write-Host "Daily publication guard passed. Only approved strategy results changed; site and member UI are protected."

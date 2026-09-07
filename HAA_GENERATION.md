@@ -1,38 +1,30 @@
-# Hybrid Asset Allocation page
+# HAA weekday updates
 
-Public page: `haa.html`. Protected page: `api/_member-content/haa.html`, served through the existing authenticated `/api/member-page?strategy=haa` route. Cards appear after ETF2 in both directories; the homepage ETF group links to HAA.
+HAA is the sixth stage of the existing **Extreme Dashboard - Sequential Strategy Updates** Windows task. The task starts Monday–Friday at **3:00 PM Pacific** on this PC. Its bootstrap fetches production `main` before invoking the batch, so merged updates are used on the next run. No additional scheduled task is required.
 
-## Rebuild the current published snapshot
+`scripts/update_haa_weekdays.ps1` loads an isolated Python dependency directory at `C:\junk\stocks\HAA\.packages` (installing `requirements-haa.txt` if needed), then runs `scripts/refresh_haa.py`. Temporary calculations are stored beneath `C:\junk\stocks\HAA\runtime` and cleaned up. The shared batch supplies the current site checkout and handles all publication.
 
-Install the existing site requirements (pandas, numpy, requests, plotly). From the site root:
+Each run:
 
-```
-python generate_haa_page.py
-```
+1. Use the NYSE calendar, including holidays and early closes, to determine the latest finished session and last fully completed month.
+2. Download fresh dividend-adjusted ETF histories and recalculate both the PDBC main test and DBC proxy extension through the last completed month. The required month-end must exist in the results.
+3. Refresh the confirmed allocation's raw-price/total-return snapshot through the latest finished session. Reject stale or missing prices; never publish a fresh date over stale data.
+4. Rebuild public/member pages and both strategy cards. Run return, allocation and public/member boundary checks.
+5. Include `haa.html`, `api/_member-content/haa.html` and `data/haa` in the shared preview, then publish only after the existing batch guards and Vercel checks pass.
 
-Input CSVs and `current_snapshot.json` are checked in under `data/haa`, which is excluded from Vercel publication by the existing `.vercelignore`. The generator updates both pages and both card metric blocks. It uses the shared chart/card helpers and the same daily, zero-risk-free-rate Sharpe convention as ETF1. All returns are net of the declared trading costs. Main equity is scaled to $100,000 to match ETF1/2. Main metrics use complete months only.
+An intramonth run updates the partial-month position panel. On the last trading day, after the close, the newly finished month enters the backtest and the new allocation is labeled for the following month. A weekday market holiday retains the last completed session's date. HAA keeps its documented month-end-close execution; it is not changed to the other strategies' MOO convention. Email delivery is not enabled.
 
-To update the separate current holding snapshot from public Yahoo Finance daily bars:
+## Manual checks and rebuilds
 
-```
-python generate_haa_page.py --refresh-snapshot
-```
-
-The snapshot marks the latest confirmed month-end weights, not a new signal. It is rejected if its signal date differs from the CSV target date or if it extends beyond the next holding month. Prices are raw closes; position total P/L includes adjusted total returns/distributions. It has no trade execution or email capability.
-
-## Reproduce the historical calculations
-
-`research/haa_backtest.py` preserves the backtest implementation with an explicit September 1, 2026 exclusive cutoff. It requires matplotlib in addition to site requirements. Run it to create `research/haa_run/results` and cache vendor responses in `research/haa_run/data`. Copy its result CSVs into `data/haa` and run the page generator. Change the cutoff deliberately for a new complete-month sample and update dated report labels as necessary; do not mark a partial month as complete.
-
-The PDBC actual-ETF test and DBC proxy extension are separate. Preserve their distinct dates and labels. Same-close execution is idealized; next-close sensitivity is included. The article's 1971 history and 15.9% CAGR are not used as our site's performance.
-
-HAA has not been added to the automatic daily scheduler or member emails. Existing daily jobs preserve unrelated cards and pages. Displayed snapshot dates remain authoritative.
-
-## Verification
+With `requirements-haa.txt` installed and the site root on `PYTHONPATH`:
 
 ```
+python scripts/refresh_haa.py
+python scripts/test_haa_refresh.py
 python scripts/verify_haa_page.py
 node scripts/verify_haa_integration.js
 ```
 
-These validate published metrics, all 129 monthly observations, historical weight alignment, absence of member holdings in public HTML, membership enforcement, and unequal-weight position sizing while retaining the existing ETF equal-weight path.
+`refresh_haa.py --as-of <timezone-aware timestamp>` is available for reproducible checks. It does not publish by itself. `generate_haa_page.py` renders the checked-in snapshot without fetching; `--refresh-snapshot` refreshes only its current prices and is not a substitute for the full calendar-aware batch.
+
+`research/haa_backtest.py --end 2026-09-01` reproduces the original historical cutoff. `--end` is exclusive and must be the first of a month. `--refresh` bypasses raw-data caches, `--output-root` selects isolated output, and `--skip-chart` omits the optional matplotlib image. The public charts use the site's shared Plotly helper. The generator's date labels follow the input data automatically.

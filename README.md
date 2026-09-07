@@ -65,3 +65,7 @@ The repository must have an Actions secret named `C2_API_KEY`. The workflow
 also refreshes the Extreme OS historical trades and current open positions.
 It commits the performance data fragments and `extreme-os.html` only when the API data
 changed, which triggers the normal Vercel production deployment.
+
+### HAA weekday updates
+
+Hybrid Asset Allocation now joins the shared weekday batch at 3:00 PM Pacific. See [HAA_GENERATION.md](HAA_GENERATION.md) for calendar handling, verification and manual refresh instructions.

@@ -5,3 +5,4 @@ requirements.txt
 .github/
 .agents/
 .codex/
+requirements-haa.txt
