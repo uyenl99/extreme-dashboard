@@ -1,25 +1,22 @@
 """HAA: actual ETF adjusted-close backtest. Run with Python + pandas/numpy/requests/matplotlib."""
 from pathlib import Path
+import argparse
 import json, time
 from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import pandas as pd
 import requests
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parent / 'haa_run'
-ROOT.mkdir(exist_ok=True)
 DATA = ROOT / 'data'
 OUT = ROOT / 'results'
-DATA.mkdir(exist_ok=True); OUT.mkdir(exist_ok=True)
 TICKERS = ['SPY','IWM','EFA','EEM','VNQ','PDBC','IEF','TLT','TIP','BIL','DBC']
-END = pd.Timestamp('2026-09-01')  # exclude the unfinished September month
+END = pd.Timestamp('2026-09-01')  # default reproduces the original research snapshot
+REFRESH = False
 
 def download(ticker):
     path = DATA / f'{ticker}.json'
-    if path.exists():
+    if path.exists() and not REFRESH:
         obj = json.loads(path.read_text())
     else:
         for attempt in range(3):
@@ -88,6 +85,19 @@ def metrics(equity):
             'positive_months':(r>0).mean(), 'months':n}
 
 def main():
+    global ROOT, DATA, OUT, END, REFRESH
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--end', default='2026-09-01', help='Exclusive complete-month cutoff (YYYY-MM-DD)')
+    parser.add_argument('--output-root', type=Path, default=ROOT)
+    parser.add_argument('--refresh', action='store_true', help='Download fresh vendor data rather than using cached JSON')
+    parser.add_argument('--skip-chart', action='store_true', help='Skip the optional static matplotlib image')
+    args = parser.parse_args()
+    END = pd.Timestamp(args.end)
+    if END.day != 1: raise ValueError('The exclusive cutoff must be the first of a month')
+    ROOT = args.output_root
+    DATA, OUT = ROOT / 'data', ROOT / 'results'
+    DATA.mkdir(parents=True, exist_ok=True); OUT.mkdir(parents=True, exist_ok=True)
+    REFRESH = args.refresh
     series = list(ThreadPoolExecutor(max_workers=4).map(download,TICKERS))
     all_prices = pd.concat(series,axis=1).sort_index()
     all_prices.to_csv(DATA/'adjusted_close.csv')
@@ -135,14 +145,18 @@ def main():
         annual = (1+monthly_ret).groupby(monthly_ret.index.year).prod()-1
         annual.to_csv(OUT/f'{label}_annual_returns.csv')
         if label=='exact_etfs':
-            fig,axes = plt.subplots(2,1,figsize=(11,8),sharex=True,gridspec_kw={'height_ratios':[2,1]})
-            for name in ['HAA net 5bp','SPY','60 SPY 40 IEF']:
-                axes[0].plot(frame.index,frame[name]*10000,label=name)
-                axes[1].plot(frame.index,100*(frame[name]/frame[name].cummax().clip(lower=1)-1),label=name)
-            axes[0].set(title='Hybrid Asset Allocation | actual ETFs',ylabel='Growth of $10,000 (log scale)',yscale='log')
-            axes[0].legend(); axes[1].set(ylabel='Daily drawdown (%)')
-            for ax in axes: ax.grid(alpha=.25)
-            fig.tight_layout(); fig.savefig(OUT/'performance.png',dpi=150); plt.close(fig)
+            if not args.skip_chart:
+                import matplotlib
+                matplotlib.use('Agg')
+                import matplotlib.pyplot as plt
+                fig,axes = plt.subplots(2,1,figsize=(11,8),sharex=True,gridspec_kw={'height_ratios':[2,1]})
+                for name in ['HAA net 5bp','SPY','60 SPY 40 IEF']:
+                    axes[0].plot(frame.index,frame[name]*10000,label=name)
+                    axes[1].plot(frame.index,100*(frame[name]/frame[name].cummax().clip(lower=1)-1),label=name)
+                axes[0].set(title='Hybrid Asset Allocation | actual ETFs',ylabel='Growth of $10,000 (log scale)',yscale='log')
+                axes[0].legend(); axes[1].set(ylabel='Daily drawdown (%)')
+                for ax in axes: ax.grid(alpha=.25)
+                fig.tight_layout(); fig.savefig(OUT/'performance.png',dpi=150); plt.close(fig)
             # First full month after the public March 3, 2023 article.
             post = frame.loc['2023-03-31':]
             post = post/post.iloc[0]

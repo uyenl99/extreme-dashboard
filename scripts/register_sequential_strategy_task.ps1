@@ -36,7 +36,7 @@ $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" 
 
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger `
     -Settings $settings -Principal $principal `
-    -Description "Five sequential jobs publish after Vercel preview checks pass. Mean Reversion live alerts publish separately at 12:30 PM." `
+    -Description "Six sequential jobs (including HAA) publish after Vercel preview checks pass. Mean Reversion live alerts publish separately at 12:30 PM." `
     -Force | Out-Null
 
 foreach ($oldTask in $retiredTasks) {

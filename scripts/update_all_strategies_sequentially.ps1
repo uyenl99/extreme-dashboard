@@ -11,6 +11,7 @@ $workflow = "update-performance.yml"
 $webRoot = Split-Path -Parent $PSScriptRoot
 $meanReversionUpdate = Join-Path $webRoot "scripts\update_mean_reversion_daily.ps1"
 $momentumUpdate = Join-Path $webRoot "scripts\update_momentum_weekdays.ps1"
+$haaUpdate = Join-Path $webRoot "scripts\update_haa_weekdays.ps1"
 $mooVerifier = Join-Path $webRoot "scripts\verify_moo_backtests.py"
 $publicationGuard = Join-Path $webRoot "scripts\test_daily_site_guard.ps1"
 $logRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\logs"
@@ -31,6 +32,7 @@ foreach ($requiredPath in @(
     $python,
     $meanReversionUpdate,
     $momentumUpdate,
+    $haaUpdate,
     $mooVerifier,
     $publicationGuard,
     (Join-Path $webRoot "inject_position_calculator.py")
@@ -191,6 +193,9 @@ try {
     Invoke-Stage "Momentum ETF1, ETF2, and SP" {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $momentumUpdate -NoPublish
     }
+    Invoke-Stage "Hybrid Asset Allocation (HAA)" {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $haaUpdate -WebRoot $webRoot
+    }
     Set-RunStage -Name "Prepare generated site files"
     $generatedMemberRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\member-pages"
     $memberContentRoot = Join-Path $webRoot "api\_member-content"
@@ -214,12 +219,12 @@ try {
     # copied into api/_member-content. Running this earlier compares today's
     # public pages with yesterday's protected member pages and can reject an
     # otherwise valid batch at a month boundary.
-    Invoke-Stage "Verify all backtests use MOO prices" {
+    Invoke-Stage "Verify MOO strategy execution prices" {
         & $python $mooVerifier
     }
 
     Set-RunStage -Name "Commit generated results"
-    & $git -C $webRoot add -- mean-reversion.html strategies.html members.html momentum.html momentum2.html inflation-compass momentum-stocks.html api/_member-content position-calculator.js
+    & $git -C $webRoot add -- mean-reversion.html strategies.html members.html momentum.html momentum2.html inflation-compass momentum-stocks.html api/_member-content position-calculator.js haa.html data/haa
     & $git -C $webRoot diff --cached --quiet
     if ($LASTEXITCODE -eq 1) {
         & $git -C $webRoot config user.name "Extreme Dashboard Automation"
@@ -248,7 +253,7 @@ try {
 
     Set-RunStage -Name "Create preview PR"
     for ($attempt = 1; $attempt -le 12 -and -not $prUrl; $attempt++) {
-        $created = & $gh pr create --repo $repo --draft --base main --head $previewBranch --title "Daily strategy batch update" --body "All five daily jobs completed: Collective2, Mean Reversion 5x5 walk-forward next-day MOO backtest, Momentum ETF1, Momentum ETF2, and Momentum SP. This PR is published automatically only after the Vercel preview check passes." 2>&1
+        $created = & $gh pr create --repo $repo --draft --base main --head $previewBranch --title "Daily strategy batch update" --body "All six daily jobs completed: Collective2, Mean Reversion 5x5 walk-forward next-day MOO backtest, Momentum ETF1, Momentum ETF2, Momentum SP, and HAA. This PR is published automatically only after the Vercel preview check passes." 2>&1
         if ($LASTEXITCODE -eq 0) { $prUrl = "$created".Trim() } else { Start-Sleep -Seconds 10 }
     }
     if (-not $prUrl) { throw "All jobs finished, but the shared PR could not be created." }
@@ -281,7 +286,7 @@ try {
         else { Start-Sleep -Seconds 10 }
     }
     if (-not $pagesPublished) { throw "Timed out waiting for GitHub Pages to publish daily update commit $mergeSha." }
-    $successMessage = "All five updates published successfully. PR: $prUrl Production: $productionUrl"
+    $successMessage = "All six updates published successfully. PR: $prUrl Production: $productionUrl"
     Write-Host "$successMessage ($mergeSha)."
     Write-RunStatus -Status "Succeeded" -Stage "Complete" -Message $successMessage -PullRequestUrl $prUrl
     Show-RunNotification -Title "Extreme Dashboard update succeeded" -Message $successMessage -Level Info

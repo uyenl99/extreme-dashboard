@@ -4,7 +4,6 @@ import calendar
 import html
 import json
 from pathlib import Path
-from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 from generate_momentum_etf2_page import table
@@ -50,24 +49,32 @@ def stats_table(summary):
     frame['Final Equity ($100k)']=frame['Final Equity ($100k)'].map(lambda v:f'${v*10:,.0f}')
     return table(frame,('CAGR','Annualized Volatility','Daily Max Drawdown'))
 
-def refresh_snapshot(source):
+def refresh_snapshot(source, expected_session=None, as_of=None):
     import requests
     weights=read(source,'exact_etfs_targets.csv').iloc[-1]
     signal=read(source,'exact_etfs_targets.csv').index[-1]
     snapshots={}
+    cutoff=pd.Timestamp(as_of) if as_of is not None else pd.Timestamp.now(tz='America/New_York')
+    if cutoff.tzinfo is None: raise ValueError('Snapshot cutoff must include a timezone')
+    cutoff=cutoff.tz_convert('America/New_York')
     # Request only the existing portfolio and benchmark; never infer a fresh monthly signal.
     for ticker in set(weights[weights>0].index)|{'SPY'}:
-        response=requests.get(f'https://query1.finance.yahoo.com/v8/finance/chart/{ticker}',params={'period1':int(signal.tz_localize('America/New_York').timestamp()),'period2':int(datetime.now(timezone.utc).timestamp()),'interval':'1d','events':'div'},headers={'User-Agent':'Mozilla/5.0'},timeout=40)
+        response=requests.get(f'https://query1.finance.yahoo.com/v8/finance/chart/{ticker}',params={'period1':int(signal.tz_localize('America/New_York').timestamp()),'period2':int(cutoff.timestamp()),'interval':'1d','events':'div'},headers={'User-Agent':'Mozilla/5.0'},timeout=40)
         response.raise_for_status()
         obj=response.json()['chart']['result'][0]
         dates=pd.to_datetime(obj['timestamp'],unit='s',utc=True).tz_convert('America/New_York').tz_localize(None).normalize()
         frame=pd.DataFrame({'close':obj['indicators']['quote'][0]['close'],'adjusted':obj['indicators']['adjclose'][0]['adjclose']},index=dates).dropna()
         # A daily close is usable only after that New York trading session ends.
-        cutoff=pd.Timestamp.now(tz='America/New_York')
-        if cutoff.hour<16: frame=frame.loc[frame.index<cutoff.tz_localize(None).normalize()]
+        if expected_session is not None:
+            frame=frame.loc[frame.index<=pd.Timestamp(expected_session)]
+        elif cutoff.hour<16:
+            frame=frame.loc[frame.index<cutoff.tz_localize(None).normalize()]
         snapshots[ticker]=frame
     common=set.intersection(*(set(f.index) for f in snapshots.values()))
+    if not common: raise ValueError('No aligned current snapshot dates')
     latest=max(common)
+    if expected_session is not None and latest != pd.Timestamp(expected_session):
+        raise ValueError(f'Stale snapshot: expected {expected_session}, received {latest.date()}')
     if signal not in common: raise ValueError('Missing signal-date prices in current snapshot')
     payload={'signal_date':str(signal.date()),'as_of':str(latest.date()),'prices':{ticker:{'entry_close':float(f.at[signal,'close']),'latest_close':float(f.at[latest,'close']),'total_return':float(f.at[latest,'adjusted']/f.at[signal,'adjusted']-1)} for ticker,f in snapshots.items()}}
     (source/'current_snapshot.json').write_text(json.dumps(payload,indent=2)+'\n',encoding='utf-8')
@@ -86,7 +93,9 @@ def member_sections(source,equity,returns):
         q=prices[ticker]; shares=base*weight/q['entry_close']; pnl=base*weight*q['total_return']
         positions.append({'Ticker':ticker,'Target Weight':weight,'Entry Date':str(signal.date()),'Shares':f'{shares:,.2f}','Entry Price':f"${q['entry_close']:.2f}",'Current Price':f"${q['latest_close']:.2f}",'Value incl. Distributions':f'${base*weight+pnl:,.2f}','Open Total P/L':f'${pnl:,.2f}','Return':q['total_return']})
     total=sum(weights[t]*prices[t]['total_return'] for t in weights[weights>0].index)
-    content=f'<p class="subtle">Snapshot through {asof:%Y-%m-%d}. {asof:%B %Y} is incomplete and is excluded from the backtest metrics and monthly table below.</p><p class="model-summary"><span>HAA: <strong class="{metric_class(percent(total))}">{percent(total)}</strong></span><span>SPY: <strong class="{metric_class(percent(prices["SPY"]["total_return"]))}">{percent(prices["SPY"]["total_return"])}</strong></span></p>'
+    holding_month=signal.to_period('M')+1
+    status=(f'{asof:%B %Y} is incomplete and is excluded from the backtest metrics and monthly table below.' if asof>signal else f'New allocation for {holding_month}. No holding-period return has accrued since the month-end rebalance.')
+    content=f'<p class="subtle">Snapshot through {asof:%Y-%m-%d}. {status}</p><p class="model-summary"><span>HAA: <strong class="{metric_class(percent(total))}">{percent(total)}</strong></span><span>SPY: <strong class="{metric_class(percent(prices["SPY"]["total_return"]))}">{percent(prices["SPY"]["total_return"])}</strong></span></p>'
     content+=table(pd.DataFrame(positions),('Target Weight','Return'))
     content+='<p class="subtle">Model shares use equity after the latest rebalance costs and allow fractional shares. Prices are raw closes; returns and values include reinvested distributions. Entry date is the latest monthly rebalance, not necessarily the first purchase.</p>'
     result=panel('Current Partial Month',content,'id="current-month"')
@@ -106,7 +115,7 @@ def member_sections(source,equity,returns):
     return result
 
 def faq(audience):
-    items=[('What is HAA?','Hybrid Asset Allocation was developed by Wouter Keller and JW Keuning. It combines momentum-based ETF selection with a TIPS filter that determines whether to use growth or defensive exposure.'),('How does it allocate?','Each month, average the trailing 1, 3, 6 and 12-month total returns. Positive TIP momentum allows four 25% slots from SPY, IWM, EFA, EEM, VNQ, PDBC, IEF and TLT. Nonpositive slots move to whichever of IEF or BIL has stronger momentum. If TIP momentum is nonpositive, the entire portfolio moves to that defensive choice.'),('Why does the backtest start in December 2015?','The backtest uses actual ETF history and reserves the first 12 months of common data for momentum calculations. Reconstructed pre-ETF histories are excluded.'),('What do Sharpe and drawdown mean here?','Sharpe uses daily returns, 252 trading sessions per year and a zero risk-free rate, matching ETF1. Maximum drawdown measures the largest peak-to-trough decline using daily portfolio values.'),('When are these results updated?','The performance statistics cover complete months only. Always use the dates printed on this page. The current allocation snapshot is separately dated; automatic HAA updates and email delivery have not been enabled.')]
+    items=[('What is HAA?','Hybrid Asset Allocation was developed by Wouter Keller and JW Keuning. It combines momentum-based ETF selection with a TIPS filter that determines whether to use growth or defensive exposure.'),('How does it allocate?','Each month, average the trailing 1, 3, 6 and 12-month total returns. Positive TIP momentum allows four 25% slots from SPY, IWM, EFA, EEM, VNQ, PDBC, IEF and TLT. Nonpositive slots move to whichever of IEF or BIL has stronger momentum. If TIP momentum is nonpositive, the entire portfolio moves to that defensive choice.'),('Why does the backtest start in December 2015?','The backtest uses actual ETF history and reserves the first 12 months of common data for momentum calculations. Reconstructed pre-ETF histories are excluded.'),('What do Sharpe and drawdown mean here?','Sharpe uses daily returns, 252 trading sessions per year and a zero risk-free rate, matching ETF1. Maximum drawdown measures the largest peak-to-trough decline using daily portfolio values.'),('When are these results updated?','HAA refreshes in the shared weekday update batch, starting at 3:00 PM Pacific. Performance statistics use complete months; current positions are marked to the latest completed trading session. Always check the displayed dates. Email delivery is not enabled.')]
     if audience=='member': items.append(('How do I read the allocation and calculator?','The confirmed alert is already in effect. Target weights may combine multiple 25% defensive slots. The calculator uses these explicit weights. Current values include distribution-adjusted returns; your account, fills, fees and taxes may differ.'))
     return '<details class="faq-wrap"><summary>Strategy FAQ</summary><div class="faq-content">'+''.join(f'<details><summary>{html.escape(q)}</summary><p>{html.escape(a)}</p></details>' for q,a in items)+'</div></details>'
 
@@ -124,10 +133,10 @@ def render(source,audience):
     primary+=panel('Portfolio Comparison',stats_table(exact[exact.strategy.isin([STRATEGY,'SPY','60 SPY 40 IEF'])]))
     primary+='<details class="panel result-options"><summary>Trading Costs and Execution Timing</summary><p class="subtle">Costs are per dollar bought or sold. A full switch between assets incurs both sides. Next-close execution waits one trading day after the completed signal.</p>'+stats_table(exact[~exact.strategy.isin(['SPY','60 SPY 40 IEF'])])+'</details>'
     post=pd.read_csv(source/'post_publication.csv',index_col=0).reset_index(names='strategy')
-    primary+=panel('After Publication: April 2023–August 2026','<p class="subtle">First full month after the public article; a historical check, not recorded live performance. Each portfolio is rebased to $100,000.</p>'+stats_table(post[post.strategy.isin([STRATEGY,'SPY','60 SPY 40 IEF'])]))
+    primary+=panel(f'After Publication: April 2023–{end:%B %Y}','<p class="subtle">First full month after the public article; a historical check, not recorded live performance. Each portfolio is rebased to $100,000.</p>'+stats_table(post[post.strategy.isin([STRATEGY,'SPY','60 SPY 40 IEF'])]))
     ext=read(source,'extended_dbc_proxy_daily_equity.csv'); ext_returns=read(source,'extended_dbc_proxy_monthly_returns.csv')
     ext_chart=build_equity_drawdown_chart(ext.index,ext[STRATEGY]*100000,ext['SPY']*100000,'HAA (DBC proxy)','haa-dbc-chart')
-    primary+='<details class="panel result-options"><summary>Longer History: DBC Proxy, June 2008–August 2026</summary><p class="subtle">DBC replaces PDBC throughout this separate test. It is a different commodity implementation; these results are not spliced into the main history.</p>'+stats_table(summary[summary['sample']=='extended_dbc_proxy'])+f'<div class="chart">{ext_chart}</div>'+monthly_table(ext_returns)+'</details>'
+    primary+=f'<details class="panel result-options"><summary>Longer History: DBC Proxy, June 2008–{end:%B %Y}</summary><p class="subtle">DBC replaces PDBC throughout this separate test. It is a different commodity implementation; these results are not spliced into the main history.</p>'+stats_table(summary[summary['sample']=='extended_dbc_proxy'])+f'<div class="chart">{ext_chart}</div>'+monthly_table(ext_returns)+'</details>'
     method='<p class="result-note">Hypothetical backtest using Yahoo Finance dividend/split-adjusted ETF closes, with dividends reinvested, no leverage and no taxes. The main result uses 0.05% per dollar bought or sold, monthly rebalancing from drifted weights and BIL as the cash proxy. ETF expenses are embedded in prices. Signals and fills at the same month-end close are idealized; the next-close sensitivity is shown above. Annualized volatility is calculated from monthly returns. The first 12 months of common ETF history are reserved for momentum. Initial allocation: November 30, 2015.</p><p class="result-note">Reconstructed pre-ETF histories are excluded. Results depend on vendor adjustments and have not been cross-validated with a second vendor. This is our implementation of the <a href="https://allocatesmartly.com/hybrid-asset-allocation/">published HAA rules</a>, including the corrected defensive fallback, not a replication of Allocate Smartly’s proprietary data.</p>'
     primary+=panel('Methodology',method)
     member=member_sections(source,equity,returns) if audience=='member' else ''
