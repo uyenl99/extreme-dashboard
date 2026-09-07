@@ -196,6 +196,10 @@ try {
     Invoke-Stage "Hybrid Asset Allocation (HAA)" {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $haaUpdate -WebRoot $webRoot
     }
+    Invoke-Stage "Combined Portfolio results" {
+        $combinedCode = "import runpy,sys; sys.path.insert(0,r'$webRoot'); sys.path.insert(0,r'C:\junk\stocks\DualMom\.python_packages'); runpy.run_path(r'$webRoot\generate_combined_portfolio_page.py',run_name='__main__')"
+        & $python -c $combinedCode
+    }
     Set-RunStage -Name "Prepare generated site files"
     $generatedMemberRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\member-pages"
     $memberContentRoot = Join-Path $webRoot "api\_member-content"
@@ -224,7 +228,7 @@ try {
     }
 
     Set-RunStage -Name "Commit generated results"
-    & $git -C $webRoot add -- mean-reversion.html strategies.html members.html momentum.html momentum2.html inflation-compass momentum-stocks.html api/_member-content position-calculator.js haa.html data/haa
+    & $git -C $webRoot add -- mean-reversion.html strategies.html members.html momentum.html momentum2.html inflation-compass momentum-stocks.html api/_member-content position-calculator.js haa.html data/haa combined-portfolio.html
     & $git -C $webRoot diff --cached --quiet
     if ($LASTEXITCODE -eq 1) {
         & $git -C $webRoot config user.name "Extreme Dashboard Automation"
