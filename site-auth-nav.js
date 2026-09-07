@@ -105,6 +105,27 @@
     return session.access_token;
   }
 
+  async function hasActiveMembership() {
+    if (!readSession()) return false;
+    try {
+      const accessToken = await freshAccessToken();
+      if (!accessToken) {
+        localStorage.removeItem(SESSION_KEY);
+        return false;
+      }
+      const response = await fetch("/api/member-access", {
+        headers: { authorization: `Bearer ${accessToken}` }
+      });
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem(SESSION_KEY);
+      }
+      return response.ok;
+    } catch {
+      // Keep public navigation usable when authentication services are unavailable.
+      return false;
+    }
+  }
+
   async function openBilling(button) {
     button.disabled = true;
     try {
@@ -173,9 +194,21 @@
 
   let navigationObserver;
   let navigationApplied = false;
+  let navigationApplying = false;
+
+  function finishNavigation(nav, isMember) {
+    try {
+      if (isMember) renderAuthenticatedNavigation(nav);
+    } finally {
+      navigationApplied = true;
+      navigationApplying = false;
+      root.classList.remove("auth-nav-pending");
+      navigationObserver?.disconnect();
+    }
+  }
 
   function applyNavigationWhenReady() {
-    if (navigationApplied) return true;
+    if (navigationApplied || navigationApplying) return true;
     const nav = document.querySelector("nav.site-nav, body > nav:first-of-type");
     if (!nav) return false;
 
@@ -185,12 +218,14 @@
       return false;
     }
 
-    try {
-      if (readSession()) renderAuthenticatedNavigation(nav);
-    } finally {
-      navigationApplied = true;
-      root.classList.remove("auth-nav-pending");
-      navigationObserver?.disconnect();
+    navigationApplying = true;
+    if (!readSession()) {
+      finishNavigation(nav, false);
+    } else {
+      hasActiveMembership().then(
+        (isMember) => finishNavigation(nav, isMember),
+        () => finishNavigation(nav, false)
+      );
     }
     return true;
   }

@@ -145,6 +145,9 @@ Assert-Contains "member.js" @(
 Assert-Contains "site-auth-nav.js" @(
     'const SESSION_KEY = "eti_member_session"',
     'const MEMBER_DIRECTORY_URL = "/members.html?view=strategies&nav=13"',
+    'async function hasActiveMembership()',
+    'fetch("/api/member-access"',
+    'finishNavigation(nav, false)',
     'homeLink.href = "/index.html"',
     'findLink(nav, "Login")?.remove()',
     'billing.textContent = "Manage billing"',
