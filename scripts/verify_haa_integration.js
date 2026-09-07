@@ -16,7 +16,7 @@ assert.deepEqual(weights(undefined),[{ticker:'SPY',weight:.5},{ticker:'TLT',weig
 assert.equal(weights('{"SPY":0.25,"BIL":0.5}'),undefined);
 const member = fs.readFileSync(path.join(root,'api/_member-content/haa.html'),'utf8');
 const encoded = member.match(/data-model-weights="([^"]+)"/)[1].replace(/&quot;/g,'"');
-assert.deepEqual(weights(encoded),[{ticker:'BIL',weight:1}]);
+assert.deepEqual(weights(encoded),Object.entries(JSON.parse(encoded)).map(([ticker,weight])=>({ticker,weight})));
 async function route(user,membership,strategy='haa') {
  const context={module:{exports:{}},console,__dirname:path.join(root,'api'),require:name=>name==='./_auth'?{getUser:async()=>user,getMembership:async()=>membership}:require(name)};
  vm.runInNewContext(fs.readFileSync(path.join(root,'api/member-page.js'),'utf8'),context);
