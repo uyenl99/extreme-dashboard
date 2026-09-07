@@ -106,7 +106,8 @@ def build_comparison_monthly_table(daily):
             'the first and last years may be partial. 60/40 is 60% SPY / 40% IEF, rebalanced monthly, '
             'with 5-basis-point trading costs. Latest returns through '
             f'{daily.Date.iloc[-1]:%Y-%m-%d}.</p>'
-            '<div class="table-wrap"><table><thead><tr>'
+            '<style>.combined-monthly-table th,.combined-monthly-table td{font-size:15px;line-height:1.5;padding:10px 12px}</style>'
+            '<div class="table-wrap combined-monthly-table"><table><thead><tr>'
             + ''.join(f'<th scope="col">{label}</th>' for label in headers)
             + '</tr></thead><tbody>' + ''.join(rows) + '</tbody></table></div>')
 
