@@ -1,31 +1,31 @@
 /* Shared highlight for Combined Portfolio in both strategy directories. */
 .dark .grid article.combined-highlight,
 .card.combined-highlight {
-  --accent: #0d9488;
-  --accent-soft: #f0fdfa;
-  background: linear-gradient(135deg, #ccfbf1, #99f6e4);
-  border-color: #5eead4;
-  color: #134e4a;
-  box-shadow: 0 12px 32px rgba(13, 148, 136, .14);
+  --accent: #2563eb;
+  --accent-soft: #ffffff;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #172033;
+  box-shadow: 0 12px 32px rgba(37, 99, 235, .1);
 }
 
 .combined-highlight h2,
-.combined-highlight h3 { color: #134e4a; }
+.combined-highlight h3 { color: #172033; }
 .card.combined-highlight > p,
-.dark article.combined-highlight > p { color: #115e59; }
+.dark article.combined-highlight > p { color: #475569; }
 .card.combined-highlight .card-kicker,
-.dark article.combined-highlight .tag { color: #0f766e; }
-.card.combined-highlight:hover { border-color: #0d9488; }
+.dark article.combined-highlight .tag { color: #2563eb; }
+.card.combined-highlight:hover { border-color: #60a5fa; }
 
 .card.combined-highlight .btn,
 .dark article.combined-highlight .strategy-button {
-  background: #0f766e;
-  border-color: #0f766e;
+  background: #2563eb;
+  border-color: #2563eb;
   color: #ffffff;
 }
 .card.combined-highlight .btn:hover,
-.dark article.combined-highlight .strategy-button:hover { background: #115e59; }
+.dark article.combined-highlight .strategy-button:hover { background: #1d4ed8; }
 .combined-highlight a:focus-visible {
-  outline: 3px solid #134e4a;
+  outline: 3px solid #1e40af;
   outline-offset: 3px;
 }
