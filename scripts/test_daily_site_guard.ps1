@@ -272,6 +272,7 @@ Assert-Contains "combined-portfolio.html" @('<nav class="site-nav">', 'href="str
 Assert-Contains "index.html" @('<article class="combined-highlight">', 'href="phase1-site/combined-portfolio.css"')
 Assert-Contains "strategies.html" @('<div class="card combined-highlight">', 'href="phase1-site/combined-portfolio.css"')
 Assert-Contains "members.html" @('href="combined-portfolio.html"')
+Assert-Contains "members.html" @('<div class="home-card combined-highlight">', 'href="phase1-site/combined-portfolio.css?v=2"')
 Assert-Contains "api/_member-content/mean-reversion.html" @("<h2>Next Day's MOO Orders</h2>", 'Signal date:', 'MOO execution date:', 'Fill prices are not yet known.')
 Assert-NotContains "api/_member-content/mean-reversion.html" @('<h2>Latest MOO Orders</h2>', 'Latest order execution date:')
 Assert-NotContains "haa.html" @('data-model-weights', 'id="current-month"', '<h2>Latest Alert</h2>')
