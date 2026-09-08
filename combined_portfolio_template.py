@@ -288,9 +288,10 @@ def render_page(summary, daily, allocations, monthly, alert, partial=None, *, re
   gtag('js', new Date());
   gtag('config', 'G-H3TCFHTVRV');
 </script>
+<script src="/site-auth-nav.js?v=5"></script>
 </head>
 <body>
-<nav><div><strong>Extreme Trading Inc.</strong></div><div><a href="index.html">Home</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a></div></nav>
+<nav class="site-nav"><strong class="brand">Extreme Trading Inc.</strong><div class="navlinks"><a href="index.html">Home</a><a href="strategies.html">Strategies</a><a href="subscribe.html">Subscribe</a><a href="members.html">Login</a><a href="about.html">About</a><a href="contact.html">Contact</a></div></nav>
 <main class="container">
 <section class="hero"><div class="eyebrow">{eyebrow}</div><h1>{html.escape(title)}</h1><p>{html.escape(description)}</p><p class="subtle">Backtest period: {start_date} through {end_date} · Starting equity: ${daily.iloc[0]["Equity"]:,.0f}</p>{faq_html}</section>
 <section class="metrics">{metric_html}</section>
