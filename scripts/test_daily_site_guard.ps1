@@ -269,6 +269,8 @@ foreach ($memberPage in @(
 
 Assert-Contains "combined-portfolio.html" @('Combined Portfolio', 'Drawdown', 'Monthly', '5 bps')
 Assert-Contains "members.html" @('href="combined-portfolio.html"')
+Assert-Contains "api/_member-content/mean-reversion.html" @("<h2>Next Day's MOO Orders</h2>", 'Signal date:', 'MOO execution date:', 'Fill prices are not yet known.')
+Assert-NotContains "api/_member-content/mean-reversion.html" @('<h2>Latest MOO Orders</h2>', 'Latest order execution date:')
 Assert-NotContains "haa.html" @('data-model-weights', 'id="current-month"', '<h2>Latest Alert</h2>')
 Assert-Contains "api/_member-content/haa.html" @('data-model-weights', 'id="current-month"', '<h2>Latest Alert</h2>')
 
