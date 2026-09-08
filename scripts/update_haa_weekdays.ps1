@@ -1,3 +1,4 @@
+# HAA uses SGOV for defensive cash and executes month-end signals at the next session open.
 param([string]$WebRoot = (Split-Path -Parent $PSScriptRoot))
 $ErrorActionPreference = "Stop"
 $python = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"

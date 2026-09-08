@@ -31,22 +31,49 @@ class RefreshChecks(unittest.TestCase):
     def test_stale_snapshot_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             source=Path(d)
-            pd.DataFrame({'BIL':[1.]},index=pd.to_datetime(['2026-08-31'])).to_csv(source/'exact_etfs_targets.csv')
+            pd.DataFrame({'SGOV':[1.]},index=pd.to_datetime(['2026-08-31'])).to_csv(source/'exact_etfs_targets.csv')
+            (source/'exact_etfs_closing_state.json').write_text(json.dumps({'date':'2026-08-31','weights':{'SGOV':1.}}))
             class Response:
                 def raise_for_status(self): pass
                 def json(self):
                     times=[int(pd.Timestamp(t,tz='America/New_York').timestamp()) for t in ['2026-08-31 16:00','2026-09-03 16:00']]
-                    return {'chart':{'result':[{'timestamp':times,'indicators':{'quote':[{'close':[100,101]}],'adjclose':[{'adjclose':[100,101]}]}}]}}
+                    return {'chart':{'result':[{'timestamp':times,'indicators':{'quote':[{'open':[100,101],'close':[100,101]}],'adjclose':[{'adjclose':[100,101]}]}}]}}
             with patch('requests.get',return_value=Response()):
                 with self.assertRaisesRegex(ValueError,'Stale snapshot'):
                     refresh_snapshot(source,pd.Timestamp('2026-09-04'),'2026-09-06T18:00:00-04:00')
             self.assertFalse((source/'current_snapshot.json').exists())
+
+    def test_snapshot_weekend_pending_and_open_execution(self):
+        with tempfile.TemporaryDirectory() as d:
+            source=Path(d)
+            pd.DataFrame({'SGOV':[1.],'IEF':[0.]},index=pd.to_datetime(['2026-07-31'])).to_csv(source/'exact_etfs_targets.csv')
+            (source/'exact_etfs_closing_state.json').write_text(json.dumps({'date':'2026-07-31','weights':{'SGOV':0.,'IEF':1.}}))
+            class Response:
+                def __init__(self,ticker): self.ticker=ticker
+                def raise_for_status(self): pass
+                def json(self):
+                    times=[int(pd.Timestamp(t,tz='America/New_York').timestamp()) for t in ['2026-07-31 16:00','2026-08-03 16:00']]
+                    op=[100.,110.] if self.ticker=='IEF' else [100.,100.]
+                    cl=[100.,111.] if self.ticker=='IEF' else [100.,102.]
+                    return {'chart':{'result':[{'timestamp':times,'indicators':{'quote':[{'open':op,'close':cl}],'adjclose':[{'adjclose':cl}]}}]}}
+            with patch('requests.get',side_effect=lambda url,**kw:Response(url.rsplit('/',1)[-1])):
+                refresh_snapshot(source,pd.Timestamp('2026-07-31'),'2026-08-01T12:00:00-04:00')
+                pending=json.loads((source/'current_snapshot.json').read_text())
+                self.assertTrue(pending['pending']);self.assertEqual(pending['execution_date'],'2026-08-03')
+                self.assertIsNone(pending['prices']['SGOV']['entry_open'])
+                self.assertEqual(pending['portfolio_return'],0.)
+                refresh_snapshot(source,pd.Timestamp('2026-08-03'),'2026-08-03T16:05:00-04:00')
+                active=json.loads((source/'current_snapshot.json').read_text())
+                self.assertFalse(active['pending']);self.assertEqual(active['prices']['SGOV']['entry_open'],100.)
+                self.assertAlmostEqual(active['entry_equity_factor'],1.1*.999)
+                self.assertAlmostEqual(active['portfolio_return'],1.1*.999*1.02-1)
 
     def test_month_end_snapshot_is_new_allocation(self):
         source=ROOT/'data/haa'
         equity=read(source,'exact_etfs_daily_equity.csv'); returns=read(source,'exact_etfs_monthly_returns.csv')
         snapshot=json.loads((source/'current_snapshot.json').read_text())
         snapshot['as_of']=snapshot['signal_date']
+        snapshot['pending']=True
         for values in snapshot['prices'].values(): values['total_return']=0
         original=Path.read_text
         def fake_read(path,*args,**kwargs):
@@ -55,5 +82,32 @@ class RefreshChecks(unittest.TestCase):
             page=member_sections(source,equity,returns)
         self.assertIn('No holding-period return has accrued',page)
         self.assertNotIn('is incomplete and is excluded',page)
+
+class OpeningChecks(unittest.TestCase):
+    def test_overnight_and_costs(self):
+        import numpy as np
+        from research.haa_backtest import simulate_open
+        dates=pd.to_datetime(['2024-01-31','2024-02-01','2024-02-02'])
+        close=pd.DataFrame({'A':[100.,121.,200.],'B':[100.,100.,55.]},index=dates)
+        opens=pd.DataFrame({'A':[100.,110.,133.1],'B':[100.,100.,50.]},index=dates)
+        a=pd.Series({'A':1.,'B':0.});b=pd.Series({'A':0.,'B':1.})
+        eq,trades=simulate_open(close,opens,{dates[0]:a,dates[1]:b},0)
+        self.assertTrue(np.allclose(eq,[1,1.1,1.331]))
+        self.assertEqual(list(trades.date),['2024-02-01','2024-02-02'])
+        eq,_=simulate_open(close,opens,{dates[0]:a,dates[1]:b},.0005)
+        self.assertAlmostEqual(eq.iloc[-1],1.331*(1-.0005)*(1-.001))
+        # A pending signal must not change the closing portfolio.
+        eq,trades=simulate_open(close.iloc[:1],opens.iloc[:1],{dates[0]:b},.0005,a)
+        self.assertTrue(trades.empty);self.assertEqual(eq.attrs['weights'],a.to_dict())
+        # Replaying a partial month preserves the old allocation's overnight gap.
+        eq,_=simulate_open(close.iloc[:2],opens.iloc[:2],{dates[0]:b},.0005,a)
+        self.assertAlmostEqual(eq.iloc[-1],1.1*(1-.001))
+
+    def test_sgov_defensive_signal(self):
+        from research.haa_backtest import targets
+        row=pd.Series({'SPY':.2,'IEF':.02,'SGOV':.04,'TIP':-.01})
+        self.assertEqual(targets(row,['SPY'])['SGOV'],1.)
+        row['SGOV']=.01
+        self.assertEqual(targets(row,['SPY'])['IEF'],1.)
 
 if __name__=='__main__': unittest.main()

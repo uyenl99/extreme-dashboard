@@ -51,72 +51,87 @@ def stats_table(summary):
 
 def refresh_snapshot(source, expected_session=None, as_of=None):
     import requests
-    weights=read(source,'exact_etfs_targets.csv').iloc[-1]
-    signal=read(source,'exact_etfs_targets.csv').index[-1]
-    snapshots={}
+    import pandas_market_calendars as mcal
+    from research.haa_backtest import simulate_open
+    targets=read(source,'exact_etfs_targets.csv')
+    weights=targets.iloc[-1]; signal=targets.index[-1]
+    state=json.loads((source/'exact_etfs_closing_state.json').read_text())
+    if state['date']!=str(signal.date()): raise ValueError('Closing state does not match signal date')
+    previous=pd.Series(state['weights'])
     cutoff=pd.Timestamp(as_of) if as_of is not None else pd.Timestamp.now(tz='America/New_York')
     if cutoff.tzinfo is None: raise ValueError('Snapshot cutoff must include a timezone')
     cutoff=cutoff.tz_convert('America/New_York')
-    # Request only the existing portfolio and benchmark; never infer a fresh monthly signal.
-    for ticker in set(weights[weights>0].index)|{'SPY'}:
+    calendar=mcal.get_calendar('NYSE').schedule(start_date=signal.date(),end_date=(cutoff+pd.Timedelta(days=10)).date())
+    completed=calendar.index[calendar.market_close<=cutoff]
+    expected=pd.Timestamp(expected_session) if expected_session is not None else completed[-1]
+    sessions=completed[completed<=expected]
+    next_open=calendar.index[calendar.index>signal][0]
+    snapshots={}
+    for ticker in sorted(set(weights[weights>0].index)|set(previous[previous>0].index)|{'SPY'}):
         response=requests.get(f'https://query1.finance.yahoo.com/v8/finance/chart/{ticker}',params={'period1':int(signal.tz_localize('America/New_York').timestamp()),'period2':int(cutoff.timestamp()),'interval':'1d','events':'div'},headers={'User-Agent':'Mozilla/5.0'},timeout=40)
-        response.raise_for_status()
-        obj=response.json()['chart']['result'][0]
+        response.raise_for_status();obj=response.json()['chart']['result'][0]
         dates=pd.to_datetime(obj['timestamp'],unit='s',utc=True).tz_convert('America/New_York').tz_localize(None).normalize()
-        frame=pd.DataFrame({'close':obj['indicators']['quote'][0]['close'],'adjusted':obj['indicators']['adjclose'][0]['adjclose']},index=dates).dropna()
-        # A daily close is usable only after that New York trading session ends.
-        if expected_session is not None:
-            frame=frame.loc[frame.index<=pd.Timestamp(expected_session)]
-        elif cutoff.hour<16:
-            frame=frame.loc[frame.index<cutoff.tz_localize(None).normalize()]
+        q=obj['indicators']['quote'][0]
+        frame=pd.DataFrame({'open':q['open'],'close':q['close'],'adjusted':obj['indicators']['adjclose'][0]['adjclose']},index=dates)
+        frame=frame.loc[frame.index<=expected]
+        if not frame.index.equals(sessions) or frame.isna().any().any(): raise ValueError(f'Stale snapshot or missing session: {ticker}, expected {expected.date()}')
+        frame['adjusted_open']=frame.open*frame.adjusted/frame.close
         snapshots[ticker]=frame
-    common=set.intersection(*(set(f.index) for f in snapshots.values()))
-    if not common: raise ValueError('No aligned current snapshot dates')
-    latest=max(common)
-    if expected_session is not None and latest != pd.Timestamp(expected_session):
-        raise ValueError(f'Stale snapshot: expected {expected_session}, received {latest.date()}')
-    if signal not in common: raise ValueError('Missing signal-date prices in current snapshot')
-    payload={'signal_date':str(signal.date()),'as_of':str(latest.date()),'prices':{ticker:{'entry_close':float(f.at[signal,'close']),'latest_close':float(f.at[latest,'close']),'total_return':float(f.at[latest,'adjusted']/f.at[signal,'adjusted']-1)} for ticker,f in snapshots.items()}}
+    close=pd.DataFrame({t:f.adjusted for t,f in snapshots.items()})
+    opens=pd.DataFrame({t:f.adjusted_open for t,f in snapshots.items()})
+    eq,trades=simulate_open(close,opens,{signal:weights.reindex(close.columns,fill_value=0.)},.0005,previous)
+    pending=expected<next_open
+    payload={'signal_date':str(signal.date()),'as_of':str(expected.date()),'execution_date':str(next_open.date()),'pending':pending,'execution':'next-session open','portfolio_return':float(eq.iloc[-1]-1),'entry_equity_factor':1. if pending else float(trades.iloc[0].equity_at_entry),'previous_weights':previous.to_dict(),'prices':{}}
+    for ticker,f in snapshots.items():
+        payload['prices'][ticker]={'entry_open':None if pending else float(f.at[next_open,'open']),'latest_close':float(f.at[expected,'close']),'total_return':0. if pending else float(f.at[expected,'adjusted']/f.at[next_open,'adjusted_open']-1)}
     (source/'current_snapshot.json').write_text(json.dumps(payload,indent=2)+'\n',encoding='utf-8')
+
 
 def member_sections(source,equity,returns):
     targets=read(source,'exact_etfs_targets.csv')
     signal=targets.index[-1]; weights=targets.iloc[-1]
     snapshot=json.loads((source/'current_snapshot.json').read_text())
     assert snapshot['signal_date']==str(signal.date()),'Snapshot is stale relative to final target'
-    asof=pd.Timestamp(snapshot['as_of'])
+    asof=pd.Timestamp(snapshot['as_of']); execution=pd.Timestamp(snapshot['execution_date'])
     assert signal<=asof and asof.to_period('M')<=signal.to_period('M')+1,'Refresh the full monthly backtest before showing later prices'
-    prices=snapshot['prices']; base=equity[STRATEGY].iloc[-1]*100000
+    pending=snapshot['pending']; prices=snapshot['prices']
+    base=equity[STRATEGY].iloc[-1]*100000*snapshot['entry_equity_factor']
     positions=[]
     for ticker,weight in weights.items():
         if weight<=0: continue
-        q=prices[ticker]; shares=base*weight/q['entry_close']; pnl=base*weight*q['total_return']
-        positions.append({'Ticker':ticker,'Target Weight':weight,'Entry Date':str(signal.date()),'Shares':f'{shares:,.2f}','Entry Price':f"${q['entry_close']:.2f}",'Current Price':f"${q['latest_close']:.2f}",'Value incl. Distributions':f'${base*weight+pnl:,.2f}','Open Total P/L':f'${pnl:,.2f}','Return':q['total_return']})
-    total=sum(weights[t]*prices[t]['total_return'] for t in weights[weights>0].index)
-    holding_month=signal.to_period('M')+1
-    status=(f'{asof:%B %Y} is incomplete and is excluded from the backtest metrics and monthly table below.' if asof>signal else f'New allocation for {holding_month}. No holding-period return has accrued since the month-end rebalance.')
-    content=f'<p class="subtle">Snapshot through {asof:%Y-%m-%d}. {status}</p><p class="model-summary"><span>HAA: <strong class="{metric_class(percent(total))}">{percent(total)}</strong></span><span>SPY: <strong class="{metric_class(percent(prices["SPY"]["total_return"]))}">{percent(prices["SPY"]["total_return"])}</strong></span></p>'
-    content+=table(pd.DataFrame(positions),('Target Weight','Return'))
-    content+='<p class="subtle">Model shares use equity after the latest rebalance costs and allow fractional shares. Prices are raw closes; returns and values include reinvested distributions. Entry date is the latest monthly rebalance, not necessarily the first purchase.</p>'
+        q=prices[ticker]
+        if pending:
+            positions.append({'Ticker':ticker,'Target Weight':weight,'Entry Date':str(execution.date()),'Entry Price':'Pending open'})
+        else:
+            shares=base*weight/q['entry_open']; pnl=base*weight*q['total_return']
+            positions.append({'Ticker':ticker,'Target Weight':weight,'Entry Date':str(execution.date()),'Shares':f'{shares:,.2f}','Entry Price':f"${q['entry_open']:.2f}",'Current Price':f"${q['latest_close']:.2f}",'Value incl. Distributions':f'${base*weight+pnl:,.2f}','Open Total P/L':f'${pnl:,.2f}','Return':q['total_return']})
+    total=snapshot['portfolio_return']
+    status=(f'Allocation pending the {execution:%Y-%m-%d} open. Current holdings: {holdings(pd.Series(snapshot["previous_weights"]))}. No holding-period return has accrued for the new allocation.' if pending else f'{asof:%B %Y} is incomplete and is excluded from the backtest metrics and monthly table below.')
+    content=f'<p class="subtle">Snapshot through {asof:%Y-%m-%d}. {status}</p>'
+    if not pending:
+        content+=f'<p class="model-summary"><span>HAA month-to-date, net: <strong class="{metric_class(percent(total))}">{percent(total)}</strong></span><span>SPY since opening fill: <strong class="{metric_class(percent(prices["SPY"]["total_return"]))}">{percent(prices["SPY"]["total_return"])}</strong></span></p>'
+    content+=table(pd.DataFrame(positions),('Target Weight','Return') if not pending else ('Target Weight',))
+    content+='<p class="subtle">Model shares use equity at the opening rebalance after overnight returns on prior holdings and trading costs, with fractional shares. Entry prices are raw opens; returns and values include reinvested distributions. Position returns start at the opening fill; HAA month-to-date also includes the preceding overnight return and rebalance costs.</p>'
     result=panel('Current Partial Month',content,'id="current-month"')
-    alert=pd.DataFrame([{'Signal':str(signal.date()),'Holding':holdings(weights),'Execution':f'{signal:%Y-%m-%d} close','Applies to':str(signal.to_period('M')+1),'Changed':'Yes' if not weights.equals(targets.iloc[-2]) else 'No','Status':'Confirmed month-end model allocation'}])
+    alert=pd.DataFrame([{'Signal':str(signal.date()),'Holding':holdings(weights),'Execution':f'{execution:%Y-%m-%d} open','Applies to':str(signal.to_period('M')+1),'Changed':'Yes' if not weights.equals(targets.iloc[-2]) else 'No','Status':'Pending next-session open' if pending else 'Executed model allocation'}])
     alloc={t:float(w) for t,w in weights.items() if w>0}
     alert_html=table(alert).replace('<table>',f'<table data-model-weights="{html.escape(json.dumps(alloc),quote=True)}">',1)
-    result+=panel('Latest Alert','<p class="subtle">This is the allocation already in effect. No preliminary next-month signal is shown. Model execution uses the signal-day close.</p>'+alert_html)
+    result+=panel('Latest Alert','<p class="subtle">Confirmed month-end signal; execution is the next trading session open. Pending allocations take effect only at that opening fill.</p>'+alert_html)
+    executions=pd.read_csv(source/'exact_etfs_HAA_net_5bp_trades.csv').set_index('signal_date')['date']
     history=[]
     for date,row in returns.iterrows():
         prior=targets.loc[targets.index<date].iloc[-1]
         prior_date=targets.loc[targets.index<date].index[-1]
-        history.append({'Month':str(date.to_period('M')),'Signal':str(prior_date.date()),'Holdings':holdings(prior),'Return':row[STRATEGY],'SPY':row['SPY']})
+        history.append({'Month':str(date.to_period('M')),'Signal':str(prior_date.date()),'Execution':executions.loc[str(prior_date.date())]+' open','Holdings':holdings(prior),'Return':row[STRATEGY],'SPY':row['SPY']})
     history=pd.DataFrame(history).iloc[::-1]
-    result+=panel('Latest 20 Historical Trades','<p class="subtle">Monthly allocation records; returns include the modeled trading costs.</p>'+table(history.head(20),('Return','SPY')))
+    result+=panel('Latest 20 Historical Trades','<p class="subtle">Monthly allocation records; calendar-month returns include the overnight return on prior holdings and modeled trading costs.</p>'+table(history.head(20),('Return','SPY')))
     result+=f'<details class="panel result-options"><summary>Complete Monthly Allocation History ({len(history)} months)</summary>'+table(history,('Return','SPY'))+'</details>'
     result+='<script src="/position-calculator.js" defer></script>'
     return result
 
 def faq(audience):
-    items=[('What is HAA?','Hybrid Asset Allocation was developed by Wouter Keller and JW Keuning. It combines momentum-based ETF selection with a TIPS filter that determines whether to use growth or defensive exposure.'),('How does it allocate?','Each month, average the trailing 1, 3, 6 and 12-month total returns. Positive TIP momentum allows four 25% slots from SPY, IWM, EFA, EEM, VNQ, PDBC, IEF and TLT. Nonpositive slots move to whichever of IEF or BIL has stronger momentum. If TIP momentum is nonpositive, the entire portfolio moves to that defensive choice.'),('Why does the backtest start in December 2015?','The backtest uses actual ETF history and reserves the first 12 months of common data for momentum calculations. Reconstructed pre-ETF histories are excluded.'),('What do Sharpe and drawdown mean here?','Sharpe uses daily returns, 252 trading sessions per year and a zero risk-free rate, matching ETF1. Maximum drawdown measures the largest peak-to-trough decline using daily portfolio values.'),('When are these results updated?','HAA refreshes in the shared weekday update batch, starting at 3:00 PM Pacific. Performance statistics use complete months; current positions are marked to the latest completed trading session. Always check the displayed dates. Email delivery is not enabled.')]
-    if audience=='member': items.append(('How do I read the allocation and calculator?','The confirmed alert is already in effect. Target weights may combine multiple 25% defensive slots. The calculator uses these explicit weights. Current values include distribution-adjusted returns; your account, fills, fees and taxes may differ.'))
+    items=[('What is HAA?','Hybrid Asset Allocation was developed by Wouter Keller and JW Keuning. It combines momentum-based ETF selection with a TIPS filter that determines whether to use growth or defensive exposure.'),('How does it allocate?','Each month, average the trailing 1, 3, 6 and 12-month total returns. Positive TIP momentum allows four 25% slots from SPY, IWM, EFA, EEM, VNQ, PDBC, IEF and TLT. Nonpositive slots move to whichever of IEF or SGOV has stronger momentum. If TIP momentum is nonpositive, the entire portfolio moves to that defensive choice.'),('Why does the backtest start in July 2021?','SGOV limits the common history. The backtest uses actual ETF history and reserves the first 12 months of common data for momentum calculations. Reconstructed pre-ETF histories are excluded.'),('What do Sharpe and drawdown mean here?','Sharpe uses daily returns, 252 trading sessions per year and a zero risk-free rate, matching ETF1. Maximum drawdown measures the largest peak-to-trough decline using daily portfolio values.'),('When are these results updated?','HAA refreshes in the shared weekday update batch, starting at 3:00 PM Pacific. Performance statistics use complete months; current positions are marked to the latest completed trading session. Always check the displayed dates. Email delivery is not enabled.')]
+    if audience=='member': items.append(('How do I read the allocation and calculator?','Check whether the confirmed alert is pending or executed. Signals execute at the next trading session open. Target weights may combine multiple 25% defensive slots. The calculator uses these explicit weights. Current values include distribution-adjusted returns; your account, fills, fees and taxes may differ.'))
     return '<details class="faq-wrap"><summary>Strategy FAQ</summary><div class="faq-content">'+''.join(f'<details><summary>{html.escape(q)}</summary><p>{html.escape(a)}</p></details>' for q,a in items)+'</div></details>'
 
 def render(source,audience):
@@ -129,15 +144,15 @@ def render(source,audience):
     cards=''.join(f'<div class="metric"><div class="metric-label">{label}</div><div class="metric-value {metric_class(value)}">{value}</div></div>' for label,value in metrics)
     chart=build_equity_drawdown_chart(equity.index,equity[STRATEGY]*100000,equity['SPY']*100000,'HAA','haa-equity-chart')
     primary=panel('Equity Curve',f'<p class="subtle">HAA and SPY, starting with $100,000. Daily equity and drawdowns through {end:%Y-%m-%d}.</p><div class="chart">{chart}</div>')
-    primary+=panel('Monthly Returns','<p class="subtle">Net returns. Annual columns compound only the months shown; 2015 and 2026 are partial years. 60/40 means monthly rebalanced SPY/IEF.</p>'+monthly_table(returns))
+    primary+=panel('Monthly Returns',f'<p class="subtle">Net returns. Annual columns compound only the months shown; boundary years may be partial. 60/40 means SPY/IEF rebalanced at the next session open.</p>'+monthly_table(returns))
     primary+=panel('Portfolio Comparison',stats_table(exact[exact.strategy.isin([STRATEGY,'SPY','60 SPY 40 IEF'])]))
-    primary+='<details class="panel result-options"><summary>Trading Costs and Execution Timing</summary><p class="subtle">Costs are per dollar bought or sold. A full switch between assets incurs both sides. Next-close execution waits one trading day after the completed signal.</p>'+stats_table(exact[~exact.strategy.isin(['SPY','60 SPY 40 IEF'])])+'</details>'
+    primary+='<details class="panel result-options"><summary>Trading Costs and Execution Timing</summary><p class="subtle">Costs are per dollar bought or sold. A full switch between assets incurs both sides. The main model executes at the next trading session open after the completed month-end signal. The MOC comparison uses the same signal-day close.</p>'+stats_table(exact[~exact.strategy.isin(['SPY','60 SPY 40 IEF'])])+'</details>'
     post=pd.read_csv(source/'post_publication.csv',index_col=0).reset_index(names='strategy')
     primary+=panel(f'After Publication: April 2023–{end:%B %Y}','<p class="subtle">First full month after the public article; a historical check, not recorded live performance. Each portfolio is rebased to $100,000.</p>'+stats_table(post[post.strategy.isin([STRATEGY,'SPY','60 SPY 40 IEF'])]))
     ext=read(source,'extended_dbc_proxy_daily_equity.csv'); ext_returns=read(source,'extended_dbc_proxy_monthly_returns.csv')
     ext_chart=build_equity_drawdown_chart(ext.index,ext[STRATEGY]*100000,ext['SPY']*100000,'HAA (DBC proxy)','haa-dbc-chart')
-    primary+=f'<details class="panel result-options"><summary>Longer History: DBC Proxy, June 2008–{end:%B %Y}</summary><p class="subtle">DBC replaces PDBC throughout this separate test. It is a different commodity implementation; these results are not spliced into the main history.</p>'+stats_table(summary[summary['sample']=='extended_dbc_proxy'])+f'<div class="chart">{ext_chart}</div>'+monthly_table(ext_returns)+'</details>'
-    method='<p class="result-note">Hypothetical backtest using Yahoo Finance dividend/split-adjusted ETF closes, with dividends reinvested, no leverage and no taxes. The main result uses 0.05% per dollar bought or sold, monthly rebalancing from drifted weights and BIL as the cash proxy. ETF expenses are embedded in prices. Signals and fills at the same month-end close are idealized; the next-close sensitivity is shown above. Annualized volatility is calculated from monthly returns. The first 12 months of common ETF history are reserved for momentum. Initial allocation: November 30, 2015.</p><p class="result-note">Reconstructed pre-ETF histories are excluded. Results depend on vendor adjustments and have not been cross-validated with a second vendor. This is our implementation of the <a href="https://allocatesmartly.com/hybrid-asset-allocation/">published HAA rules</a>, including the corrected defensive fallback, not a replication of Allocate Smartly’s proprietary data.</p>'
+    primary+=f'<details class="panel result-options"><summary>Commodity Sensitivity: DBC Proxy, {ext_returns.index[0]:%B %Y}–{end:%B %Y}</summary><p class="subtle">DBC replaces PDBC throughout this separate test. SGOV limits this test to the same history as the main model. It is a different commodity implementation; these results are not spliced into the main history.</p>'+stats_table(summary[summary['sample']=='extended_dbc_proxy'])+f'<div class="chart">{ext_chart}</div>'+monthly_table(ext_returns)+'</details>'
+    method='<p class="result-note">Hypothetical backtest using Yahoo Finance dividend/split-adjusted ETF closes, with dividends reinvested, no leverage and no taxes. The main result uses 0.05% per dollar bought or sold, monthly rebalancing from drifted weights and SGOV as the cash proxy. ETF expenses are embedded in prices. Signals use month-end closes and execute at the next trading session open. Historical opening prices are adjusted by the same distribution/split factor as each day’s close; they are proxies for auction fills. Existing holdings earn the overnight gap before the rebalance. The same-close comparison is idealized. Annualized volatility is calculated from monthly returns. The first 12 months of common ETF history are reserved for momentum. Initial signal: June 30, 2021; first opening fill: July 1, 2021. SGOV replaces the original cash ETF in both momentum selection and holdings.</p><p class="result-note">Reconstructed pre-ETF histories are excluded. Results depend on vendor adjustments and have not been cross-validated with a second vendor. This is our implementation of the <a href="https://allocatesmartly.com/hybrid-asset-allocation/">published HAA rules</a>, including the corrected defensive fallback, not a replication of Allocate Smartly’s proprietary data.</p>'
     primary+=panel('Methodology',method)
     member=member_sections(source,equity,returns) if audience=='member' else ''
     cta=panel('Member Signals','<p class="subtle">Members can view the dated allocation snapshot, confirmed monthly alert, position calculator and complete allocation history.</p><p><a href="members.html?strategy=haa">Sign in to view HAA</a> · <a href="subscribe.html">View membership options</a></p>') if audience=='public' else ''
