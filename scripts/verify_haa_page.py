@@ -58,3 +58,17 @@ if (source/'refresh_info.json').exists():
 for filename in ['haa.html','api/_member-content/haa.html','position-calculator.js']:
     s=(ROOT/filename).read_text(encoding='utf-8'); assert '\u00e2\u20ac' not in s
 print(f'PASS: card metrics, {len(r)} monthly returns, annual compounding, charts, allocation dates, snapshot, and public/member boundaries')
+
+assert 'SGOV' in targets.columns and 'BIL' not in targets.columns
+assert info['cash_etf']=='SGOV' and info['execution']=='next-session open'
+assert snapshot['execution']=='next-session open'
+assert pd.Timestamp(snapshot['execution_date'])>targets.index[-1]
+assert 'next trading session open' in public
+assert 'Longer History' not in public and 'December 2015' not in public
+trades=pd.read_csv(source/'exact_etfs_HAA_net_5bp_trades.csv')
+sessions=pd.to_datetime(eq.index)
+for row in trades.itertuples():
+    assert sessions.get_loc(pd.Timestamp(row.date))==sessions.get_loc(pd.Timestamp(row.signal_date))+1
+fees=pd.Series(1-.0005*trades.traded_notional.values,index=pd.to_datetime(trades.date)).reindex(sessions,fill_value=1).cumprod()
+assert np.allclose(eq['HAA net 5bp'].values/eq['HAA gross'].values,fees.values)
+print('PASS: SGOV targets, MOO execution dates, and all transaction fees')

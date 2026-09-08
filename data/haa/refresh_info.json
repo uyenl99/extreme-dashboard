@@ -3,6 +3,7 @@
   "complete_month_end": "2026-08-31",
   "exclusive_cutoff": "2026-09-01",
   "calendar": "NYSE",
-  "execution": "month-end close",
+  "execution": "next-session open",
+  "cash_etf": "SGOV",
   "cost_per_traded_dollar": 0.0005
 }

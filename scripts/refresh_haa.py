@@ -45,10 +45,12 @@ def run(as_of=None,work_dir=None):
         refresh_snapshot(source,expected_session=latest,as_of=now)
         # Render before replacing tracked files so missing/misaligned inputs stop the stage.
         for audience in ['public','member']: render(source,audience)
-        info={'latest_session':str(latest.date()),'complete_month_end':str(month_end.date()),'exclusive_cutoff':str(exclusive.date()),'calendar':'NYSE','execution':'month-end close','cost_per_traded_dollar':0.0005}
+        info={'latest_session':str(latest.date()),'complete_month_end':str(month_end.date()),'exclusive_cutoff':str(exclusive.date()),'calendar':'NYSE','execution':'next-session open','cash_etf':'SGOV','cost_per_traded_dollar':0.0005}
         (source/'refresh_info.json').write_text(json.dumps(info,indent=2)+'\n',encoding='utf-8')
         destination=ROOT/'data/haa'
         destination.mkdir(parents=True,exist_ok=True)
+        for sample in ['exact_etfs','extended_dbc_proxy']:
+            (destination/f'{sample}_HAA_next_close_5bp_trades.csv').unlink(missing_ok=True)
         for file in source.iterdir():
             if file.suffix not in {'.csv','.json'}: continue
             pending=destination/(file.name+'.tmp')
@@ -60,6 +62,7 @@ def run(as_of=None,work_dir=None):
         generate_pages()
     finally: sys.argv=original
     subprocess.run([sys.executable,str(ROOT/'scripts/verify_haa_page.py')],check=True)
+    subprocess.run([sys.executable,str(ROOT/'scripts/test_haa_refresh.py')],check=True)
     print('HAA refresh verified; publication remains controlled by the shared batch.',flush=True)
 
 if __name__=='__main__':

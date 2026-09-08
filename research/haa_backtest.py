@@ -10,7 +10,7 @@ import requests
 ROOT = Path(__file__).resolve().parent / 'haa_run'
 DATA = ROOT / 'data'
 OUT = ROOT / 'results'
-TICKERS = ['SPY','IWM','EFA','EEM','VNQ','PDBC','IEF','TLT','TIP','BIL','DBC']
+TICKERS = ['SPY','IWM','EFA','EEM','VNQ','PDBC','IEF','TLT','TIP','SGOV','DBC']
 END = pd.Timestamp('2026-09-01')  # default reproduces the original research snapshot
 REFRESH = False
 
@@ -38,7 +38,8 @@ def download(ticker):
 
 def targets(momentum, offensive):
     w = pd.Series(0., index=momentum.index)
-    safe = 'IEF' if momentum['IEF'] > momentum['BIL'] else 'BIL'
+    cash = 'SGOV' if 'SGOV' in momentum.index else 'BIL'
+    safe = 'IEF' if momentum['IEF'] > momentum[cash] else cash
     if momentum['TIP'] <= 0:
         w[safe] = 1.
     else:
@@ -71,6 +72,39 @@ def simulate(prices, schedule, cost):
         values[date] = wealth
     return pd.Series(values), pd.DataFrame(logs)
 
+def opening_prices(prices):
+    result={}
+    for ticker in prices.columns:
+        obj=json.loads((DATA/f'{ticker}.json').read_text())
+        dates=pd.to_datetime(obj['timestamp'],unit='s',utc=True).tz_convert('America/New_York').tz_localize(None).normalize()
+        q=obj['indicators']['quote'][0]
+        f=pd.DataFrame({'open':q['open'],'close':q['close'],'adjusted':obj['indicators']['adjclose'][0]['adjclose']},index=dates)
+        if f.index.duplicated().any(): raise ValueError(f'Duplicate dates: {ticker}')
+        result[ticker]=f['open']*f['adjusted']/f['close']
+    return pd.DataFrame(result).reindex(prices.index)
+
+
+def simulate_open(prices, opens, schedule, cost, initial_weights=None):
+    """Month-end signals fill next session open; old weights earn overnight gaps."""
+    p=prices.loc[min(schedule):]; o=opens.reindex(index=p.index,columns=p.columns)
+    if o.isna().any().any() or (o<=0).any().any(): raise ValueError('Missing or invalid opening prices')
+    w=pd.Series(0.,index=p.columns) if initial_weights is None else pd.Series(initial_weights).reindex(p.columns,fill_value=0.)
+    wealth=1.; values={p.index[0]:wealth}; logs=[]
+    for i in range(1,len(p)):
+        day,prev=p.index[i],p.index[i-1]
+        overnight=o.iloc[i]/p.iloc[i-1]-1
+        gain=float(w@overnight); wealth*=1+gain; w=w*(1+overnight)/(1+gain)
+        if prev in schedule:
+            target=schedule[prev]; turnover=float((target-w).abs().sum())
+            wealth*=1-cost*turnover; w=target.copy()
+            logs.append({'signal_date':str(prev.date()),'date':str(day.date()),'execution':'next-session open','traded_notional':turnover,'equity_at_entry':wealth,**w.to_dict()})
+        intraday=p.iloc[i]/o.iloc[i]-1
+        gain=float(w@intraday); wealth*=1+gain; w=w*(1+intraday)/(1+gain)
+        values[day]=wealth
+    equity=pd.Series(values); equity.attrs['weights']=w.to_dict()
+    return equity,pd.DataFrame(logs)
+
+
 def metrics(equity):
     # Include initial trading cost in the first holding month.
     month = equity.resample('ME').last()
@@ -101,10 +135,11 @@ def main():
     series = list(ThreadPoolExecutor(max_workers=4).map(download,TICKERS))
     all_prices = pd.concat(series,axis=1).sort_index()
     all_prices.to_csv(DATA/'adjusted_close.csv')
+    opens = opening_prices(all_prices)
     summaries = []
     for commodity, label in [('PDBC','exact_etfs'),('DBC','extended_dbc_proxy')]:
         offensive = ['SPY','IWM','EFA','EEM','VNQ',commodity,'IEF','TLT']
-        cols = offensive+['TIP','BIL']
+        cols = offensive+['TIP','SGOV']
         prices = all_prices[cols].dropna()
         # Fail on internal holes instead of silently compressing the trading calendar.
         reference = all_prices['SPY'].dropna().loc[prices.index.min():prices.index.max()].index
@@ -117,7 +152,7 @@ def main():
         pd.DataFrame(schedule).T.to_csv(OUT/f'{label}_targets.csv')
         mom.to_csv(OUT/f'{label}_momentum.csv')
         curves = {}
-        for name,cost,lag in [('HAA gross',0,0),('HAA net 5bp',.0005,0),('HAA net 10bp',.001,0),('HAA next close 5bp',.0005,1),('SPY',.0005,0),('60 SPY 40 IEF',.0005,0)]:
+        for name,cost,lag in [('HAA gross',0,0),('HAA net 5bp',.0005,0),('HAA net 10bp',.001,0),('HAA MOC comparison 5bp',.0005,1),('SPY',.0005,0),('60 SPY 40 IEF',.0005,0)]:
             sched = schedule
             if name in ['SPY','60 SPY 40 IEF']:
                 target = pd.Series(0.,index=cols)
@@ -125,13 +160,11 @@ def main():
                 target['IEF'] = 0 if name=='SPY' else .4
                 sched = {d:target for d in schedule} if name!='SPY' else {min(schedule):target}
             if lag:
-                # Start in BIL at the common baseline; use completed signal at next daily close.
-                initial = pd.Series(0.,index=cols); initial['BIL']=1
-                sched = {min(schedule):initial}
-                for d,w in schedule.items():
-                    pos = prices.index.get_loc(d)+1
-                    if pos < len(prices): sched[prices.index[pos]]=w
-            eq,trades = simulate(prices,sched,cost)
+                eq,trades = simulate(prices,sched,cost)
+            else:
+                eq,trades = simulate_open(prices,opens[cols],sched,cost)
+            if name=='HAA net 5bp':
+                (OUT/f'{label}_closing_state.json').write_text(json.dumps({'date':str(eq.index[-1].date()),'equity':float(eq.iloc[-1]),'weights':eq.attrs['weights']},indent=2)+'\n')
             curves[name] = eq
             row = {'sample':label,'strategy':name,'start':str(eq.index[0].date()),'end':str(eq.index[-1].date()), **metrics(eq)}
             summaries.append(row)
