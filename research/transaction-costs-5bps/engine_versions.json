@@ -3,5 +3,7 @@
   "inflationcompass/inflation_compass.py": "d8eabedd5c0d820856f5e640cda8ade17a850693f8588664efb9b4d068021514",
   "MomoSp/momo_sp_v2.py": "b6a57a135a91a8f8d95a736a0ac0e6bc6dfcd2322b9782c2642fef2221a784ef",
   "RevMurphy/backtest.py": "ad55846f1125e7e5d654bf63ae6bac5d3c8239915fcfc8c2bd269c7969c796e2",
-  "RevMurphy/config.py": "00c7cf4edf6e2ed454dc7b960fdebcb13c94aaf98338c724e3010d2fc143a5b8"
+  "RevMurphy/config.py": "00c7cf4edf6e2ed454dc7b960fdebcb13c94aaf98338c724e3010d2fc143a5b8",
+  "RevMurphy/signals.py": "56bfcfbde4fd88e6eecbdf8ca533ed74fe29266cacfc4078b4b4a4ac4560ce42",
+  "RevMurphy/indicators.py": "d15abfe7c75c0c025eba95d5b8b786b67216acefc2f47381d4d12d955beb21af"
 }

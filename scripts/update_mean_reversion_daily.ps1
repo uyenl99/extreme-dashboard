@@ -71,9 +71,18 @@ try {
 
     Push-Location $checkout
     try {
+        $nextOrders = Join-Path (Split-Path -Parent $privateMeanReversionPage) "mean-reversion-next-orders.json"
+        $calendarPython = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
+        $previousPythonPath = $env:PYTHONPATH
+        try {
+            $env:PYTHONPATH = "$checkout;C:\junk\stocks\HAA\.packages"
+            & $calendarPython "mean_reversion_next_orders.py" --source $backtestOutput --price-source $dailyPriceRoot --output $nextOrders 2>&1 | Tee-Object -FilePath $commandLog -Append
+            if ($LASTEXITCODE -ne 0) { throw "Mean Reversion next-session MOO order generation failed." }
+        }
+        finally { $env:PYTHONPATH = $previousPythonPath }
         & $python "generate_mean_reversion_page.py" --source $backtestOutput --price-source $dailyPriceRoot --output "mean-reversion.html" --audience public --members-page (Join-Path $checkout "members.html") 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion public page generation failed." }
-        & $python "generate_mean_reversion_page.py" --source $backtestOutput --price-source $dailyPriceRoot --output $privateMeanReversionPage --audience member --members-page (Join-Path $checkout "members.html") 2>&1 | Tee-Object -FilePath $commandLog -Append
+        & $python "generate_mean_reversion_page.py" --source $backtestOutput --price-source $dailyPriceRoot --next-orders $nextOrders --output $privateMeanReversionPage --audience member --members-page (Join-Path $checkout "members.html") 2>&1 | Tee-Object -FilePath $commandLog -Append
         if ($LASTEXITCODE -ne 0) { throw "Mean Reversion member page generation failed." }
         Write-Output "Private Mean Reversion member page: $privateMeanReversionPage"
 

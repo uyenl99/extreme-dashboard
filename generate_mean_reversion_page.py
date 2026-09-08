@@ -1,5 +1,6 @@
 import argparse
 import html
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from metric_style import metric_class
 from strategy_benchmark import yearly_returns_by_year
 from strategy_card import update_backtest_card, update_member_backtest_card
 from strategy_chart import build_equity_drawdown_chart
+from mean_reversion_next_orders import render_orders
 
 
 REQUIRED_FILES = (
@@ -31,6 +33,7 @@ def parse_args():
         default=Path("../RevMurphy/output_long_only_5x0_100_no_cluster_next_open"),
         help="Directory containing the production long-only RevMurphy output CSV files.",
     )
+    parser.add_argument("--next-orders", type=Path, help="Fresh next-session MOO order JSON (required for member pages).")
     parser.add_argument(
         "--output",
         type=Path,
@@ -281,44 +284,11 @@ def add_current_marks(trades, price_source, results_through):
         return pd.DataFrame()
 
 
-def build_moo_order_tables(trades, total_equity, results_through):
+def build_open_positions(trades, total_equity):
     data = trades.copy()
     data["entry_date"] = pd.to_datetime(data["entry_date"], errors="coerce")
     data["exit_date"] = pd.to_datetime(data["exit_date"], errors="coerce")
     closed = data["status"].fillna("").astype(str).str.lower().eq("closed")
-    latest_dates = [data["entry_date"].max(), data.loc[closed, "exit_date"].max()]
-    latest_dates = [date for date in latest_dates if pd.notna(date)]
-    execution_date = max(latest_dates) if latest_dates else pd.Timestamp.today().normalize()
-    entries = data[data["entry_date"].eq(execution_date)]
-    exits = data[closed & data["exit_date"].eq(execution_date)]
-
-    order_rows = []
-    for row in exits.itertuples(index=False):
-        side = str(row.side).title()
-        order_rows.append(
-            f"<tr><td>Exit</td><td>{html.escape(str(row.ticker))}</td>"
-            f'<td><span class="side {side.lower()}">{side}</span></td>'
-            f"<td>${float(row.entry_notional):,.0f}</td><td>{float(row.shares):,.2f}</td>"
-            f"<td>${float(row.exit_price):,.2f}</td></tr>"
-        )
-    for row in entries.itertuples(index=False):
-        side = str(row.side).title()
-        action = "Buy" if side.lower() == "long" else "Sell Short"
-        order_rows.append(
-            f"<tr><td>{action}</td><td>{html.escape(str(row.ticker))}</td>"
-            f'<td><span class="side {side.lower()}">{side}</span></td>'
-            f"<td>${float(row.entry_notional):,.0f}</td><td>{float(row.shares):,.2f}</td>"
-            f"<td>${float(row.entry_price):,.2f}</td></tr>"
-        )
-    if not order_rows:
-        order_rows.append('<tr><td colspan="6" class="muted">None - no MOO orders on the latest execution date.</td></tr>')
-    orders = (
-        f'<p class="subtle">Results through: {results_through:%Y-%m-%d} · Latest order execution date: {execution_date:%Y-%m-%d}. Signals use completed daily bars and orders fill at the next market open.</p>'
-        '<div class="table-wrap"><table><thead><tr><th>Action</th><th>Ticker</th>'
-        '<th>Direction</th><th>Position Value</th><th>Shares</th>'
-        f'<th>MOO Fill Price</th></tr></thead><tbody>{"".join(order_rows)}</tbody></table></div>'
-    )
-
     position_rows = []
     holdings = data[~closed].sort_values(["side", "entry_date", "ticker"])
     for row in holdings.itertuples(index=False):
@@ -348,7 +318,7 @@ def build_moo_order_tables(trades, total_equity, results_through):
         '<th>Current Price</th><th>Current Position Value</th><th>Current P/L</th><th>Current Return</th>'
         f'<th>Position Size (% Equity)</th></tr></thead><tbody>{"".join(position_rows)}</tbody></table></div>'
     )
-    return orders, positions
+    return positions
 
 
 def build_portfolio_tables(alert_source, signal_date, total_equity):
@@ -470,22 +440,25 @@ def build_trade_table(trades, limit=20):
     )
 
 
-def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, alert_source, price_source, audience="public"):
+def render_page(summary, equity, benchmarks, monthly, trades, daily_trades, alert_source, price_source, audience="public", next_orders=None):
     generated_at = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M %p %Z")
     if audience == "member":
         trades = add_current_marks(trades, price_source, equity.iloc[-1]["date"])
-        moo_orders, latest_positions = build_moo_order_tables(
-            trades, float(equity.iloc[-1]["equity"]), equity.iloc[-1]["date"]
+        latest_positions = build_open_positions(
+            trades, float(equity.iloc[-1]["equity"])
         )
+        if next_orders is None:
+            raise ValueError("Fresh next-session MOO orders are required for member pages")
+        moo_orders = render_orders(next_orders, equity.iloc[-1]["date"])
         protected_sections = (
-            f'<section class="panel"><h2>Latest MOO Orders</h2>{moo_orders}</section>'
+            f'<section class="panel"><h2>Next Day\'s MOO Orders</h2>{moo_orders}</section>'
             f'<section class="panel"><h2>Open Positions</h2>{latest_positions}</section>'
             f'<section class="panel"><h2>Latest 20 Trades</h2>{build_trade_table(trades)}</section>'
         )
     else:
         protected_sections = (
             '<section class="panel"><h2>Member Signals</h2>'
-            '<p class="subtle">Latest MOO orders, current positions, and recent trades are available to members.</p>'
+            '<p class="subtle">Next-session MOO orders, current positions, and recent trades are available to members.</p>'
             '<p><a href="subscribe.html">View membership options</a></p></section>'
         )
     chart_html = build_chart(equity, benchmarks)
@@ -546,10 +519,12 @@ def main():
     page = render_page(
             summary, equity, benchmarks, monthly, trades, daily_trades,
             args.alert_source, price_source, args.audience,
+            json.loads(args.next_orders.read_text(encoding="utf-8")) if args.next_orders else None,
     )
     if args.audience == "public":
         forbidden = (
             "<h2>Latest MOO Orders</h2>",
+            "<h2>Next Day's MOO Orders</h2>",
             "<h2>Open Positions</h2>",
             "<h2>Latest 20 Trades</h2>",
         )

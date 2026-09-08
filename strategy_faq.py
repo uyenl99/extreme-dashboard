@@ -74,7 +74,7 @@ FAQS = {
             ("What are the main risks?", "Long positions can lose money, and a five-position portfolio can be concentrated. Opening gaps, liquidity, and real fills can differ materially from a backtest."),
         ],
         "member": [
-            ("What should I check first?", "Review Latest MOO Orders, then Open Positions. An empty order table means the model currently has no new order to execute."),
+            ("What should I check first?", "Review Next Day's MOO Orders and its execution date, then Open Positions. No orders means retain current positions for that session. Weekends and exchange holidays are skipped."),
             ("What does MOO mean?", "Market-on-open: the model assumes execution at the next regular market open after a completed-bar signal."),
             ("How are positions sized?", "The strategy is fully invested when all five slots are filled. Each new position targets approximately 20% of current strategy equity. Actual weights can differ as prices and total equity change after entry."),
             ("Does the strategy use correlation clusters?", "No. This selected version does not restrict candidates using correlation clusters."),
