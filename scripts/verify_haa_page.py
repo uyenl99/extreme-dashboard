@@ -59,12 +59,15 @@ for filename in ['haa.html','api/_member-content/haa.html','position-calculator.
     s=(ROOT/filename).read_text(encoding='utf-8'); assert '\u00e2\u20ac' not in s
 print(f'PASS: card metrics, {len(r)} monthly returns, annual compounding, charts, allocation dates, snapshot, and public/member boundaries')
 
-assert 'SGOV' in targets.columns and 'BIL' not in targets.columns
+assert 'SGOV' in targets.columns and 'BIL' in targets.columns
 assert info['cash_etf']=='SGOV' and info['execution']=='next-session open'
 assert snapshot['execution']=='next-session open'
 assert pd.Timestamp(snapshot['execution_date'])>targets.index[-1]
 assert 'next trading session open' in public
-assert 'Longer History' not in public and 'December 2015' not in public
+assert 'Longer History' in public and 'December 2015' in public
+assert (targets.loc[targets.index<'2020-06-01','SGOV']==0).all()
+assert (targets.loc[targets.index>='2020-06-01','BIL']==0).all()
+assert (targets.loc[targets.index<'2020-06-01','BIL']>0).any()
 trades=pd.read_csv(source/'exact_etfs_HAA_net_5bp_trades.csv')
 sessions=pd.to_datetime(eq.index)
 for row in trades.itertuples():

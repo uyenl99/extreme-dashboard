@@ -1,2 +1,2 @@
-signal_date,date,execution,traded_notional,equity_at_entry,SPY,IWM,EFA,EEM,VNQ,PDBC,IEF,TLT,TIP,SGOV
-2021-06-30,2021-07-01,next-session open,1.0,0.9995,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+signal_date,date,execution,traded_notional,equity_at_entry,SPY,IWM,EFA,EEM,VNQ,PDBC,IEF,TLT,TIP,SGOV,BIL
+2015-11-30,2015-12-01,next-session open,1.0,0.9995,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0

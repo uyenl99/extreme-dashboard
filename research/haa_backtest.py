@@ -10,7 +10,7 @@ import requests
 ROOT = Path(__file__).resolve().parent / 'haa_run'
 DATA = ROOT / 'data'
 OUT = ROOT / 'results'
-TICKERS = ['SPY','IWM','EFA','EEM','VNQ','PDBC','IEF','TLT','TIP','SGOV','DBC']
+TICKERS = ['SPY','IWM','EFA','EEM','VNQ','PDBC','IEF','TLT','TIP','SGOV','BIL','DBC']
 END = pd.Timestamp('2026-09-01')  # default reproduces the original research snapshot
 REFRESH = False
 
@@ -36,9 +36,9 @@ def download(ticker):
     print(ticker, s.index.min().date(), s.index.max().date(), len(s), flush=True)
     return s[s.index < END]
 
-def targets(momentum, offensive):
+def targets(momentum, offensive, cash=None):
     w = pd.Series(0., index=momentum.index)
-    cash = 'SGOV' if 'SGOV' in momentum.index else 'BIL'
+    cash = cash or ('SGOV' if 'SGOV' in momentum.index else 'BIL')
     safe = 'IEF' if momentum['IEF'] > momentum[cash] else cash
     if momentum['TIP'] <= 0:
         w[safe] = 1.
@@ -118,6 +118,21 @@ def metrics(equity):
             'ending_10000':10000*equity.iloc[-1],
             'positive_months':(r>0).mean(), 'months':n}
 
+def cash_history(prices, opens):
+    """Link BIL and SGOV total returns at SGOV's first observed close."""
+    first=prices.SGOV.first_valid_index()
+    if first is None: raise ValueError('No SGOV history')
+    if prices.loc[first:,'SGOV'].isna().any() or opens.loc[first:,'SGOV'].isna().any():
+        raise ValueError('Missing SGOV prices after inception; do not hide gaps with BIL')
+    linked=prices.BIL.copy()
+    linked.loc[first:]=prices.loc[first:,'SGOV']*(prices.at[first,'BIL']/prices.at[first,'SGOV'])
+    # Neutral placeholders only for an unheld ETF, never used as SGOV returns.
+    prices=prices.copy();opens=opens.copy()
+    prices.loc[prices.index<first,'SGOV']=1.
+    opens.loc[opens.index<first,'SGOV']=1.
+    return prices,opens,linked,first
+
+
 def main():
     global ROOT, DATA, OUT, END, REFRESH
     parser = argparse.ArgumentParser(description=__doc__)
@@ -139,15 +154,20 @@ def main():
     summaries = []
     for commodity, label in [('PDBC','exact_etfs'),('DBC','extended_dbc_proxy')]:
         offensive = ['SPY','IWM','EFA','EEM','VNQ',commodity,'IEF','TLT']
-        cols = offensive+['TIP','SGOV']
-        prices = all_prices[cols].dropna()
+        cols = offensive+['TIP','SGOV','BIL']
+        dates=all_prices[offensive+['TIP','BIL']].dropna().index
+        prices, sample_opens, linked_cash, sgov_first=cash_history(all_prices.loc[dates,cols],opens.loc[dates,cols])
         # Fail on internal holes instead of silently compressing the trading calendar.
         reference = all_prices['SPY'].dropna().loc[prices.index.min():prices.index.max()].index
         assert prices.index.equals(reference), 'Missing ETF observations within common history'
         monthly = prices.groupby(prices.index.to_period('M')).tail(1)
-        mom = sum(monthly/monthly.shift(k)-1 for k in [1,3,6,12])/4
+        signal_prices=monthly.copy()
+        signal_prices['SGOV']=linked_cash.reindex(monthly.index)
+        mom = sum(signal_prices/signal_prices.shift(k)-1 for k in [1,3,6,12])/4
         mom = mom.dropna()
-        schedule = {d:targets(row,offensive) for d,row in mom.iterrows()}
+        schedule = {d:targets(row,offensive,'SGOV' if d>=sgov_first else 'BIL') for d,row in mom.iterrows()}
+        assert all(w['SGOV']==0 for d,w in schedule.items() if d<sgov_first)
+        (OUT/f'{label}_cash_history.json').write_text(json.dumps({'fallback':'BIL','preferred':'SGOV','sgov_first_close':str(sgov_first.date()),'first_sgov_signal':str(min(d for d in schedule if d>=sgov_first).date()),'momentum':'BIL total returns linked to SGOV at first SGOV close'},indent=2)+'\n')
         latest = max(schedule)
         pd.DataFrame(schedule).T.to_csv(OUT/f'{label}_targets.csv')
         mom.to_csv(OUT/f'{label}_momentum.csv')
@@ -162,7 +182,7 @@ def main():
             if lag:
                 eq,trades = simulate(prices,sched,cost)
             else:
-                eq,trades = simulate_open(prices,opens[cols],sched,cost)
+                eq,trades = simulate_open(prices,sample_opens,sched,cost)
             if name=='HAA net 5bp':
                 (OUT/f'{label}_closing_state.json').write_text(json.dumps({'date':str(eq.index[-1].date()),'equity':float(eq.iloc[-1]),'weights':eq.attrs['weights']},indent=2)+'\n')
             curves[name] = eq
