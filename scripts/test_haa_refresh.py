@@ -103,6 +103,29 @@ class OpeningChecks(unittest.TestCase):
         eq,_=simulate_open(close.iloc[:2],opens.iloc[:2],{dates[0]:b},.0005,a)
         self.assertAlmostEqual(eq.iloc[-1],1.1*(1-.001))
 
+    def test_bil_history_link_and_switch(self):
+        import numpy as np
+        from research.haa_backtest import cash_history, simulate_open, targets
+        dates=pd.to_datetime(['2020-05-28','2020-05-29','2020-06-01','2020-06-02'])
+        raw=pd.DataFrame({'BIL':[99.,100.,101.,102.],'SGOV':[np.nan,np.nan,200.,202.]},index=dates)
+        prices,opens,linked,first=cash_history(raw,raw)
+        self.assertEqual(first,dates[2])
+        self.assertTrue(np.allclose(linked,[99.,100.,101.,102.01]))
+        # Price levels differ by 2x; linking must not invent a 100% gain.
+        self.assertAlmostEqual(linked.iloc[2]/linked.iloc[1]-1,.01)
+        self.assertEqual(prices.iloc[0].SGOV,1.)
+        a=pd.Series({'BIL':1.,'SGOV':0.});b=pd.Series({'BIL':0.,'SGOV':1.})
+        eq,trades=simulate_open(prices,opens,{dates[0]:a,dates[2]:b},.0005)
+        self.assertAlmostEqual(eq.iloc[-1],1.02*(1-.0005)*(1-.001))
+        self.assertEqual(trades.iloc[1].date,'2020-06-02')
+        self.assertAlmostEqual(trades.iloc[1].traded_notional,2.)
+        bad=raw.copy();bad.loc[dates[-1],'SGOV']=np.nan
+        with self.assertRaisesRegex(ValueError,'Missing SGOV'):
+            cash_history(bad,raw)
+        row=pd.Series({'SPY':.2,'IEF':.02,'SGOV':.04,'BIL':.03,'TIP':-.01})
+        self.assertEqual(targets(row,['SPY'],'BIL')['BIL'],1.)
+        self.assertEqual(targets(row,['SPY'],'SGOV')['SGOV'],1.)
+
     def test_sgov_defensive_signal(self):
         from research.haa_backtest import targets
         row=pd.Series({'SPY':.2,'IEF':.02,'SGOV':.04,'TIP':-.01})

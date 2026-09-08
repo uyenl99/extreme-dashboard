@@ -1,0 +1,7 @@
+{
+  "fallback": "BIL",
+  "preferred": "SGOV",
+  "sgov_first_close": "2020-06-01",
+  "first_sgov_signal": "2020-06-30",
+  "momentum": "BIL total returns linked to SGOV at first SGOV close"
+}
