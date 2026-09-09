@@ -98,7 +98,7 @@ def render_orders(payload, results_through):
     return (f'<p class="subtle">Signal date: {signal:%Y-%m-%d} (completed close) · MOO execution date: {execution:%Y-%m-%d}.</p>'
             '<p class="subtle">Exits execute before new entries. Buy quantities and values are estimates using the signal-day close and 5 bps per side. '
             'Actual sizing depends on opening equity, available cash, and opening prices. Fill prices are not yet known.</p>'
-            + coverage + '<div class="table-wrap"><table><thead><tr><th>Action</th><th>Ticker</th><th>Shares (buys estimated)</th>'
+            + coverage + '<div class="table-wrap"><table data-default-position-weight="0.2"><thead><tr><th>Action</th><th>Ticker</th><th>Shares (buys estimated)</th>'
             '<th>Estimated Value</th><th>Reference Close</th><th>Execution</th></tr></thead><tbody>' + ''.join(rows) + '</tbody></table></div>')
 
 

@@ -1,6 +1,6 @@
 (() => {
   const panels = Array.from(document.querySelectorAll("section.panel"));
-  const panel = panels.find((item) => ["Latest Alert", "Latest MOO Orders"].includes(item.querySelector("h2")?.textContent.trim()));
+  const panel = panels.find((item) => ["Latest Alert", "Latest MOO Orders", "Next Day's MOO Orders"].includes(item.querySelector("h2")?.textContent.trim()));
   if (!panel || panel.querySelector(".position-calculator")) return;
   const source = panel.querySelector("table");
   if (!source) return;
@@ -21,20 +21,24 @@
     const cell = source.querySelector(`tbody tr td:nth-child(${index + 1})`);
     const tickers = (cell?.textContent || "").split(",").map((ticker) => ticker.trim()).filter(Boolean);
     positions = tickers.map((ticker) => ({ ticker, weight: 1 / tickers.length }));
-  } else if (headers.includes("Action") && headers.includes("Position Value")) {
-    const indexes = Object.fromEntries(["Action", "Ticker", "Direction", "Position Value", "MOO Fill Price"].map((label) => [label, headers.indexOf(label)]));
+  } else if (headers.includes("Action") && (headers.includes("Position Value") || headers.includes("Estimated Value"))) {
+    const valueLabel = headers.includes("Position Value") ? "Position Value" : "Estimated Value";
+    const priceLabel = headers.includes("MOO Fill Price") ? "MOO Fill Price" : "Reference Close";
+    const indexes = Object.fromEntries(["Action", "Ticker", "Direction", valueLabel, priceLabel].map((label) => [label, headers.indexOf(label)]));
     const entries = Array.from(source.querySelectorAll("tbody tr")).map((row) => {
       const cells = row.querySelectorAll("td");
+      const action = cells[indexes.Action]?.textContent.trim() || "";
       return {
-        action: cells[indexes.Action]?.textContent.trim() || "",
+        action,
         ticker: cells[indexes.Ticker]?.textContent.trim() || "",
-        direction: cells[indexes.Direction]?.textContent.trim() || "",
-        value: Number((cells[indexes["Position Value"]]?.textContent || "").replace(/[^0-9.-]/g, "")),
-        price: Number((cells[indexes["MOO Fill Price"]]?.textContent || "").replace(/[^0-9.-]/g, "")),
+        direction: indexes.Direction >= 0 ? cells[indexes.Direction]?.textContent.trim() || "" : action === "Sell Short" ? "Short" : "Long",
+        value: Number((cells[indexes[valueLabel]]?.textContent || "").replace(/[^0-9.-]/g, "")),
+        price: Number((cells[indexes[priceLabel]]?.textContent || "").replace(/[^0-9.-]/g, "")),
       };
     }).filter((item) => item.action === "Buy" || item.action === "Sell Short");
     const gross = entries.reduce((sum, item) => sum + Math.abs(item.value), 0);
-    positions = entries.map((item) => ({ ...item, weight: gross ? Math.abs(item.value) / gross : 0 }));
+    const defaultWeight = Number(source.dataset.defaultPositionWeight);
+    positions = entries.map((item) => ({ ...item, weight: Number.isFinite(defaultWeight) && defaultWeight > 0 ? defaultWeight : gross ? Math.abs(item.value) / gross : 0 }));
   }
   if (!positions.length) return;
   const style = document.createElement("style");
