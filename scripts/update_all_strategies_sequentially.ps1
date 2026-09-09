@@ -13,6 +13,7 @@ $meanReversionUpdate = Join-Path $webRoot "scripts\update_mean_reversion_daily.p
 $momentumUpdate = Join-Path $webRoot "scripts\update_momentum_weekdays.ps1"
 $haaUpdate = Join-Path $webRoot "scripts\update_haa_weekdays.ps1"
 $mooVerifier = Join-Path $webRoot "scripts\verify_moo_backtests.py"
+$memberMappingTests = Join-Path $webRoot "test_member_update_mappings.py"
 $publicationGuard = Join-Path $webRoot "scripts\test_daily_site_guard.ps1"
 $logRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\logs"
 $statusRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
@@ -34,6 +35,7 @@ foreach ($requiredPath in @(
     $momentumUpdate,
     $haaUpdate,
     $mooVerifier,
+    $memberMappingTests,
     $publicationGuard,
     (Join-Path $webRoot "inject_position_calculator.py")
 )) {
@@ -231,6 +233,15 @@ try {
     # otherwise valid batch at a month boundary.
     Invoke-Stage "Verify MOO strategy execution prices" {
         & $python $mooVerifier
+    }
+    Invoke-Stage "Verify member alert and trade mappings" {
+        $previousPythonPath = $env:PYTHONPATH
+        try {
+            $env:PYTHONPATH = "$webRoot;C:\junk\stocks\HAA\.packages"
+            & $python -m unittest test_member_update_mappings
+            if ($LASTEXITCODE -ne 0) { throw "Member alert and trade mapping verification failed." }
+        }
+        finally { $env:PYTHONPATH = $previousPythonPath }
     }
 
     Set-RunStage -Name "Commit generated results"

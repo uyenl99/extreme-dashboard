@@ -97,7 +97,7 @@ def build_monthly_table(monthly, daily):
     )
 
 
-def allocation_history(monthly_backtest, limit=20):
+def allocation_history(monthly_backtest, current=None, limit=20):
     data = monthly_backtest.copy()
     data.index = pd.PeriodIndex(data.index.astype(str), freq="M")
     display = pd.DataFrame(index=data.index)
@@ -105,6 +105,10 @@ def allocation_history(monthly_backtest, limit=20):
     display["Holdings"] = data["held"]
     display["Return"] = data["strategy_return"]
     display["SPY"] = data["spy_return"]
+    display["Status"] = "Closed"
+    if current is not None:
+        current_frame = pd.DataFrame([current], index=[pd.Period(current["Month"], freq="M")])
+        display = pd.concat([display, current_frame])
     return display.sort_index(ascending=False).head(limit).reset_index(drop=True)
 
 
@@ -118,11 +122,20 @@ def extend_daily_to_partial(daily, close_prices, open_prices, alert, start_equit
     ]
     if period_days.empty:
         return daily, None, None, []
-    entry_date = pd.Timestamp(period_days[0])
+    signal_period = pd.Period(str(alert["signal_month_end"]), freq="M")
+    if monthly_backtest is None or signal_period not in pd.PeriodIndex(monthly_backtest.index.astype(str), freq="M"):
+        raise ValueError(f"Missing completed signal month in monthly backtest: {signal_period}")
+    signal_row = monthly_backtest.loc[str(signal_period)]
+    entry_date = pd.Timestamp(signal_row["exit_date"])
+    period_days = period_days[period_days >= entry_date]
+    if period_days.empty:
+        return daily, None, None, []
     if entry_date < pd.Timestamp(daily.index.max()):
         return daily, None, None, []
 
-    holding = str(alert["current_holding"])
+    # The completed signal becomes the live holding at the next month's open.
+    # current_holding is the allocation that was held during the signal month.
+    holding = str(alert["next_holding"])
     weights = {"XLP": 0.5, "IEF": 0.5} if holding == "XLP/IEF" else {holding: 1.0}
     missing = [
         ticker for ticker in (*weights, "SPY")
@@ -188,14 +201,22 @@ def current_month_panel(daily, positions):
     )
 
 
-def latest_alert_table(daily, alert):
+def latest_alert_table(daily, alert, monthly_backtest, close_prices):
     latest_day = pd.to_datetime(daily.index).max()
+    signal_period = pd.Period(str(alert["signal_month_end"]), freq="M")
+    signal_prices = close_prices.loc[pd.PeriodIndex(close_prices.index, freq="M") == signal_period]
+    if signal_prices.empty:
+        raise ValueError(f"Missing price session for ETF2 signal month: {signal_period}")
+    signal_date = pd.Timestamp(signal_prices.index.max())
+    execution_date = pd.Timestamp(monthly_backtest.loc[str(signal_period), "exit_date"])
+    executed = latest_day >= execution_date
     frame = pd.DataFrame([{
-        "Signal": str(alert["signal_month_end"]),
+        "Signal": f"{signal_date:%Y-%m-%d}",
         "Holding": alert["next_holding"],
-        "Execution": f'{alert["effective_month"]} open',
+        "Execution": f"{execution_date:%Y-%m-%d} open",
+        "Applies to": str(alert["effective_month"]),
         "Changed": "Yes" if bool(alert["allocation_changed"]) else "No",
-        "Status": f"Preliminary through {latest_day:%Y-%m-%d}",
+        "Status": f"Executed; marked through {latest_day:%Y-%m-%d}" if executed else "Pending next-session open",
     }])
     return table(frame)
 
@@ -210,7 +231,7 @@ def render(source, audience, chart_src):
     alert = json.loads((source / "latest_alert.json").read_text(encoding="utf-8"))
     start_equity = 100000.0
     entry_equity = float(daily.iloc[-1]["strategy_wealth"]) * start_equity
-    daily, partial_return, _, positions = extend_daily_to_partial(
+    daily, partial_return, partial_spy, positions = extend_daily_to_partial(
         daily, close_prices, open_prices, alert, entry_equity, monthly_backtest
     )
     strategy = summary.iloc[:, 0]
@@ -234,12 +255,21 @@ def render(source, audience, chart_src):
         for label, value in metrics
     )
     if audience == "member":
-        allocations = allocation_history(monthly_backtest)
+        current_allocation = None
+        if partial_return is not None:
+            current_allocation = {
+                "Month": str(alert["effective_month"]),
+                "Holdings": str(alert["next_holding"]),
+                "Return": partial_return,
+                "SPY": partial_spy,
+                "Status": f"Open through {end_date}",
+            }
+        allocations = allocation_history(monthly_backtest, current_allocation)
         protected = (
             current_month_panel(daily, positions)
             + '<section class="panel enlarged-table"><h2>Latest Alert</h2>'
-            + '<p class="subtle">The current-month signal is preliminary until month end and may change before execution.</p>'
-            + latest_alert_table(daily, alert)
+            + '<p class="subtle">Confirmed month-end signal; execution is the next trading session open.</p>'
+            + latest_alert_table(daily, alert, monthly_backtest, close_prices)
             + '</section>'
             + '<section class="panel enlarged-table"><h2>Latest 20 Historical Trades</h2>'
             + table(allocations, ("Return", "SPY"))

@@ -274,8 +274,17 @@ Assert-Contains "strategies.html" @('<div class="card combined-highlight">', 'hr
 Assert-Contains "members.html" @('href="combined-portfolio.html"')
 Assert-Contains "members.html" @('<div class="home-card combined-highlight">', 'href="phase1-site/combined-portfolio.css?v=2"')
 Assert-Contains "api/_member-content/mean-reversion.html" @("<h2>Next Day's MOO Orders</h2>", 'Signal date:', 'MOO execution date:', 'Fill prices are not yet known.')
+Assert-Contains "api/_member-content/mean-reversion.html" @('data-default-position-weight="0.2"', '<script src="/position-calculator.js" defer></script>')
+Assert-Contains "position-calculator.js" @("Next Day's MOO Orders", 'Estimated Value', 'Reference Close', 'defaultPositionWeight')
 Assert-NotContains "api/_member-content/mean-reversion.html" @('<h2>Latest MOO Orders</h2>', 'Latest order execution date:')
 Assert-NotContains "haa.html" @('data-model-weights', 'id="current-month"', '<h2>Latest Alert</h2>')
 Assert-Contains "api/_member-content/haa.html" @('data-model-weights', 'id="current-month"', '<h2>Latest Alert</h2>')
+foreach ($memberPage in @(
+    "api/_member-content/momentum2.html",
+    "api/_member-content/haa.html"
+)) {
+    Assert-Contains $memberPage @('Executed; marked through', 'Open through')
+    Assert-SectionRowCount $memberPage "Latest 20 Historical Trades" 20
+}
 
 Write-Host "Daily publication guard passed. Only approved strategy results changed; site and member UI are protected."

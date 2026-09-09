@@ -32,6 +32,26 @@ def holdings(row):
 def panel(title, content, extra=''):
     return f'<section class="panel enlarged-table" {extra}><h2>{title}</h2>{content}</section>'
 
+def allocation_history(source, returns, targets, snapshot):
+    """Match each holding month to the rebalance that actually executed in it."""
+    executions=pd.read_csv(source/'exact_etfs_HAA_net_5bp_trades.csv',parse_dates=['signal_date','date'])
+    weight_columns=[column for column in targets.columns if column in executions.columns]
+    rows=[]
+    for date,row in returns.iterrows():
+        month=pd.Timestamp(date).to_period('M')
+        matches=executions.loc[executions['date'].dt.to_period('M')==month]
+        if len(matches)!=1:
+            raise ValueError(f'Expected one HAA opening rebalance for {month}, found {len(matches)}')
+        trade=matches.iloc[0]
+        weights=trade[weight_columns].astype(float)
+        rows.append({'Month':str(month),'Signal':str(trade.signal_date.date()),'Execution':f'{trade.date.date()} open','Holdings':holdings(weights),'Return':row[STRATEGY],'SPY':row['SPY'],'Status':'Closed'})
+    if not snapshot['pending']:
+        asof=pd.Timestamp(snapshot['as_of'])
+        current_month=asof.to_period('M')
+        if current_month>pd.Timestamp(returns.index.max()).to_period('M'):
+            rows.append({'Month':str(current_month),'Signal':snapshot['signal_date'],'Execution':f'{snapshot["execution_date"]} open','Holdings':holdings(targets.iloc[-1]),'Return':snapshot['portfolio_return'],'SPY':snapshot['prices']['SPY']['total_return'],'Status':f'Open through {asof:%Y-%m-%d}'})
+    return pd.DataFrame(rows).iloc[::-1].reset_index(drop=True)
+
 def monthly_table(returns):
     headers='<th>Year</th>'+''.join(f'<th>{calendar.month_abbr[m]}</th>' for m in range(1,13))+'<th>Year Return</th><th>SPY Year</th><th>60/40 Year</th>'
     rows=[]
@@ -113,17 +133,12 @@ def member_sections(source,equity,returns):
     content+=table(pd.DataFrame(positions),('Target Weight','Return') if not pending else ('Target Weight',))
     content+='<p class="subtle">Model shares use equity at the opening rebalance after overnight returns on prior holdings and trading costs, with fractional shares. Entry prices are raw opens; returns and values include reinvested distributions. Position returns start at the opening fill; HAA month-to-date also includes the preceding overnight return and rebalance costs.</p>'
     result=panel('Current Partial Month',content,'id="current-month"')
-    alert=pd.DataFrame([{'Signal':str(signal.date()),'Holding':holdings(weights),'Execution':f'{execution:%Y-%m-%d} open','Applies to':str(signal.to_period('M')+1),'Changed':'Yes' if not weights.equals(targets.iloc[-2]) else 'No','Status':'Pending next-session open' if pending else 'Executed model allocation'}])
+    alert_status='Pending next-session open' if pending else f'Executed; marked through {asof:%Y-%m-%d}'
+    alert=pd.DataFrame([{'Signal':str(signal.date()),'Holding':holdings(weights),'Execution':f'{execution:%Y-%m-%d} open','Applies to':str(signal.to_period('M')+1),'Changed':'Yes' if not weights.equals(targets.iloc[-2]) else 'No','Status':alert_status}])
     alloc={t:float(w) for t,w in weights.items() if w>0}
     alert_html=table(alert).replace('<table>',f'<table data-model-weights="{html.escape(json.dumps(alloc),quote=True)}">',1)
     result+=panel('Latest Alert','<p class="subtle">Confirmed month-end signal; execution is the next trading session open. Pending allocations take effect only at that opening fill.</p>'+alert_html)
-    executions=pd.read_csv(source/'exact_etfs_HAA_net_5bp_trades.csv').set_index('signal_date')['date']
-    history=[]
-    for date,row in returns.iterrows():
-        prior=targets.loc[targets.index<date].iloc[-1]
-        prior_date=targets.loc[targets.index<date].index[-1]
-        history.append({'Month':str(date.to_period('M')),'Signal':str(prior_date.date()),'Execution':executions.loc[str(prior_date.date())]+' open','Holdings':holdings(prior),'Return':row[STRATEGY],'SPY':row['SPY']})
-    history=pd.DataFrame(history).iloc[::-1]
+    history=allocation_history(source,returns,targets,snapshot)
     result+=panel('Latest 20 Historical Trades','<p class="subtle">Monthly allocation records; calendar-month returns include the overnight return on prior holdings and modeled trading costs.</p>'+table(history.head(20),('Return','SPY')))
     result+=f'<details class="panel result-options"><summary>Complete Monthly Allocation History ({len(history)} months)</summary>'+table(history,('Return','SPY'))+'</details>'
     result+='<script src="/position-calculator.js" defer></script>'
