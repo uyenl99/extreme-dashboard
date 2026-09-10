@@ -43,11 +43,19 @@ for filename in ['strategies.html','members.html']:
 m=Tables(); m.feed(member)
 history=next(t for t in m.tables if t[0][:2]==['Month','Signal'])
 targets=pd.read_csv(source/'exact_etfs_targets.csv',index_col=0,parse_dates=True)
-for row in history[1:]:
-    date=pd.Period(row[0]).to_timestamp('M'); prior=targets.loc[targets.index<date].index[-1]
-    assert row[1]==str(prior.date())
-assert len(history)==21
+trades=pd.read_csv(source/'exact_etfs_HAA_net_5bp_trades.csv',parse_dates=['signal_date','date'])
 snapshot=json.loads((source/'current_snapshot.json').read_text())
+for row in history[1:]:
+    month=pd.Period(row[0],freq='M')
+    if row[-1].startswith('Open through'):
+        assert row[1]==snapshot['signal_date']
+        assert row[2]==snapshot['execution_date']+' open'
+    else:
+        execution=trades.loc[trades['date'].dt.to_period('M')==month]
+        assert len(execution)==1
+        assert row[1]==str(execution.iloc[0].signal_date.date())
+        assert row[2]==str(execution.iloc[0].date.date())+' open'
+assert len(history)==21
 assert snapshot['signal_date']==str(targets.index[-1].date())
 assert pd.Timestamp(snapshot['as_of'])>=targets.index[-1]
 assert snapshot['as_of'] in member
@@ -68,7 +76,6 @@ assert 'Longer History' in public and 'December 2015' in public
 assert (targets.loc[targets.index<'2020-06-01','SGOV']==0).all()
 assert (targets.loc[targets.index>='2020-06-01','BIL']==0).all()
 assert (targets.loc[targets.index<'2020-06-01','BIL']>0).any()
-trades=pd.read_csv(source/'exact_etfs_HAA_net_5bp_trades.csv')
 sessions=pd.to_datetime(eq.index)
 for row in trades.itertuples():
     assert sessions.get_loc(pd.Timestamp(row.date))==sessions.get_loc(pd.Timestamp(row.signal_date))+1
