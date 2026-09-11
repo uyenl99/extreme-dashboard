@@ -1,10 +1,10 @@
 {
   "signal_date": "2026-08-31",
-  "as_of": "2026-09-10",
+  "as_of": "2026-09-11",
   "execution_date": "2026-09-01",
   "pending": false,
   "execution": "next-session open",
-  "portfolio_return": -0.0007503145252494292,
+  "portfolio_return": -0.0005514922437104275,
   "entry_equity_factor": 0.9983051089582597,
   "previous_weights": {
     "SPY": 0.0,
@@ -22,33 +22,33 @@
   "prices": {
     "EEM": {
       "entry_open": 67.05999755859375,
-      "latest_close": 67.0,
-      "total_return": -0.0008946847715186612
+      "latest_close": 67.83999633789062,
+      "total_return": 0.0116313571084663
     },
     "EFA": {
       "entry_open": 107.04000091552734,
-      "latest_close": 105.66000366210938,
-      "total_return": -0.012892350911945738
+      "latest_close": 106.69999694824219,
+      "total_return": -0.0031764196970950342
     },
     "IWM": {
       "entry_open": 291.9800109863281,
-      "latest_close": 287.70001220703125,
-      "total_return": -0.014658533523711936
+      "latest_close": 288.8900146484375,
+      "total_return": -0.010582903697593626
     },
     "PDBC": {
       "entry_open": 18.770000457763672,
-      "latest_close": 20.049999237060547,
-      "total_return": 0.06819385978051162
+      "latest_close": 19.790000915527344,
+      "total_return": 0.05434205822524518
     },
     "SGOV": {
       "entry_open": 100.40499877929688,
-      "latest_close": 100.5,
-      "total_return": 0.0009461801888166477
+      "latest_close": 100.5199966430664,
+      "total_return": 0.0011453400245768908
     },
     "SPY": {
       "entry_open": 762.010009765625,
-      "latest_close": 757.8300170898438,
-      "total_return": -0.005485482634364436
+      "latest_close": 764.2899780273438,
+      "total_return": 0.002992045028936019
     }
   }
 }
