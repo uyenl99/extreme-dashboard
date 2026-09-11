@@ -86,20 +86,33 @@ def refresh_snapshot(source, expected_session=None, as_of=None):
     expected=pd.Timestamp(expected_session) if expected_session is not None else completed[-1]
     sessions=completed[completed<=expected]
     next_open=calendar.index[calendar.index>signal][0]
+    benchmark_trades=pd.read_csv(source/'exact_etfs_60_SPY_40_IEF_trades.csv')
+    benchmark_entry=pd.Timestamp(benchmark_trades.iloc[-1]['date'])
+    download_start=min(signal,benchmark_entry)
     snapshots={}
-    for ticker in sorted(set(weights[weights>0].index)|set(previous[previous>0].index)|{'SPY'}):
-        response=requests.get(f'https://query1.finance.yahoo.com/v8/finance/chart/{ticker}',params={'period1':int(signal.tz_localize('America/New_York').timestamp()),'period2':int(cutoff.timestamp()),'interval':'1d','events':'div'},headers={'User-Agent':'Mozilla/5.0'},timeout=40)
+    benchmark_growth={}
+    for ticker in sorted(set(weights[weights>0].index)|set(previous[previous>0].index)|{'SPY','IEF'}):
+        response=requests.get(f'https://query1.finance.yahoo.com/v8/finance/chart/{ticker}',params={'period1':int(download_start.tz_localize('America/New_York').timestamp()),'period2':int(cutoff.timestamp()),'interval':'1d','events':'div'},headers={'User-Agent':'Mozilla/5.0'},timeout=40)
         response.raise_for_status();obj=response.json()['chart']['result'][0]
         dates=pd.to_datetime(obj['timestamp'],unit='s',utc=True).tz_convert('America/New_York').tz_localize(None).normalize()
         q=obj['indicators']['quote'][0]
         frame=pd.DataFrame({'open':q['open'],'close':q['close'],'adjusted':obj['indicators']['adjclose'][0]['adjclose']},index=dates)
         frame=frame.loc[frame.index<=expected]
-        if not frame.index.equals(sessions) or frame.isna().any().any(): raise ValueError(f'Stale snapshot or missing session: {ticker}, expected {expected.date()}')
         frame['adjusted_open']=frame.open*frame.adjusted/frame.close
+        if ticker in {'SPY','IEF'}:
+            benchmark_growth[ticker]=(.6 if ticker=='SPY' else .4)*frame.at[signal,'adjusted']/frame.at[benchmark_entry,'adjusted_open']
+        frame=frame.loc[signal:]
+        if not frame.index.equals(sessions) or frame.isna().any().any(): raise ValueError(f'Stale snapshot or missing session: {ticker}, expected {expected.date()}')
         snapshots[ticker]=frame
     close=pd.DataFrame({t:f.adjusted for t,f in snapshots.items()})
     opens=pd.DataFrame({t:f.adjusted_open for t,f in snapshots.items()})
     eq,trades=simulate_open(close,opens,{signal:weights.reindex(close.columns,fill_value=0.)},.0005,previous)
+    benchmark_previous=pd.Series(benchmark_growth); benchmark_previous/=benchmark_previous.sum()
+    benchmark_target=pd.Series({'SPY':.6,'IEF':.4}).reindex(close.columns,fill_value=0.)
+    benchmark_eq,_=simulate_open(close,opens,{signal:benchmark_target},.0005,benchmark_previous)
+    completed=read(source,'exact_etfs_daily_equity.csv')
+    pd.DataFrame({'HAA net 5bp':eq*completed['HAA net 5bp'].iloc[-1],
+                  '60 SPY 40 IEF':benchmark_eq*completed['60 SPY 40 IEF'].iloc[-1]}).to_csv(source/'current_daily_equity.csv',index_label='Date')
     pending=expected<next_open
     payload={'signal_date':str(signal.date()),'as_of':str(expected.date()),'execution_date':str(next_open.date()),'pending':pending,'execution':'next-session open','portfolio_return':float(eq.iloc[-1]-1),'entry_equity_factor':1. if pending else float(trades.iloc[0].equity_at_entry),'previous_weights':previous.to_dict(),'prices':{}}
     for ticker,f in snapshots.items():

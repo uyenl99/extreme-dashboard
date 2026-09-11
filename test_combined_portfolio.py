@@ -1,9 +1,11 @@
 import unittest
+import tempfile
+from pathlib import Path
 
 import pandas as pd
 
 from generate_combined_portfolio_page import (combine_curves, summarize, period_returns,
-                                              build_comparison_chart, build_comparison_monthly_table)
+                                              build_comparison_chart, build_comparison_monthly_table, extend_etf1, extend_haa)
 from combined_portfolio_template import render_page
 
 
@@ -73,6 +75,38 @@ class CombinedPortfolioTests(unittest.TestCase):
             self.assertEqual(trace.yaxis, "y2")
             self.assertEqual(trace.y[0], 0)
             self.assertAlmostEqual(trace.y[-1], daily[column].iloc[-1] / daily[column].max() - 1)
+
+    def test_current_month_is_labeled_and_included_in_annual_returns(self):
+        daily=combine_curves(self.etf,self.haa,self.mr)
+        table=build_comparison_monthly_table(daily)
+        self.assertIn('Partial month-to-date through 2024-03-01',table)
+        self.assertIn('-0.7%*',table)
+        self.assertIn('annual returns include this partial month',table)
+
+    def test_etf_partial_daily_marks_reconcile_and_keep_completed_history(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder); source=root/'output'; source.mkdir(); (root/'data').mkdir()
+            pd.DataFrame([dict(entry_day='2024-03-01',latest_day='2024-03-04',cost_fraction=.001,partial_return=1.2*.999-1)]).to_csv(source/'partial_month_return.csv',index=False)
+            pd.DataFrame([dict(ticker='A',entry_price=100)]).to_csv(source/'partial_month_slots.csv',index=False)
+            for ticker,values in [('A',[100,110,120]),('SPY',[200,202,204])]:
+                pd.DataFrame(dict(date=['2024-02-29','2024-03-01','2024-03-04'],close=values)).to_csv(root/'data'/f'{ticker}_daily.csv',index=False)
+            base=self.etf.iloc[:3]
+            extended=extend_etf1(base,source)
+            pd.testing.assert_frame_equal(extended.iloc[:3],base,check_dtype=False)
+            self.assertAlmostEqual(extended.ETF1.iloc[-1],121*1.2*.999)
+            self.assertAlmostEqual(extended.SPY_Equity.iloc[-1],220*1.02)
+            self.assertEqual(len(extended),5)
+
+    def test_haa_current_marks_require_matching_base(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source=Path(folder)
+            frame=pd.DataFrame({'Date':['2024-03-01','2024-03-04'],'HAA net 5bp':[2,2.1],'60 SPY 40 IEF':[1.03,1.04]})
+            frame.to_csv(source/'current_daily_equity.csv',index=False)
+            extended=extend_haa(self.haa,source)
+            self.assertAlmostEqual(extended.HAA.iloc[-1],2.1)
+            frame.loc[0,'HAA net 5bp']=99
+            frame.to_csv(source/'current_daily_equity.csv',index=False)
+            with self.assertRaises(ValueError): extend_haa(self.haa,source)
 
 
 if __name__ == "__main__":

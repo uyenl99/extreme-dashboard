@@ -19,12 +19,12 @@ ROOT = Path(__file__).resolve().parent
 START_PER_STRATEGY = 10_000.0
 
 
-def read_curve(path, date_column, columns):
+def read_curve(path, date_column, columns, min_rows=2):
     frame = pd.read_csv(path)
     dates = pd.to_datetime(frame.iloc[:, 0] if date_column is None else frame[date_column])
     result = frame[list(columns)].astype(float).rename(columns=columns)
     result.index = pd.DatetimeIndex(dates, name="Date")
-    if (len(result) < 2 or result.index.hasnans or result.index.has_duplicates
+    if (len(result) < min_rows or result.index.hasnans or result.index.has_duplicates
             or not result.index.is_monotonic_increasing
             or not np.isfinite(result.to_numpy()).all() or (result <= 0).any().any()):
         raise ValueError(f"Invalid dates or equity values in {path}")
@@ -46,6 +46,45 @@ def combine_curves(etf1, haa, mean_reversion):
     combined["SPY_Equity"] *= 3
     combined["60/40_Equity"] *= 3
     return combined.reset_index()
+
+
+def extend_etf1(etf1, source):
+    """Mark every current-month session from the same holdings and fees as ETF1."""
+    partial_path=source/'partial_month_return.csv'
+    if not partial_path.is_file():
+        return etf1
+    partial=pd.read_csv(partial_path).iloc[0]
+    latest=pd.Timestamp(partial.latest_day)
+    if latest<=etf1.index[-1]:
+        return etf1
+    slots=pd.read_csv(source/'partial_month_slots.csv')
+    base=etf1.index[-1]
+    entry=pd.Timestamp(partial.entry_day)
+    prices={}
+    for ticker in set(slots.ticker)|{'SPY'}:
+        frame=pd.read_csv(source.parent/'data'/f'{ticker}_daily.csv',parse_dates=['date']).set_index('date')
+        prices[ticker]=frame['close'].loc[base:latest]
+    close=pd.DataFrame(prices)
+    if close.index[-1]!=latest or close.isna().any().any():
+        raise ValueError('Missing ETF1 partial-month prices')
+    marks=close.loc[entry:]
+    growth=sum(marks[row.ticker]/float(row.entry_price) for row in slots.itertuples())/len(slots)
+    net=growth*(1-float(partial.cost_fraction))
+    if not np.isclose(net.iloc[-1]-1,float(partial.partial_return),rtol=1e-7,atol=1e-8):
+        raise ValueError('ETF1 daily partial marks do not reconcile to published partial return')
+    continuation=pd.DataFrame({'ETF1':etf1.ETF1.iloc[-1]*net,
+                               'SPY_Equity':etf1.SPY_Equity.iloc[-1]*marks.SPY/close.at[base,'SPY']})
+    return pd.concat([etf1,continuation.loc[continuation.index>base]]).rename_axis('Date')
+
+
+def extend_haa(haa, source):
+    path=source/'current_daily_equity.csv'
+    if not path.is_file():
+        raise ValueError('HAA current daily marks are missing; refresh the HAA snapshot first')
+    current=read_curve(path,'Date',{'HAA net 5bp':'HAA','60 SPY 40 IEF':'60/40_Equity'},min_rows=1)
+    if current.index[0]!=haa.index[-1] or not np.allclose(current.iloc[0],haa.iloc[-1]):
+        raise ValueError('HAA current marks do not match the completed-month endpoint')
+    return pd.concat([haa,current.iloc[1:]])
 
 
 COMPARISONS = (("Equity", "Combined Portfolio", "#60a5fa"),
@@ -85,6 +124,8 @@ def period_returns(daily):
 
 def build_comparison_monthly_table(daily):
     returns = period_returns(daily)
+    latest=daily.Date.iloc[-1]
+    partial_period=latest.to_period('M') if latest<latest+pd.offsets.BMonthEnd(0) else None
     headers = ["Year", *calendar.month_abbr[1:], "Year Return", "SPY Return", "60/40 Return"]
     rows = []
     for year in sorted(set(returns.index.year), reverse=True):
@@ -94,18 +135,22 @@ def build_comparison_monthly_table(daily):
                   for month in range(1, 13)]
         values.extend(((1 + subset).prod() - 1).tolist())
         cells = []
-        for value in values:
+        for index,value in enumerate(values):
             if pd.isna(value):
                 cells.append('<td class="muted">—</td>')
             else:
                 css = "positive" if value > 0 else "negative" if value < 0 else "muted"
-                cells.append(f'<td class="{css}">{value:.1%}</td>')
+                is_partial=index<12 and pd.Period(year=year,month=index+1,freq='M')==partial_period
+                suffix='*' if is_partial else ''
+                title=f' title="Partial month-to-date through {latest:%Y-%m-%d}"' if is_partial else ''
+                cells.append(f'<td class="{css}"{title}>{value:.1%}{suffix}</td>')
         rows.append(f'<tr><th scope="row">{year}</th>{"".join(cells)}</tr>')
     return ('<p class="subtle">Jan–Dec show Combined Portfolio monthly returns. '
             'The last three columns show compounded returns for each year over the same available dates; '
             'the first and last years may be partial. 60/40 is 60% SPY / 40% IEF, rebalanced monthly, '
             'with 5-basis-point trading costs. Latest returns through '
-            f'{daily.Date.iloc[-1]:%Y-%m-%d}.</p>'
+            f'{daily.Date.iloc[-1]:%Y-%m-%d}. '
+            + (f'* Partial month-to-date through {latest:%Y-%m-%d}; annual returns include this partial month.' if partial_period else '') + '</p>'
             '<style>.combined-monthly-table th,.combined-monthly-table td{font-size:15px;line-height:1.5;padding:10px 12px}</style>'
             '<div class="table-wrap combined-monthly-table"><table><thead><tr>'
             + ''.join(f'<th scope="col">{label}</th>' for label in headers)
@@ -159,8 +204,10 @@ def main():
     args = parser.parse_args()
     etf1 = read_curve(args.etf1_source / "daily_equity_entries_exits.csv", "Date",
                       {"Equity": "ETF1", "SPY_Equity": "SPY_Equity"})
+    etf1=extend_etf1(etf1,args.etf1_source)
     haa = read_curve(args.haa_source / "exact_etfs_daily_equity.csv", None,
                      {"HAA net 5bp": "HAA", "60 SPY 40 IEF": "60/40_Equity"})
+    haa=extend_haa(haa,args.haa_source)
     mr = read_curve(args.mean_reversion_source / "equity_curve.csv", "date", {"equity": "Mean Reversion"})
     daily = combine_curves(etf1, haa, mr)
     summary, monthly, months, partial = summarize(daily)

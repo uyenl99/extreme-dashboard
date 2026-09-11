@@ -32,6 +32,7 @@ class RefreshChecks(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             source=Path(d)
             pd.DataFrame({'SGOV':[1.]},index=pd.to_datetime(['2026-08-31'])).to_csv(source/'exact_etfs_targets.csv')
+            pd.DataFrame({'date':['2026-08-31']}).to_csv(source/'exact_etfs_60_SPY_40_IEF_trades.csv',index=False)
             (source/'exact_etfs_closing_state.json').write_text(json.dumps({'date':'2026-08-31','weights':{'SGOV':1.}}))
             class Response:
                 def raise_for_status(self): pass
@@ -47,6 +48,8 @@ class RefreshChecks(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             source=Path(d)
             pd.DataFrame({'SGOV':[1.],'IEF':[0.]},index=pd.to_datetime(['2026-07-31'])).to_csv(source/'exact_etfs_targets.csv')
+            pd.DataFrame({'date':['2026-07-31']}).to_csv(source/'exact_etfs_60_SPY_40_IEF_trades.csv',index=False)
+            pd.DataFrame({'HAA net 5bp':[2.],'60 SPY 40 IEF':[3.]},index=pd.to_datetime(['2026-07-31'])).to_csv(source/'exact_etfs_daily_equity.csv')
             (source/'exact_etfs_closing_state.json').write_text(json.dumps({'date':'2026-07-31','weights':{'SGOV':0.,'IEF':1.}}))
             class Response:
                 def __init__(self,ticker): self.ticker=ticker
