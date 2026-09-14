@@ -1,10 +1,10 @@
 {
   "signal_date": "2026-08-31",
-  "as_of": "2026-09-11",
+  "as_of": "2026-09-14",
   "execution_date": "2026-09-01",
   "pending": false,
   "execution": "next-session open",
-  "portfolio_return": -0.0005514922437104275,
+  "portfolio_return": -0.00045204317423397367,
   "entry_equity_factor": 0.9983051089582597,
   "previous_weights": {
     "SPY": 0.0,
@@ -22,38 +22,38 @@
   "prices": {
     "EEM": {
       "entry_open": 67.05999755859375,
-      "latest_close": 67.83999633789062,
-      "total_return": 0.0116313571084663
+      "latest_close": 65.98999786376953,
+      "total_return": -0.015955856453607864
     },
     "EFA": {
       "entry_open": 107.04000091552734,
-      "latest_close": 106.69999694824219,
-      "total_return": -0.0031764196970950342
+      "latest_close": 105.8499984741211,
+      "total_return": -0.011117362025672706
     },
     "IEF": {
       "entry_open": 92.19000244140625,
-      "latest_close": 91.01000213623047,
-      "total_return": -0.01279965586209586
+      "latest_close": 90.93000030517578,
+      "total_return": -0.013667448778204472
     },
     "IWM": {
       "entry_open": 291.9800109863281,
-      "latest_close": 288.8900146484375,
-      "total_return": -0.010582903697593626
+      "latest_close": 287.9100036621094,
+      "total_return": -0.013939335471870096
     },
     "PDBC": {
       "entry_open": 18.770000457763672,
-      "latest_close": 19.790000915527344,
-      "total_return": 0.05434205822524518
+      "latest_close": 19.780000686645508,
+      "total_return": 0.053809280993601494
     },
     "SGOV": {
       "entry_open": 100.40499877929688,
-      "latest_close": 100.5199966430664,
-      "total_return": 0.0011453400245768908
+      "latest_close": 100.52999877929688,
+      "total_return": 0.001244957935558233
     },
     "SPY": {
       "entry_open": 762.010009765625,
-      "latest_close": 764.2899780273438,
-      "total_return": 0.002992045028936019
+      "latest_close": 760.8800048828125,
+      "total_return": -0.0014829265604530129
     }
   }
 }
