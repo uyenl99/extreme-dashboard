@@ -1,18 +1,18 @@
 {
   "signal_date": "2026-08-31",
-  "as_of": "2026-09-15",
+  "as_of": "2026-09-16",
   "execution_date": "2026-09-01",
   "pending": false,
   "execution": "next-session open",
-  "portfolio_return": -0.00045204317423397367,
-  "entry_equity_factor": 0.9983051089582597,
+  "portfolio_return": -0.00025314016746147416,
+  "entry_equity_factor": 0.9983051138190597,
   "previous_weights": {
     "SPY": 0.0,
-    "IWM": 0.2411519579054653,
-    "EFA": 0.2442392733034595,
-    "EEM": 0.25267285192236555,
+    "IWM": 0.2411519489044361,
+    "EFA": 0.24423927620048844,
+    "EEM": 0.25267285491942887,
     "VNQ": 0.0,
-    "PDBC": 0.2619359168687096,
+    "PDBC": 0.26193591997564647,
     "IEF": 0.0,
     "TLT": 0.0,
     "TIP": 0.0,
@@ -22,38 +22,38 @@
   "prices": {
     "EEM": {
       "entry_open": 67.05999755859375,
-      "latest_close": 65.76000213623047,
-      "total_return": -0.01938555725754998
+      "latest_close": 65.72000122070312,
+      "total_return": -0.019982051695122793
     },
     "EFA": {
       "entry_open": 107.04000091552734,
-      "latest_close": 105.4000015258789,
-      "total_return": -0.015321369353711756
+      "latest_close": 105.0199966430664,
+      "total_return": -0.018871489678471298
     },
     "IEF": {
       "entry_open": 92.19000244140625,
-      "latest_close": 90.81999969482422,
-      "total_return": -0.014860643348531988
+      "latest_close": 90.7300033569336,
+      "total_return": -0.01583684831118859
     },
     "IWM": {
       "entry_open": 291.9800109863281,
-      "latest_close": 285.1400146484375,
-      "total_return": -0.02342624864895604
+      "latest_close": 283.9200134277344,
+      "total_return": -0.025064939980429357
     },
     "PDBC": {
       "entry_open": 18.770000457763672,
-      "latest_close": 20.100000381469727,
-      "total_return": 0.0708577459387294
+      "latest_close": 19.799999237060547,
+      "total_return": 0.05487473384002217
     },
     "SGOV": {
       "entry_open": 100.40499877929688,
-      "latest_close": 100.52999877929688,
-      "total_return": 0.001244957935558233
+      "latest_close": 100.55000305175781,
+      "total_return": 0.0014441937575206953
     },
     "SPY": {
       "entry_open": 762.010009765625,
-      "latest_close": 757.3900146484375,
-      "total_return": -0.006062906074696395
+      "latest_close": 754.0499877929688,
+      "total_return": -0.010446085839613262
     }
   }
 }
