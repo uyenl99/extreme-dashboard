@@ -1,10 +1,10 @@
 {
   "signal_date": "2026-08-31",
-  "as_of": "2026-09-16",
+  "as_of": "2026-09-17",
   "execution_date": "2026-09-01",
   "pending": false,
   "execution": "next-session open",
-  "portfolio_return": -0.00025314016746147416,
+  "portfolio_return": -0.0001537669549152021,
   "entry_equity_factor": 0.9983051138190597,
   "previous_weights": {
     "SPY": 0.0,
@@ -22,38 +22,38 @@
   "prices": {
     "EEM": {
       "entry_open": 67.05999755859375,
-      "latest_close": 65.72000122070312,
-      "total_return": -0.019982051695122793
+      "latest_close": 66.91000366210938,
+      "total_return": -0.0022367119287965975
     },
     "EFA": {
       "entry_open": 107.04000091552734,
-      "latest_close": 105.0199966430664,
-      "total_return": -0.018871489678471298
+      "latest_close": 106.04000091552734,
+      "total_return": -0.009342301863292879
     },
     "IEF": {
       "entry_open": 92.19000244140625,
-      "latest_close": 90.7300033569336,
-      "total_return": -0.01583684831118859
+      "latest_close": 91.25,
+      "total_return": -0.010196359871057492
     },
     "IWM": {
       "entry_open": 291.9800109863281,
-      "latest_close": 283.9200134277344,
-      "total_return": -0.025064939980429357
+      "latest_close": 285.42999267578125,
+      "total_return": -0.019879917300802075
     },
     "PDBC": {
       "entry_open": 18.770000457763672,
-      "latest_close": 19.799999237060547,
-      "total_return": 0.05487473384002217
+      "latest_close": 19.709999084472656,
+      "total_return": 0.05007984037209656
     },
     "SGOV": {
       "entry_open": 100.40499877929688,
-      "latest_close": 100.55000305175781,
-      "total_return": 0.0014441937575206953
+      "latest_close": 100.55999755859375,
+      "total_return": 0.0015437356822998183
     },
     "SPY": {
       "entry_open": 762.010009765625,
-      "latest_close": 754.0499877929688,
-      "total_return": -0.010446085839613262
+      "latest_close": 762.5999755859375,
+      "total_return": 0.0007742231896585849
     }
   }
 }
