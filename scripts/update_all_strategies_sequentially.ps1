@@ -140,7 +140,12 @@ function Wait-ForRun([string]$RunId) {
 }
 
 function Wait-ForVercelCheckRegistration([string]$PullRequestUrl) {
-    for ($attempt = 1; $attempt -le 60; $attempt++) {
+    $pollIntervalSeconds = 5
+    $registrationTimeoutMinutes = 30
+    $maxAttempts = [int][Math]::Ceiling(($registrationTimeoutMinutes * 60) / $pollIntervalSeconds)
+    $registrationStarted = Get-Date
+
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
         $savedPreference = $ErrorActionPreference
         $ErrorActionPreference = "Continue"
         $json = & $gh pr view $PullRequestUrl --repo $repo --json statusCheckRollup 2>$null
@@ -152,16 +157,18 @@ function Wait-ForVercelCheckRegistration([string]$PullRequestUrl) {
                 $_.context -eq "Vercel" -or $_.name -eq "Vercel"
             })
             if ($vercelChecks.Count -gt 0) {
-                Write-Host "Vercel preview check registered."
+                $elapsed = (Get-Date) - $registrationStarted
+                Write-Host "Vercel preview check registered after $([Math]::Round($elapsed.TotalMinutes, 1)) minutes."
                 return
             }
         }
-        if ($attempt -eq 1 -or $attempt % 6 -eq 0) {
-            Write-Host "Waiting for Vercel preview check registration (attempt $attempt of 60)..."
+        if ($attempt -eq 1 -or $attempt % 12 -eq 0) {
+            $elapsed = (Get-Date) - $registrationStarted
+            Write-Host "Waiting for Vercel preview check registration ($([Math]::Round($elapsed.TotalMinutes, 1)) of $registrationTimeoutMinutes minutes elapsed)..."
         }
-        Start-Sleep -Seconds 5
+        if ($attempt -lt $maxAttempts) { Start-Sleep -Seconds $pollIntervalSeconds }
     }
-    throw "Timed out waiting for the Vercel preview check to register: $PullRequestUrl"
+    throw "Timed out after $registrationTimeoutMinutes minutes waiting for the Vercel preview check to register: $PullRequestUrl"
 }
 
 Write-RunStatus -Status "Running" -Stage $currentStage -Message "Daily strategy batch started." -PullRequestUrl $null
