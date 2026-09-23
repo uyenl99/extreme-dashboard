@@ -3,6 +3,7 @@ import argparse
 import calendar
 import html
 import json
+import os
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -69,6 +70,35 @@ def stats_table(summary):
     frame['Final Equity ($100k)']=frame['Final Equity ($100k)'].map(lambda v:f'${v*10:,.0f}')
     return table(frame,('CAGR','Annualized Volatility','Daily Max Drawdown'))
 
+def fill_missing_daily_bars(frame, sessions, ticker, requests_module):
+    """Repair isolated null/missing Yahoo bars with Polygon adjusted daily OHLC."""
+    required=['open','close','adjusted']
+    missing=sessions.difference(frame.index)
+    null_rows=frame.index[frame[required].isna().any(axis=1)]
+    problem=pd.DatetimeIndex(sorted(set(missing)|set(null_rows.intersection(sessions))))
+    if problem.empty:
+        return frame
+    api_key=os.environ.get('POLYGON_API_KEY')
+    if not api_key:
+        return frame
+    response=requests_module.get(
+        f'https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{problem[0].date()}/{problem[-1].date()}',
+        params={'adjusted':'true','sort':'asc','limit':5000,'apiKey':api_key},
+        timeout=40,
+    )
+    response.raise_for_status()
+    results=response.json().get('results') or []
+    factors=(frame.adjusted/frame.close).replace([np.inf,-np.inf],np.nan).dropna()
+    for row in results:
+        date=pd.to_datetime(row['t'],unit='ms',utc=True).tz_convert('America/New_York').tz_localize(None).normalize()
+        if date not in problem:
+            continue
+        following=factors.loc[factors.index>date]
+        preceding=factors.loc[factors.index<date]
+        factor=float(following.iloc[0] if not following.empty else preceding.iloc[-1] if not preceding.empty else 1.)
+        frame.loc[date,required]=[float(row['o']),float(row['c']),float(row['c'])*factor]
+    return frame.sort_index()
+
 def refresh_snapshot(source, expected_session=None, as_of=None):
     import requests
     import pandas_market_calendars as mcal
@@ -98,6 +128,7 @@ def refresh_snapshot(source, expected_session=None, as_of=None):
         q=obj['indicators']['quote'][0]
         frame=pd.DataFrame({'open':q['open'],'close':q['close'],'adjusted':obj['indicators']['adjclose'][0]['adjclose']},index=dates)
         frame=frame.loc[frame.index<=expected]
+        frame=fill_missing_daily_bars(frame,sessions,ticker,requests)
         frame['adjusted_open']=frame.open*frame.adjusted/frame.close
         if ticker in {'SPY','IEF'}:
             benchmark_growth[ticker]=(.6 if ticker=='SPY' else .4)*frame.at[signal,'adjusted']/frame.at[benchmark_entry,'adjusted_open']
