@@ -10,9 +10,28 @@ import pandas as pd
 ROOT=Path(__file__).resolve().parents[1]
 sys.path[:0]=[str(ROOT),str(ROOT/'scripts')]
 from refresh_haa import completed_dates
-from generate_haa_page import refresh_snapshot, member_sections, read
+from generate_haa_page import fill_missing_daily_bars, refresh_snapshot, member_sections, read
 
 class RefreshChecks(unittest.TestCase):
+    def test_polygon_repairs_null_yahoo_session(self):
+        sessions=pd.to_datetime(['2026-09-21','2026-09-22','2026-09-23'])
+        frame=pd.DataFrame(
+            {'open':[68.,float('nan'),70.], 'close':[69.,float('nan'),71.], 'adjusted':[62.1,float('nan'),63.9]},
+            index=sessions,
+        )
+        class Response:
+            def raise_for_status(self): pass
+            def json(self):
+                timestamp=int(pd.Timestamp('2026-09-22',tz='America/New_York').timestamp()*1000)
+                return {'results':[{'t':timestamp,'o':68.5,'c':69.1}]}
+        with patch.dict('os.environ',{'POLYGON_API_KEY':'test-key'}):
+            with patch('requests.get',return_value=Response()) as get:
+                repaired=fill_missing_daily_bars(frame,sessions,'EEM',__import__('requests'))
+        self.assertEqual(repaired.at[pd.Timestamp('2026-09-22'),'open'],68.5)
+        self.assertEqual(repaired.at[pd.Timestamp('2026-09-22'),'close'],69.1)
+        self.assertAlmostEqual(repaired.at[pd.Timestamp('2026-09-22'),'adjusted'],69.1*.9)
+        self.assertIn('/EEM/range/1/day/2026-09-22/2026-09-22',get.call_args.args[0])
+
     def test_completed_sessions(self):
         cases=[
             ('2026-09-06T18:00:00-04:00','2026-09-04','2026-08-31','2026-09-01'),
