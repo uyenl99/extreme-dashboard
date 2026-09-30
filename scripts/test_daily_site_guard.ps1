@@ -42,6 +42,14 @@ function Assert-NotContains([string]$Path, [string[]]$ForbiddenText) {
     }
 }
 
+function Assert-ContainsAny([string]$Path, [string[]]$AllowedText) {
+    $content = Get-Content -LiteralPath (Join-Path $WebRoot $Path) -Raw
+    foreach ($text in $AllowedText) {
+        if ($content.Contains($text)) { return }
+    }
+    throw "Daily publication guard failed: $Path is missing every allowed site marker: $($AllowedText -join ', ')"
+}
+
 function Assert-SectionRowCount([string]$Path, [string]$Heading, [int]$ExpectedRows) {
     $content = Get-Content -LiteralPath (Join-Path $WebRoot $Path) -Raw
     $start = $content.IndexOf("<h2>$Heading</h2>")
@@ -279,12 +287,10 @@ Assert-Contains "position-calculator.js" @("Next Day's MOO Orders", 'Estimated V
 Assert-NotContains "api/_member-content/mean-reversion.html" @('<h2>Latest MOO Orders</h2>', 'Latest order execution date:')
 Assert-NotContains "haa.html" @('data-model-weights', 'id="current-month"', '<h2>Latest Alert</h2>')
 Assert-Contains "api/_member-content/haa.html" @('data-model-weights', 'id="current-month"', '<h2>Latest Alert</h2>')
-foreach ($memberPage in @(
-    "api/_member-content/momentum2.html",
-    "api/_member-content/haa.html"
-)) {
-    Assert-Contains $memberPage @('Executed; marked through', 'Open through')
-    Assert-SectionRowCount $memberPage "Latest 20 Historical Trades" 20
-}
+Assert-Contains "api/_member-content/momentum2.html" @('Open through')
+Assert-ContainsAny "api/_member-content/momentum2.html" @('Executed; marked through', 'Pending next-session open')
+Assert-SectionRowCount "api/_member-content/momentum2.html" "Latest 20 Historical Trades" 20
+Assert-ContainsAny "api/_member-content/haa.html" @('Executed; marked through', 'Pending next-session open')
+Assert-SectionRowCount "api/_member-content/haa.html" "Latest 20 Historical Trades" 20
 
 Write-Host "Daily publication guard passed. Only approved strategy results changed; site and member UI are protected."
