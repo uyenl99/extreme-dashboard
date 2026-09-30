@@ -123,9 +123,23 @@ def extend_daily_to_partial(daily, close_prices, open_prices, alert, start_equit
     if period_days.empty:
         return daily, None, None, []
     signal_period = pd.Period(str(alert["signal_month_end"]), freq="M")
-    if monthly_backtest is None or signal_period not in pd.PeriodIndex(monthly_backtest.index.astype(str), freq="M"):
+    backtest_periods = None if monthly_backtest is None else pd.PeriodIndex(monthly_backtest.index.astype(str), freq="M")
+    if backtest_periods is not None and signal_period in backtest_periods:
+        signal_row = monthly_backtest.loc[str(signal_period)]
+        holding = str(alert["next_holding"])
+    elif (
+        backtest_periods is not None
+        and len(backtest_periods)
+        and signal_period == current_period
+        and pd.Period(str(alert["effective_month"]), freq="M") == current_period + 1
+        and backtest_periods[-1] == current_period - 1
+    ):
+        # At month-end the new signal is known, but its next-session opening
+        # trade cannot appear in the completed backtest until that session occurs.
+        signal_row = monthly_backtest.iloc[-1]
+        holding = str(alert["current_holding"])
+    else:
         raise ValueError(f"Missing completed signal month in monthly backtest: {signal_period}")
-    signal_row = monthly_backtest.loc[str(signal_period)]
     entry_date = pd.Timestamp(signal_row["exit_date"])
     period_days = period_days[period_days >= entry_date]
     if period_days.empty:
@@ -134,8 +148,7 @@ def extend_daily_to_partial(daily, close_prices, open_prices, alert, start_equit
         return daily, None, None, []
 
     # The completed signal becomes the live holding at the next month's open.
-    # current_holding is the allocation that was held during the signal month.
-    holding = str(alert["next_holding"])
+    # On signal day itself, current_holding remains active until that open.
     weights = {"XLP": 0.5, "IEF": 0.5} if holding == "XLP/IEF" else {holding: 1.0}
     missing = [
         ticker for ticker in (*weights, "SPY")
@@ -208,12 +221,21 @@ def latest_alert_table(daily, alert, monthly_backtest, close_prices):
     if signal_prices.empty:
         raise ValueError(f"Missing price session for ETF2 signal month: {signal_period}")
     signal_date = pd.Timestamp(signal_prices.index.max())
-    execution_date = pd.Timestamp(monthly_backtest.loc[str(signal_period), "exit_date"])
-    executed = latest_day >= execution_date
+    backtest_periods = pd.PeriodIndex(monthly_backtest.index.astype(str), freq="M")
+    if signal_period in backtest_periods:
+        execution_date = pd.Timestamp(monthly_backtest.loc[str(signal_period), "exit_date"])
+        execution = f"{execution_date:%Y-%m-%d} open"
+        executed = latest_day >= execution_date
+    else:
+        effective_period = pd.Period(str(alert["effective_month"]), freq="M")
+        if signal_period != latest_day.to_period("M") or effective_period != signal_period + 1:
+            raise ValueError(f"Missing completed signal month in monthly backtest: {signal_period}")
+        execution = f"{effective_period} first session open"
+        executed = False
     frame = pd.DataFrame([{
         "Signal": f"{signal_date:%Y-%m-%d}",
         "Holding": alert["next_holding"],
-        "Execution": f"{execution_date:%Y-%m-%d} open",
+        "Execution": execution,
         "Applies to": str(alert["effective_month"]),
         "Changed": "Yes" if bool(alert["allocation_changed"]) else "No",
         "Status": f"Executed; marked through {latest_day:%Y-%m-%d}" if executed else "Pending next-session open",
