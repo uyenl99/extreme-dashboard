@@ -1,59 +1,39 @@
 {
-  "signal_date": "2026-08-31",
-  "as_of": "2026-09-29",
-  "execution_date": "2026-09-01",
-  "pending": false,
+  "signal_date": "2026-09-30",
+  "as_of": "2026-09-30",
+  "execution_date": "2026-10-01",
+  "pending": true,
   "execution": "next-session open",
-  "portfolio_return": 0.0010393943123687688,
-  "entry_equity_factor": 0.9983051138190597,
+  "portfolio_return": 0.0,
+  "entry_equity_factor": 1.0,
   "previous_weights": {
     "SPY": 0.0,
-    "IWM": 0.2411519489044361,
-    "EFA": 0.24423927620048844,
-    "EEM": 0.25267285491942887,
+    "IWM": 0.0,
+    "EFA": 0.0,
+    "EEM": 0.0,
     "VNQ": 0.0,
-    "PDBC": 0.26193591997564647,
+    "PDBC": 0.0,
     "IEF": 0.0,
     "TLT": 0.0,
     "TIP": 0.0,
-    "SGOV": 0.0,
+    "SGOV": 1.0,
     "BIL": 0.0
   },
   "prices": {
-    "EEM": {
-      "entry_open": 67.05999755859375,
-      "latest_close": 67.4000015258789,
-      "total_return": 0.005070145834527917
-    },
-    "EFA": {
-      "entry_open": 107.04000091552734,
-      "latest_close": 104.54000091552734,
-      "total_return": -0.023355754658232142
-    },
     "IEF": {
-      "entry_open": 92.19000244140625,
-      "latest_close": 89.44999694824219,
-      "total_return": -0.029721286697063976
-    },
-    "IWM": {
-      "entry_open": 291.9800109863281,
-      "latest_close": 279.010009765625,
-      "total_return": -0.04192509244810072
-    },
-    "PDBC": {
-      "entry_open": 18.770000457763672,
-      "latest_close": 19.09000015258789,
-      "total_return": 0.017048464945127906
+      "entry_open": null,
+      "latest_close": 89.30999755859375,
+      "total_return": 0.0
     },
     "SGOV": {
-      "entry_open": 100.40499877929688,
+      "entry_open": null,
       "latest_close": 100.68000030517578,
-      "total_return": 0.002738922655468601
+      "total_return": 0.0
     },
     "SPY": {
-      "entry_open": 762.010009765625,
-      "latest_close": 764.2000122070312,
-      "total_return": 0.005364313154962774
+      "entry_open": null,
+      "latest_close": 762.6300048828125,
+      "total_return": 0.0
     }
   }
 }
