@@ -42,7 +42,7 @@ class MonthEndTransitionTests(unittest.TestCase):
 
     def test_new_signal_is_pending_without_completed_backtest_row(self):
         html = latest_alert_table(self.daily, self.alert, self.monthly, self.close)
-        self.assertIn("2026-10 first session open", html)
+        self.assertIn("2026-10-01 open", html)
         self.assertIn("Pending next-session open", html)
 
 

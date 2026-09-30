@@ -91,7 +91,7 @@ def load_results(source):
 
     result = summary.iloc[0]
     daily = extend_daily_to_partial(daily, result, partial, source)
-    alert = parse_alert(source / "next_entry_alert.txt")
+    alert = parse_alert(source / "next_entry_alert.txt", source / "alerts.csv")
     return result, daily, allocations, monthly, alert, partial, partial_slots
 
 
@@ -145,7 +145,7 @@ def extend_daily_to_partial(daily, summary, partial, source):
     )
 
 
-def parse_alert(path):
+def parse_alert(path, events_path=None):
     aliases = {
         "signal month": "Signal",
         "signal date": "Signal",
@@ -166,6 +166,12 @@ def parse_alert(path):
         canonical = aliases.get(label.lower())
         if canonical:
             alert[canonical] = value
+    if events_path is not None and events_path.is_file():
+        events = pd.read_csv(events_path)
+        next_entries = events.loc[events["type"].eq("NEXT_ENTRY")]
+        if not next_entries.empty:
+            execution_date = pd.Timestamp(next_entries.iloc[-1]["date"])
+            alert["Execution"] = f"{execution_date:%Y-%m-%d} open"
     return alert
 
 

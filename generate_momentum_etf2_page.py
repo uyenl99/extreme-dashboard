@@ -230,7 +230,15 @@ def latest_alert_table(daily, alert, monthly_backtest, close_prices):
         effective_period = pd.Period(str(alert["effective_month"]), freq="M")
         if signal_period != latest_day.to_period("M") or effective_period != signal_period + 1:
             raise ValueError(f"Missing completed signal month in monthly backtest: {signal_period}")
-        execution = f"{effective_period} first session open"
+        import pandas_market_calendars as mcal
+        calendar = mcal.get_calendar("NYSE").schedule(
+            start_date=(signal_date + pd.Timedelta(days=1)).date(),
+            end_date=(signal_date + pd.Timedelta(days=10)).date(),
+        )
+        if calendar.empty:
+            raise ValueError(f"Missing next NYSE session after ETF2 signal date: {signal_date:%Y-%m-%d}")
+        execution_date = pd.Timestamp(calendar.index[0])
+        execution = f"{execution_date:%Y-%m-%d} open"
         executed = False
     frame = pd.DataFrame([{
         "Signal": f"{signal_date:%Y-%m-%d}",

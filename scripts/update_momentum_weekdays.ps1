@@ -5,6 +5,7 @@ $ErrorActionPreference = "Stop"
 $dualMomUpdate = "C:\junk\stocks\DualMom\update_momo5_daily.ps1"
 $dualMomRoot = "C:\junk\stocks\DualMom"
 $plotlyDir = Join-Path $dualMomRoot ".python_packages"
+$marketCalendarDir = "C:\junk\stocks\HAA\.packages"
 $inflationRoot = "C:\junk\stocks\inflationcompass"
 $momoSpRoot = "C:\junk\stocks\MomoSp\pit_version"
 $momoSpUpdate = Join-Path $momoSpRoot "update_v2a_live.py"
@@ -37,12 +38,13 @@ try {
         $momoSpPreview,
         $momoSpGenerator,
         $momentumEtf2Generator
+        $marketCalendarDir
     )) {
         if (-not (Test-Path -LiteralPath $path)) { throw "Required path not found: $path" }
     }
 
     # Generators import shared site modules and Plotly from the bundled package directory.
-    $env:PYTHONPATH = "$webRoot;$plotlyDir"
+    $env:PYTHONPATH = "$webRoot;$plotlyDir;$marketCalendarDir"
 
     if ($NoPublish) {
         Push-Location $dualMomRoot
