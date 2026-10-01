@@ -224,13 +224,54 @@ nav a {
 <details class="faq-wrap"><summary aria-label="Open Member FAQ">Member FAQ</summary><div class="faq-content"><p class="faq-note">Member guide for reading alerts and results.</p><details><summary>What is Extreme OS?</summary><p>Extreme OS is an intraday discretionary stock trading system. It is not a rules-based or backtested model; its signals are submitted and tracked go-forward through Collective2.</p></details><details><summary>When do trades take place?</summary><p>There is no fixed intraday schedule. Discretionary entries and exits can occur at unpredictable times throughout the regular trading day.</p></details><details><summary>How many positions can the system hold, and how are they sized?</summary><p>The system can hold as many as 15 positions and has rarely used margin. Its recent positioning has generally been more conservative. This service does not prescribe subscriber-specific position sizes; each subscriber independently decides whether to trade and how much risk to take. More aggressive sizing increases loss and margin risk.</p></details><details><summary>How is a subscription here different from Collective2?</summary><p>A Collective2 subscription provides Collective2&#x27;s full Extreme OS signal delivery and optional AutoTrade; the Extreme OS content here is a summary. A subscription here does not provide AutoTrade, but it includes access to the other backtested systems. Direct email alerts for members who do not use Collective2 are planned but are not yet an active delivery channel.</p></details><details><summary>Where should I look first?</summary><p>On the member page, check Today&#x27;s Trades first, then Open Positions. Historical trades provide context but are not current instructions.</p></details><details><summary>When is the page updated?</summary><p>The site refreshes from the latest published Collective2 data. Always check the displayed update time before acting.</p></details><details><summary>Why can my fill differ?</summary><p>Broker timing, spreads, liquidity, order handling, account size, and missed alerts can make personal results differ from the model.</p></details><details><summary>Are alerts personalized advice?</summary><p>No. Alerts report model activity. Members remain responsible for execution, sizing, taxes, and risk decisions.</p></details></div></details>
 </section>
 
-<section><h2>Verified Collective2 Performance</h2><div class="metrics"><div class="metric"><div class="metric-label">Annual Return</div><div class="metric-value positive">21.8%</div></div><div class="metric"><div class="metric-label">Max Drawdown</div><div class="metric-value negative">-61.1%</div></div><div class="metric"><div class="metric-label">Number of Trades</div><div class="metric-value positive">5,093</div></div><div class="metric"><div class="metric-label">Win Trades %</div><div class="metric-value positive">73.6%</div></div></div></section>
+<section><h2>Verified Collective2 Performance</h2><div class="metrics"><div class="metric"><div class="metric-label">Annual Return</div><div class="metric-value positive">21.8%</div></div><div class="metric"><div class="metric-label">Max Drawdown</div><div class="metric-value negative">-61.1%</div></div><div class="metric"><div class="metric-label">Number of Trades</div><div class="metric-value positive">5,095</div></div><div class="metric"><div class="metric-label">Win Trades %</div><div class="metric-value positive">73.6%</div></div></div></section>
 
 <section class="panel">
 
 <h2>Today's Trades</h2>
 
-<p class="subtle">No trades today.</p>
+<table border="1" class="dataframe trade-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Time (ET)</th>
+      <th>Action</th>
+      <th>Symbol</th>
+      <th>Direction</th>
+      <th>Qty</th>
+      <th>Price</th>
+      <th>P/L</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>15:03</td>
+      <td>Close</td>
+      <td>GM</td>
+      <td>Long</td>
+      <td>60</td>
+      <td>78.74</td>
+      <td><span class="pnl-pos">$116.08</span></td>
+    </tr>
+    <tr>
+      <td>11:57</td>
+      <td>Open</td>
+      <td>APP</td>
+      <td>Long</td>
+      <td>17</td>
+      <td>277.62</td>
+      <td>&mdash;</td>
+    </tr>
+    <tr>
+      <td>09:41</td>
+      <td>Close</td>
+      <td>GEN</td>
+      <td>Long</td>
+      <td>200</td>
+      <td>22.42</td>
+      <td><span class="pnl-pos">$39.39</span></td>
+    </tr>
+  </tbody>
+</table>
 
 </section>
 
@@ -262,11 +303,11 @@ nav a {
       <td>Long</td>
       <td>50</td>
       <td>68.30</td>
-      <td>2026-09-30 16:00</td>
-      <td>30.68</td>
-      <td>1,534.00</td>
-      <td><span class="pnl-neg">$-1,881.00</span></td>
-      <td><span class="pnl-neg">-55.08%</span></td>
+      <td>2026-10-01 16:00</td>
+      <td>30.48</td>
+      <td>1,524.00</td>
+      <td><span class="pnl-neg">$-1,891.00</span></td>
+      <td><span class="pnl-neg">-55.37%</span></td>
     </tr>
     <tr>
       <td>2026-04-29 15:46</td>
@@ -274,11 +315,11 @@ nav a {
       <td>Long</td>
       <td>28</td>
       <td>137.75</td>
-      <td>2026-09-30 16:00</td>
-      <td>96.19</td>
-      <td>2,693.32</td>
-      <td><span class="pnl-neg">$-1,163.68</span></td>
-      <td><span class="pnl-neg">-30.17%</span></td>
+      <td>2026-10-01 16:00</td>
+      <td>95.86</td>
+      <td>2,684.08</td>
+      <td><span class="pnl-neg">$-1,172.92</span></td>
+      <td><span class="pnl-neg">-30.41%</span></td>
     </tr>
     <tr>
       <td>2026-06-04 12:22</td>
@@ -286,11 +327,11 @@ nav a {
       <td>Long</td>
       <td>100</td>
       <td>33.69</td>
-      <td>2026-09-30 16:00</td>
-      <td>14.24</td>
-      <td>1,424.00</td>
-      <td><span class="pnl-neg">$-1,945.00</span></td>
-      <td><span class="pnl-neg">-57.73%</span></td>
+      <td>2026-10-01 16:00</td>
+      <td>14.05</td>
+      <td>1,405.00</td>
+      <td><span class="pnl-neg">$-1,964.00</span></td>
+      <td><span class="pnl-neg">-58.30%</span></td>
     </tr>
     <tr>
       <td>2026-06-18 15:01</td>
@@ -298,11 +339,11 @@ nav a {
       <td>Long</td>
       <td>65</td>
       <td>59.25</td>
-      <td>2026-09-30 16:03</td>
-      <td>42.00</td>
-      <td>2,730.00</td>
-      <td><span class="pnl-neg">$-1,121.25</span></td>
-      <td><span class="pnl-neg">-29.11%</span></td>
+      <td>2026-10-01 16:02</td>
+      <td>42.06</td>
+      <td>2,733.90</td>
+      <td><span class="pnl-neg">$-1,117.35</span></td>
+      <td><span class="pnl-neg">-29.01%</span></td>
     </tr>
     <tr>
       <td>2026-07-27 15:25</td>
@@ -310,11 +351,11 @@ nav a {
       <td>Long</td>
       <td>20</td>
       <td>174.57</td>
-      <td>2026-09-30 16:00</td>
-      <td>147.96</td>
-      <td>2,959.20</td>
-      <td><span class="pnl-neg">$-532.20</span></td>
-      <td><span class="pnl-neg">-15.24%</span></td>
+      <td>2026-10-01 16:00</td>
+      <td>153.14</td>
+      <td>3,062.80</td>
+      <td><span class="pnl-neg">$-428.60</span></td>
+      <td><span class="pnl-neg">-12.28%</span></td>
     </tr>
     <tr>
       <td>2026-08-24 10:59</td>
@@ -322,11 +363,11 @@ nav a {
       <td>Long</td>
       <td>70</td>
       <td>54.20</td>
-      <td>2026-09-30 16:00</td>
-      <td>42.69</td>
-      <td>2,988.30</td>
-      <td><span class="pnl-neg">$-805.52</span></td>
-      <td><span class="pnl-neg">-21.23%</span></td>
+      <td>2026-10-01 16:00</td>
+      <td>42.82</td>
+      <td>2,997.40</td>
+      <td><span class="pnl-neg">$-796.42</span></td>
+      <td><span class="pnl-neg">-20.99%</span></td>
     </tr>
     <tr>
       <td>2026-08-26 14:17</td>
@@ -334,11 +375,11 @@ nav a {
       <td>Long</td>
       <td>90</td>
       <td>48.05</td>
-      <td>2026-09-30 16:00</td>
-      <td>32.42</td>
-      <td>2,917.80</td>
-      <td><span class="pnl-neg">$-1,406.70</span></td>
-      <td><span class="pnl-neg">-32.53%</span></td>
+      <td>2026-10-01 16:00</td>
+      <td>31.89</td>
+      <td>2,870.10</td>
+      <td><span class="pnl-neg">$-1,454.40</span></td>
+      <td><span class="pnl-neg">-33.63%</span></td>
     </tr>
     <tr>
       <td>2026-09-08 13:37</td>
@@ -346,11 +387,11 @@ nav a {
       <td>Long</td>
       <td>25</td>
       <td>181.31</td>
-      <td>2026-09-30 16:00</td>
-      <td>162.91</td>
-      <td>4,072.75</td>
-      <td><span class="pnl-neg">$-460.00</span></td>
-      <td><span class="pnl-neg">-10.15%</span></td>
+      <td>2026-10-01 16:00</td>
+      <td>160.28</td>
+      <td>4,007.00</td>
+      <td><span class="pnl-neg">$-525.75</span></td>
+      <td><span class="pnl-neg">-11.60%</span></td>
     </tr>
     <tr>
       <td>2026-09-22 15:09</td>
@@ -358,11 +399,11 @@ nav a {
       <td>Long</td>
       <td>20</td>
       <td>228.93</td>
-      <td>2026-09-30 16:00</td>
-      <td>221.86</td>
-      <td>4,437.20</td>
-      <td><span class="pnl-neg">$-141.30</span></td>
-      <td><span class="pnl-neg">-3.09%</span></td>
+      <td>2026-10-01 16:00</td>
+      <td>224.41</td>
+      <td>4,488.20</td>
+      <td><span class="pnl-neg">$-90.30</span></td>
+      <td><span class="pnl-neg">-1.97%</span></td>
     </tr>
     <tr>
       <td>2026-09-25 10:29</td>
@@ -370,23 +411,11 @@ nav a {
       <td>Long</td>
       <td>140</td>
       <td>27.82</td>
-      <td>2026-09-30 16:00</td>
-      <td>27.28</td>
-      <td>3,819.20</td>
-      <td><span class="pnl-neg">$-75.60</span></td>
-      <td><span class="pnl-neg">-1.94%</span></td>
-    </tr>
-    <tr>
-      <td>2026-09-25 12:55</td>
-      <td>GEN</td>
-      <td>Long</td>
-      <td>200</td>
-      <td>22.21</td>
-      <td>2026-09-30 16:00</td>
-      <td>22.02</td>
-      <td>4,404.00</td>
-      <td><span class="pnl-neg">$-38.00</span></td>
-      <td><span class="pnl-neg">-0.86%</span></td>
+      <td>2026-10-01 16:00</td>
+      <td>27.29</td>
+      <td>3,820.60</td>
+      <td><span class="pnl-neg">$-74.20</span></td>
+      <td><span class="pnl-neg">-1.91%</span></td>
     </tr>
     <tr>
       <td>2026-09-28 15:12</td>
@@ -394,11 +423,23 @@ nav a {
       <td>Long</td>
       <td>60</td>
       <td>77.42</td>
-      <td>2026-09-30 16:00</td>
-      <td>74.54</td>
-      <td>4,472.40</td>
-      <td><span class="pnl-neg">$-172.80</span></td>
-      <td><span class="pnl-neg">-3.72%</span></td>
+      <td>2026-10-01 16:00</td>
+      <td>76.47</td>
+      <td>4,588.20</td>
+      <td><span class="pnl-neg">$-57.00</span></td>
+      <td><span class="pnl-neg">-1.23%</span></td>
+    </tr>
+    <tr>
+      <td>2026-10-01 11:57</td>
+      <td>APP</td>
+      <td>Long</td>
+      <td>17</td>
+      <td>277.62</td>
+      <td>2026-10-01 16:00</td>
+      <td>281.31</td>
+      <td>4,782.27</td>
+      <td><span class="pnl-pos">$62.73</span></td>
+      <td><span class="pnl-pos">1.33%</span></td>
     </tr>
   </tbody>
 </table>
@@ -423,6 +464,26 @@ nav a {
     </tr>
   </thead>
   <tbody>
+    <tr>
+      <td>2026-10-01 10:16</td>
+      <td>GM</td>
+      <td>Long</td>
+      <td>60</td>
+      <td>76.79</td>
+      <td>2026-10-01 15:03</td>
+      <td>78.74</td>
+      <td><span class="pnl-pos">$116.08</span></td>
+    </tr>
+    <tr>
+      <td>2026-09-25 12:55</td>
+      <td>GEN</td>
+      <td>Long</td>
+      <td>200</td>
+      <td>22.21</td>
+      <td>2026-10-01 09:41</td>
+      <td>22.42</td>
+      <td><span class="pnl-pos">$39.39</span></td>
+    </tr>
     <tr>
       <td>2026-09-24 15:27</td>
       <td>CMG</td>
@@ -602,26 +663,6 @@ nav a {
       <td>2026-09-02 15:01</td>
       <td>16.63</td>
       <td><span class="pnl-pos">$48.16</span></td>
-    </tr>
-    <tr>
-      <td>2026-08-31 11:18</td>
-      <td>BURL</td>
-      <td>Long</td>
-      <td>17</td>
-      <td>262.10</td>
-      <td>2026-09-01 14:01</td>
-      <td>263.72</td>
-      <td><span class="pnl-pos">$27.24</span></td>
-    </tr>
-    <tr>
-      <td>2026-08-27 14:55</td>
-      <td>HRL</td>
-      <td>Long</td>
-      <td>200</td>
-      <td>21.42</td>
-      <td>2026-08-31 11:58</td>
-      <td>21.75</td>
-      <td><span class="pnl-pos">$62.30</span></td>
     </tr>
   </tbody>
 </table>
