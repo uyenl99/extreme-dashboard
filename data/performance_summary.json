@@ -1,12 +1,12 @@
 {
-  "current_equity": "$70,828",
-  "total_return": "7039.9%",
+  "current_equity": "$70,890",
+  "total_return": "7046.2%",
   "annual_return": "21.8%",
   "sharpe_ratio": "0.67",
   "max_drawdown": "-61.1%",
   "max_drawdown_since_2013": "-24.5%",
-  "number_of_trades": "5,099",
+  "number_of_trades": "5,100",
   "win_trades_pct": "73.6%",
   "start_date": "2005-02-17",
-  "last_update": "2026-10-08"
+  "last_update": "2026-10-09"
 }
