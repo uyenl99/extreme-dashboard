@@ -1,6 +1,6 @@
 {
   "signal_date": "2026-09-30",
-  "as_of": "2026-10-16",
+  "as_of": "2026-10-19",
   "execution_date": "2026-10-01",
   "pending": false,
   "execution": "next-session open",
@@ -22,8 +22,8 @@
   "prices": {
     "IEF": {
       "entry_open": 88.79000091552734,
-      "latest_close": 90.41999816894531,
-      "total_return": 0.018357892066795944
+      "latest_close": 90.08000183105469,
+      "total_return": 0.014528673299087025
     },
     "SGOV": {
       "entry_open": 100.40899658203125,
@@ -32,8 +32,8 @@
     },
     "SPY": {
       "entry_open": 764.3599853515625,
-      "latest_close": 763.25,
-      "total_return": -0.0014521761641563824
+      "latest_close": 766.47998046875,
+      "total_return": 0.0027735558608714683
     }
   }
 }
