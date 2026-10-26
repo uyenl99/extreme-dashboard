@@ -365,7 +365,6 @@ try {
     $successMessage = "All six updates published successfully. PR: $prUrl Production: $productionUrl"
     Write-Host "$successMessage ($mergeSha)."
     Write-RunStatus -Status "Succeeded" -Stage "Complete" -Message $successMessage -PullRequestUrl $prUrl
-    Show-RunNotification -Title "Extreme Dashboard update succeeded" -Message $successMessage -Level Info
 }
 catch {
     $failureMessage = $_.Exception.Message
