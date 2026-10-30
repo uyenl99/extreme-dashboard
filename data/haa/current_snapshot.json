@@ -1,11 +1,11 @@
 {
-  "signal_date": "2026-09-30",
-  "as_of": "2026-10-29",
-  "execution_date": "2026-10-01",
-  "pending": false,
+  "signal_date": "2026-10-30",
+  "as_of": "2026-10-30",
+  "execution_date": "2026-11-02",
+  "pending": true,
   "execution": "next-session open",
-  "portfolio_return": 0.0032974390503153206,
-  "entry_equity_factor": 1.0002987791099667,
+  "portfolio_return": 0.0,
+  "entry_equity_factor": 1.0,
   "previous_weights": {
     "SPY": 0.0,
     "IWM": 0.0,
@@ -20,20 +20,35 @@
     "BIL": 0.0
   },
   "prices": {
+    "EFA": {
+      "entry_open": null,
+      "latest_close": 103.37000274658203,
+      "total_return": 0.0
+    },
     "IEF": {
-      "entry_open": 88.79000091552734,
-      "latest_close": 91.25,
-      "total_return": 0.027705812130951912
+      "entry_open": null,
+      "latest_close": 91.76000213623047,
+      "total_return": 0.0
+    },
+    "IWM": {
+      "entry_open": null,
+      "latest_close": 279.3299865722656,
+      "total_return": 0.0
+    },
+    "PDBC": {
+      "entry_open": null,
+      "latest_close": 20.020000457763672,
+      "total_return": 0.0
     },
     "SGOV": {
-      "entry_open": 100.40899658203125,
-      "latest_close": 100.70999908447266,
-      "total_return": 0.0029977642710081742
+      "entry_open": null,
+      "latest_close": 100.7300033569336,
+      "total_return": 0.0
     },
     "SPY": {
-      "entry_open": 764.3599853515625,
-      "latest_close": 769.3599853515625,
-      "total_return": 0.006541420398531672
+      "entry_open": null,
+      "latest_close": 755.719970703125,
+      "total_return": 0.0
     }
   }
 }
