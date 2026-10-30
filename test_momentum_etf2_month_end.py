@@ -2,7 +2,11 @@ import unittest
 
 import pandas as pd
 
-from generate_momentum_etf2_page import extend_daily_to_partial, latest_alert_table
+from generate_momentum_etf2_page import (
+    current_allocation_snapshot,
+    extend_daily_to_partial,
+    latest_alert_table,
+)
 
 
 class MonthEndTransitionTests(unittest.TestCase):
@@ -44,6 +48,17 @@ class MonthEndTransitionTests(unittest.TestCase):
         html = latest_alert_table(self.daily, self.alert, self.monthly, self.close)
         self.assertIn("2026-10-01 open", html)
         self.assertIn("Pending next-session open", html)
+
+    def test_open_history_uses_current_month_not_pending_effective_month(self):
+        extended, partial, spy, _ = extend_daily_to_partial(
+            self.daily, self.close, self.open, self.alert, 200000.0, self.monthly
+        )
+
+        current = current_allocation_snapshot(extended, partial, spy)
+
+        self.assertEqual(current["Month"], "2026-09")
+        self.assertEqual(current["Holdings"], "XLE")
+        self.assertEqual(current["Status"], "Open through 2026-09-30")
 
 
 if __name__ == "__main__":

@@ -112,6 +112,20 @@ def allocation_history(monthly_backtest, current=None, limit=20):
     return display.sort_index(ascending=False).head(limit).reset_index(drop=True)
 
 
+def current_allocation_snapshot(daily, partial_return, partial_spy):
+    """Describe the allocation that is actually open, not the pending next-month alert."""
+    if partial_return is None:
+        return None
+    latest_day = pd.to_datetime(daily.index).max()
+    return {
+        "Month": str(latest_day.to_period("M")),
+        "Holdings": str(daily.iloc[-1]["holding"]),
+        "Return": partial_return,
+        "SPY": partial_spy,
+        "Status": f"Open through {latest_day:%Y-%m-%d}",
+    }
+
+
 def extend_daily_to_partial(daily, close_prices, open_prices, alert, start_equity, monthly_backtest=None):
     """Append the current holding's open-to-latest-close mark without closing the month."""
     original_index_name = daily.index.name
@@ -285,15 +299,7 @@ def render(source, audience, chart_src):
         for label, value in metrics
     )
     if audience == "member":
-        current_allocation = None
-        if partial_return is not None:
-            current_allocation = {
-                "Month": str(alert["effective_month"]),
-                "Holdings": str(alert["next_holding"]),
-                "Return": partial_return,
-                "SPY": partial_spy,
-                "Status": f"Open through {end_date}",
-            }
+        current_allocation = current_allocation_snapshot(daily, partial_return, partial_spy)
         allocations = allocation_history(monthly_backtest, current_allocation)
         protected = (
             current_month_panel(daily, positions)

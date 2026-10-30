@@ -290,6 +290,7 @@ Assert-Contains "api/_member-content/haa.html" @('data-model-weights', 'id="curr
 Assert-Contains "api/_member-content/momentum2.html" @('Open through')
 Assert-ContainsAny "api/_member-content/momentum2.html" @('Executed; marked through', 'Pending next-session open')
 Assert-SectionRowCount "api/_member-content/momentum2.html" "Latest 20 Historical Trades" 20
+Assert-Contains "api/_member-content/momentum.html" @('<strong>Portfolio return:</strong>', '<strong>SPY:</strong>')
 Assert-ContainsAny "api/_member-content/haa.html" @('Executed; marked through', 'Pending next-session open')
 Assert-SectionRowCount "api/_member-content/haa.html" "Latest 20 Historical Trades" 20
 
