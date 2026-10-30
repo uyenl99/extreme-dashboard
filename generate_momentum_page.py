@@ -80,6 +80,9 @@ def load_results(source):
     monthly = pd.read_csv(source / "monthly_return_table.csv")
     partial_path = source / "partial_month_return.csv"
     partial = pd.read_csv(partial_path).iloc[0] if partial_path.is_file() else None
+    if partial is not None:
+        partial = partial.copy()
+        partial["spy_partial_return"] = calculate_partial_spy_return(source, partial)
     partial_slots = pd.read_csv(source / "partial_month_slots.csv")
 
     for frame, column, label in (
@@ -99,6 +102,33 @@ def pct(value, decimals=2):
     return f"{float(value) * 100:,.{decimals}f}%"
 
 
+def calculate_partial_spy_return(source, partial):
+    """Return SPY's current-month MOO-to-latest-close benchmark return."""
+    spy_path = source.parent / "data" / "SPY_daily.csv"
+    if not spy_path.is_file():
+        raise FileNotFoundError(f"Missing SPY daily prices for partial month: {spy_path}")
+    spy_prices = pd.read_csv(spy_path)
+    date_column = "Date" if "Date" in spy_prices.columns else "date"
+    open_column = next(column for column in ("Open", "open") if column in spy_prices.columns)
+    close_column = next(
+        column for column in ("Adj Close", "Close", "adj_close", "close")
+        if column in spy_prices.columns
+    )
+    spy_prices[date_column] = pd.to_datetime(spy_prices[date_column])
+    spy_prices = spy_prices.sort_values(date_column).set_index(date_column)
+    entry_day = pd.Timestamp(partial["entry_day"])
+    latest_day = pd.Timestamp(partial["latest_day"])
+    missing = [day for day in (entry_day, latest_day) if day not in spy_prices.index]
+    if missing:
+        raise ValueError(
+            "Missing exact SPY session(s) for ETF1 partial month: "
+            + ", ".join(f"{day:%Y-%m-%d}" for day in missing)
+        )
+    return float(spy_prices.at[latest_day, close_column]) / float(
+        spy_prices.at[entry_day, open_column]
+    ) - 1.0
+
+
 def extend_daily_to_partial(daily, summary, partial, source):
     """Extend completed monthly equity through the latest partial trading day."""
     if partial is None:
@@ -108,20 +138,7 @@ def extend_daily_to_partial(daily, summary, partial, source):
         return daily
 
     entry_day = pd.Timestamp(partial["entry_day"])
-    spy_path = source.parent / "data" / "SPY_daily.csv"
-    if not spy_path.is_file():
-        raise FileNotFoundError(f"Missing SPY daily prices for partial-month chart: {spy_path}")
-    spy_prices = pd.read_csv(spy_path)
-    date_column = "Date" if "Date" in spy_prices.columns else "date"
-    close_column = next(
-        column for column in ("Adj Close", "Close", "adj_close", "close")
-        if column in spy_prices.columns
-    )
-    spy_prices[date_column] = pd.to_datetime(spy_prices[date_column])
-    spy_prices = spy_prices.sort_values(date_column)
-    entry_close = spy_prices.loc[spy_prices[date_column] <= entry_day, close_column].iloc[-1]
-    latest_close = spy_prices.loc[spy_prices[date_column] <= latest_day, close_column].iloc[-1]
-    spy_partial_return = float(latest_close) / float(entry_close) - 1.0
+    spy_partial_return = float(partial["spy_partial_return"])
 
     additions = pd.DataFrame(
         [
@@ -171,6 +188,17 @@ def parse_alert(path, events_path=None):
         next_entries = events.loc[events["type"].eq("NEXT_ENTRY")]
         if not next_entries.empty:
             execution_date = pd.Timestamp(next_entries.iloc[-1]["date"])
+            import pandas_market_calendars as mcal
+
+            calendar = mcal.get_calendar("NYSE").schedule(
+                start_date=execution_date.date(),
+                end_date=(execution_date + pd.Timedelta(days=10)).date(),
+            )
+            if calendar.empty:
+                raise ValueError(
+                    f"Missing next NYSE session for ETF1 execution marker: {execution_date:%Y-%m-%d}"
+                )
+            execution_date = pd.Timestamp(calendar.index[0])
             alert["Execution"] = f"{execution_date:%Y-%m-%d} open"
     return alert
 
@@ -250,6 +278,8 @@ def build_allocation_table(allocations, partial=None, limit=20):
         regime_css = "risk-off" if risk_off else "risk-on"
         partial_return = float(partial["partial_return"])
         return_css = "positive" if partial_return > 0 else "negative" if partial_return < 0 else "muted"
+        spy_return = float(partial["spy_partial_return"])
+        spy_css = "positive" if spy_return > 0 else "negative" if spy_return < 0 else "muted"
         entry_month = pd.Timestamp(partial["entry_month"]).strftime("%Y-%m")
         rows.append(
             '<tr>'
@@ -257,7 +287,7 @@ def build_allocation_table(allocations, partial=None, limit=20):
             f"<td>{html.escape(str(partial['holdings']))}</td>"
             f'<td><span class="regime {regime_css}">{regime}</span></td>'
             f'<td class="{return_css}">{partial_return * 100:.2f}%</td>'
-            '<td class="muted">—</td></tr>'
+            f'<td class="{spy_css}">{spy_return * 100:.2f}%</td></tr>'
         )
         completed_limit -= 1
     recent = allocations.sort_values("date", ascending=False).head(completed_limit)
@@ -290,11 +320,17 @@ def current_partial_month_panel(partial, partial_slots, portfolio_equity):
         partial_slots.set_index("ticker")["latest_price"].to_dict(),
         portfolio_equity,
     )
+    partial_return = float(partial["partial_return"])
+    spy_return = float(partial["spy_partial_return"])
+    partial_css = "positive" if partial_return > 0 else "negative" if partial_return < 0 else "muted"
+    spy_css = "positive" if spy_return > 0 else "negative" if spy_return < 0 else "muted"
     return (
         '<section class="panel" id="current-month"><h2>Current Partial Month</h2>'
         f'<p class="subtle">Mark-to-market through {html.escape(str(partial["latest_day"]))}; this is an incomplete-month estimate.</p>'
+        f'<p><strong>Portfolio return:</strong> <span class="{partial_css}">{partial_return * 100:.2f}%</span>'
+        f' &middot; <strong>SPY:</strong> <span class="{spy_css}">{spy_return * 100:.2f}%</span></p>'
         f'{render_open_positions_table(positions)}'
-        '<p class="subtle">Shares and dollar values use model equity at entry and assume fractional shares.</p></section>'
+        '<p class="subtle">Open P/L % is shown per position. The portfolio return is the equal-weight aggregate after modeled transaction costs. Shares and dollar values use model equity at entry and assume fractional shares.</p></section>'
     )
 
 

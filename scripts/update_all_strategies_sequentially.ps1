@@ -245,7 +245,7 @@ try {
         $previousPythonPath = $env:PYTHONPATH
         try {
             $env:PYTHONPATH = "$webRoot;C:\junk\stocks\HAA\.packages"
-            & $python -m unittest test_member_update_mappings
+            & $python -m unittest test_member_update_mappings test_momentum_alert_dates test_momentum_etf2_month_end
             if ($LASTEXITCODE -ne 0) { throw "Member alert and trade mapping verification failed." }
         }
         finally { $env:PYTHONPATH = $previousPythonPath }
