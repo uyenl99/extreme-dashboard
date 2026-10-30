@@ -24,6 +24,7 @@ $productionUrl = "https://uyenl99.github.io/extreme-dashboard/index.html"
 $runStarted = Get-Date
 $currentStage = "Initialization"
 $prUrl = $null
+$meanReversionCheckpoint = $false
 
 New-Item -ItemType Directory -Force $logRoot, $statusRoot | Out-Null
 
@@ -171,6 +172,33 @@ function Wait-ForVercelCheckRegistration([string]$PullRequestUrl) {
     throw "Timed out after $registrationTimeoutMinutes minutes waiting for the Vercel preview check to register: $PullRequestUrl"
 }
 
+function Publish-MeanReversionCheckpoint {
+    # A later strategy failed after Mean Reversion completed. Remove partial
+    # downstream changes and publish the committed, verified checkpoint.
+    & $git -C $webRoot reset --hard HEAD
+    if ($LASTEXITCODE -ne 0) { throw "Could not discard partial downstream files before Mean Reversion recovery." }
+    & $git -C $webRoot fetch origin main
+    if ($LASTEXITCODE -ne 0) { throw "Could not refresh main for Mean Reversion recovery." }
+    & $git -C $webRoot rebase origin/main
+    if ($LASTEXITCODE -ne 0) { throw "Mean Reversion recovery conflicts with newer production changes." }
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $publicationGuard -WebRoot $webRoot -BaseRef origin/main
+    if ($LASTEXITCODE -ne 0) { throw "Mean Reversion recovery publication guard failed." }
+
+    & $git -C $webRoot push --force-with-lease -u origin $previewBranch
+    if ($LASTEXITCODE -ne 0) { throw "Could not push the Mean Reversion recovery branch." }
+    $created = & $gh pr create --repo $repo --base main --head $previewBranch `
+        --title "Recover daily Mean Reversion update" `
+        --body "Mean Reversion completed successfully, but a later daily strategy failed. This recovery publishes the verified Mean Reversion order page while the batch remains failed." 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "Could not create the Mean Reversion recovery PR: $created" }
+    $script:prUrl = "$created".Trim()
+    Wait-ForVercelCheckRegistration $script:prUrl
+    & $gh pr checks $script:prUrl --repo $repo --watch --interval 10 --fail-fast
+    if ($LASTEXITCODE -ne 0) { throw "Mean Reversion recovery preview checks failed: $script:prUrl" }
+    & $gh pr merge $script:prUrl --repo $repo --squash --delete-branch
+    if ($LASTEXITCODE -ne 0) { throw "Mean Reversion recovery passed checks but could not be merged: $script:prUrl" }
+    Write-Host "Published verified Mean Reversion checkpoint after downstream batch failure: $script:prUrl"
+}
+
 Write-RunStatus -Status "Running" -Stage $currentStage -Message "Daily strategy batch started." -PullRequestUrl $null
 Start-Transcript -Path $log -Append
 try {
@@ -202,6 +230,28 @@ try {
     Invoke-Stage "Mean Reversion 5x5 walk-forward next-day MOO backtest" {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $meanReversionUpdate -NoPublish -TargetCheckout $webRoot
     }
+    Set-RunStage -Name "Checkpoint Mean Reversion results"
+    $generatedMemberRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\member-pages"
+    $memberContentRoot = Join-Path $webRoot "api\_member-content"
+    $generatedMeanReversionPage = Join-Path $generatedMemberRoot "mean-reversion-members.html"
+    $protectedMeanReversionPage = Join-Path $memberContentRoot "mean-reversion.html"
+    if (-not (Test-Path -LiteralPath $generatedMeanReversionPage)) {
+        throw "Generated Mean Reversion member page not found: $generatedMeanReversionPage"
+    }
+    New-Item -ItemType Directory -Force $memberContentRoot | Out-Null
+    Copy-Item -LiteralPath $generatedMeanReversionPage -Destination $protectedMeanReversionPage -Force
+    & $python (Join-Path $webRoot "inject_position_calculator.py") $protectedMeanReversionPage
+    if ($LASTEXITCODE -ne 0) { throw "Mean Reversion position calculator injection failed." }
+    & $git -C $webRoot add -- mean-reversion.html strategies.html members.html api/_member-content/mean-reversion.html position-calculator.js
+    & $git -C $webRoot diff --cached --quiet
+    if ($LASTEXITCODE -eq 1) {
+        & $git -C $webRoot config user.name "Extreme Dashboard Automation"
+        & $git -C $webRoot config user.email "uyenl99@users.noreply.github.com"
+        & $git -C $webRoot commit -m "Checkpoint Mean Reversion update $today"
+        if ($LASTEXITCODE -ne 0) { throw "Could not commit the Mean Reversion checkpoint." }
+    }
+    elseif ($LASTEXITCODE -ne 0) { throw "Could not inspect the Mean Reversion checkpoint." }
+    $meanReversionCheckpoint = $true
     Invoke-Stage "Momentum ETF1, ETF2, and SP" {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $momentumUpdate -NoPublish
     }
@@ -216,8 +266,6 @@ try {
         & $python -c $combinedCode
     }
     Set-RunStage -Name "Prepare generated site files"
-    $generatedMemberRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\member-pages"
-    $memberContentRoot = Join-Path $webRoot "api\_member-content"
     New-Item -ItemType Directory -Force $memberContentRoot | Out-Null
     $memberPages = @{
         "mean-reversion-members.html" = "mean-reversion.html"
@@ -317,12 +365,22 @@ try {
     $successMessage = "All six updates published successfully. PR: $prUrl Production: $productionUrl"
     Write-Host "$successMessage ($mergeSha)."
     Write-RunStatus -Status "Succeeded" -Stage "Complete" -Message $successMessage -PullRequestUrl $prUrl
-    Show-RunNotification -Title "Extreme Dashboard update succeeded" -Message $successMessage -Level Info
 }
 catch {
     $failureMessage = $_.Exception.Message
-    Write-RunStatus -Status "Failed" -Stage $currentStage -Message $failureMessage -PullRequestUrl $prUrl
-    Show-RunNotification -Title "Extreme Dashboard update failed" -Message "$currentStage`: $failureMessage Log: $log" -Level Error
+    $failedStage = $currentStage
+    if ($meanReversionCheckpoint -and -not $prUrl) {
+        try {
+            Set-RunStage -Name "Recover completed Mean Reversion update" -Message "A downstream strategy failed; publishing the verified Mean Reversion checkpoint."
+            Publish-MeanReversionCheckpoint
+            $failureMessage += " Mean Reversion was recovered and published separately: $prUrl"
+        }
+        catch {
+            $failureMessage += " Mean Reversion recovery also failed: $($_.Exception.Message)"
+        }
+    }
+    Write-RunStatus -Status "Failed" -Stage $failedStage -Message $failureMessage -PullRequestUrl $prUrl
+    Show-RunNotification -Title "Extreme Dashboard update failed" -Message "$failedStage`: $failureMessage Log: $log" -Level Error
     throw
 }
 finally { Stop-Transcript }
