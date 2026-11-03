@@ -29,6 +29,26 @@ class NextOrdersTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             select_orders(day.drop('A'), positions, 0., pd.Timestamp('2026-09-09'))
 
+    def test_earnings_exclusions_replace_entries_without_changing_exits(self):
+        day = pd.DataFrame([
+            dict(ticker=t, close=100., qpi=q, ibs=.05, entry_signal=e, exit_signal=x)
+            for t,q,e,x in [('WM',.1,False,True),('BAX',.1,False,True),
+                            ('KEEP1',.1,False,False),('KEEP2',.1,False,False),
+                            ('KEEP3',.1,False,False),('DDOG',0.,True,False),
+                            ('AMD',.001,True,False),('NTAP',.004,True,False),
+                            ('DELL',.005,True,False)]
+        ]).set_index('ticker')
+        positions = pd.DataFrame([dict(ticker=t,side='long',entry_date='2026-10-30',shares=20.)
+                                  for t in ['WM','BAX','KEEP1','KEEP2','KEEP3']])
+        orders = select_orders(day, positions, 100., pd.Timestamp('2026-11-03'),
+                               excluded_entries={'DDOG','AMD'})
+        self.assertEqual([(o['action'],o['ticker']) for o in orders],
+                         [('Exit','WM'),('Exit','BAX'),('Buy','NTAP'),('Buy','DELL')])
+        self.assertTrue(all(o['estimated_notional']/o['reference_close'] == o['shares']
+                            for o in orders))
+        from mean_reversion_next_orders import ENTRY_EXCLUSIONS
+        self.assertNotIn('2026-11-04', ENTRY_EXCLUSIONS)
+
     def test_stale_orders_and_no_future_fills(self):
         payload = dict(signal_date='2026-09-08',execution_date='2026-09-09',orders=[])
         self.assertIn('No orders for this session', render_orders(payload, pd.Timestamp('2026-09-08')))
