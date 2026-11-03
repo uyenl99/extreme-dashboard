@@ -47,7 +47,14 @@ def latest_signal(bars, cfg):
                 entry_signal=bool(entry), exit_signal=bool(ibs > cfg.EXIT_IBS_THRESHOLD or rsi2 > cfg.EXIT_RSI2_THRESHOLD))
 
 
-def select_orders(day, positions, cash, execution, cost_rate=.0005, max_hold_days=None):
+# Date-scoped user selection; historical results and later sessions are unchanged.
+ENTRY_EXCLUSIONS = {
+    "2026-11-03": {"DDOG": "Earnings November 4", "AMD": "Earnings November 3"},
+}
+
+
+def select_orders(day, positions, cash, execution, cost_rate=.0005, max_hold_days=None,
+                  excluded_entries=()):
     if len(positions) > 5 or (not positions.empty and not positions.side.eq("long").all()):
         raise ValueError("Expected the production long-only five-position portfolio")
     missing = set(positions.ticker) - set(day.index)
@@ -67,7 +74,7 @@ def select_orders(day, positions, cash, execution, cost_rate=.0005, max_hold_day
             retained.append(pos)
     equity = cash + sum(pos.shares * day.loc[pos.ticker, "close"] for pos in retained)
     held = {pos.ticker for pos in retained}
-    candidates = day.loc[day.entry_signal & ~day.index.isin(held)].sort_values(["qpi", "ibs"]).head(5-len(retained))
+    candidates = day.loc[day.entry_signal & ~day.index.isin(held) & ~day.index.isin(excluded_entries)].sort_values(["qpi", "ibs"]).head(5-len(retained))
     for ticker, row in candidates.iterrows():
         notional = min(equity / 5, cash / (1 + cost_rate))
         if notional <= 0:
@@ -92,13 +99,15 @@ def render_orders(payload, results_through):
                     f'<td>${order["reference_close"]:,.2f}</td><td>Pending market open</td></tr>')
     if not rows:
         rows = ['<tr><td colspan="6">No orders for this session; retain current positions.</td></tr>']
+    entry_note = payload.get("entry_filter_note", "")
+    entry_note = ('<p class="subtle">' + html.escape(entry_note) + '</p>') if entry_note else ''
     stale = payload.get("excluded_stale_tickers", [])
     coverage = ('<p class="subtle">Excluded from new entries because their latest bars are older than the signal date: '
                 + html.escape(', '.join(stale)) + '.</p>') if stale else ''
     return (f'<p class="subtle">Signal date: {signal:%Y-%m-%d} (completed close) · MOO execution date: {execution:%Y-%m-%d}.</p>'
             '<p class="subtle">Exits execute before new entries. Buy quantities and values are estimates using the signal-day close and 5 bps per side. '
             'Actual sizing depends on opening equity, available cash, and opening prices. Fill prices are not yet known.</p>'
-            + coverage + '<div class="table-wrap"><table data-default-position-weight="0.2"><thead><tr><th>Action</th><th>Ticker</th><th>Shares (buys estimated)</th>'
+            + entry_note + coverage + '<div class="table-wrap"><table data-default-position-weight="0.2"><thead><tr><th>Action</th><th>Ticker</th><th>Shares (buys estimated)</th>'
             '<th>Estimated Value</th><th>Reference Close</th><th>Execution</th></tr></thead><tbody>' + ''.join(rows) + '</tbody></table></div>')
 
 
@@ -132,11 +141,17 @@ def main():
     if not rows:
         raise ValueError("No current signal bars")
     day = pd.DataFrame(rows).set_index("ticker")
+    excluded = ENTRY_EXCLUSIONS.get(str(execution.date()), {})
     orders = select_orders(day, positions, float(equity.iloc[-1].cash), execution,
-                           config.TRANSACTION_COST_BPS / 10000, config.MAX_HOLD_DAYS)
+                           config.TRANSACTION_COST_BPS / 10000, config.MAX_HOLD_DAYS, excluded_entries=excluded)
     payload = dict(signal_date=str(signal_date.date()), execution_date=str(execution.date()),
                    generated_at=pd.Timestamp.now(tz="UTC").isoformat(), orders=orders,
                    evaluated_tickers=len(rows), excluded_stale_tickers=stale)
+    if excluded:
+        payload["entry_filter_note"] = ("November 3 buy candidates: NTAP and DELL. "
+            "AMD and DDOG excluded from new entries for earnings within November 3–9. "
+            "This session-only selection does not change historical backtest results.")
+        payload["excluded_earnings_tickers"] = excluded
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, allow_nan=False) + '\n', encoding="utf-8")
     print(f'Next-session MOO orders: {signal_date.date()} -> {execution.date()}; {len(orders)} orders; {len(rows)} current tickers; {len(stale)} stale tickers excluded.')
