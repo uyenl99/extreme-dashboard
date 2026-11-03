@@ -1,3 +1,5 @@
+import io
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -6,7 +8,22 @@ from types import SimpleNamespace
 import numpy as np
 import pandas as pd
 
-from mean_reversion_next_orders import latest_signal, select_orders, session_dates, render_orders
+from mean_reversion_next_orders import (
+    fetch_earnings_for_sessions,
+    latest_signal,
+    next_trading_sessions,
+    render_orders,
+    select_orders,
+    session_dates,
+)
+
+
+class JsonResponse(io.BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
 
 class NextOrdersTests(unittest.TestCase):
@@ -46,8 +63,24 @@ class NextOrdersTests(unittest.TestCase):
                          [('Exit','WM'),('Exit','BAX'),('Buy','NTAP'),('Buy','DELL')])
         self.assertTrue(all(o['estimated_notional']/o['reference_close'] == o['shares']
                             for o in orders))
-        from mean_reversion_next_orders import ENTRY_EXCLUSIONS
-        self.assertNotIn('2026-11-04', ENTRY_EXCLUSIONS)
+
+    def test_next_five_sessions_and_earnings_calendar(self):
+        sessions = next_trading_sessions(pd.Timestamp('2026-10-30'), count=5)
+        self.assertEqual([str(date.date()) for date in sessions],
+                         ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06'])
+
+        def opener(request, timeout):
+            date = request.full_url.rsplit('=', 1)[-1]
+            rows = [{'symbol': 'AMD'}] if date == '2026-11-03' else []
+            return JsonResponse(json.dumps({'data': {'rows': rows}}).encode())
+
+        self.assertEqual(fetch_earnings_for_sessions(sessions, opener), {'AMD': '2026-11-03'})
+
+        def bad_opener(request, timeout):
+            return JsonResponse(json.dumps({'data': None}).encode())
+
+        with self.assertRaises(RuntimeError):
+            fetch_earnings_for_sessions(sessions[:1], bad_opener)
 
     def test_stale_orders_and_no_future_fills(self):
         payload = dict(signal_date='2026-09-08',execution_date='2026-09-09',orders=[])
