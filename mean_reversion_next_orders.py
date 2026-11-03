@@ -3,6 +3,9 @@ import argparse
 import html
 import json
 import sys
+import time
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 import numpy as np
@@ -47,10 +50,55 @@ def latest_signal(bars, cfg):
                 entry_signal=bool(entry), exit_signal=bool(ibs > cfg.EXIT_IBS_THRESHOLD or rsi2 > cfg.EXIT_RSI2_THRESHOLD))
 
 
-# Date-scoped user selection; historical results and later sessions are unchanged.
-ENTRY_EXCLUSIONS = {
-    "2026-11-03": {"DDOG": "Earnings November 4", "AMD": "Earnings November 3"},
-}
+NASDAQ_EARNINGS_URL = "https://api.nasdaq.com/api/calendar/earnings"
+
+
+def next_trading_sessions(signal_date, count=5):
+    import pandas_market_calendars as mcal
+    signal_date = pd.Timestamp(signal_date).normalize()
+    schedule = mcal.get_calendar("NYSE").schedule(
+        start_date=(signal_date + pd.Timedelta(days=1)).date(),
+        end_date=(signal_date + pd.Timedelta(days=20)).date())
+    sessions = schedule.index[:count]
+    if len(sessions) != count:
+        raise ValueError(f"Could not resolve the next {count} NYSE sessions")
+    return sessions
+
+
+def fetch_earnings_for_sessions(sessions, opener=urllib.request.urlopen):
+    """Return ticker -> earnings date from Nasdaq; raise if any session is unavailable."""
+    earnings = {}
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json, text/plain, */*",
+        "Origin": "https://www.nasdaq.com",
+        "Referer": "https://www.nasdaq.com/",
+    }
+    for session in sessions:
+        date = pd.Timestamp(session).strftime("%Y-%m-%d")
+        url = NASDAQ_EARNINGS_URL + "?" + urllib.parse.urlencode({"date": date})
+        last_error = None
+        for attempt in range(3):
+            try:
+                request = urllib.request.Request(url, headers=headers)
+                with opener(request, timeout=30) as response:
+                    payload = json.load(response)
+                data = payload.get("data")
+                if not isinstance(data, dict) or not isinstance(data.get("rows"), list):
+                    raise ValueError(f"Nasdaq returned no earnings rows collection for {date}")
+                for row in data["rows"]:
+                    ticker = str(row.get("symbol", "")).strip().upper()
+                    if ticker:
+                        earnings.setdefault(ticker, date)
+                last_error = None
+                break
+            except Exception as error:
+                last_error = error
+                if attempt < 2:
+                    time.sleep(2 ** attempt)
+        if last_error is not None:
+            raise RuntimeError(f"Could not verify Nasdaq earnings for {date}: {last_error}")
+    return earnings
 
 
 def select_orders(day, positions, cash, execution, cost_rate=.0005, max_hold_days=None,
@@ -141,16 +189,21 @@ def main():
     if not rows:
         raise ValueError("No current signal bars")
     day = pd.DataFrame(rows).set_index("ticker")
-    excluded = ENTRY_EXCLUSIONS.get(str(execution.date()), {})
+    earnings_sessions = next_trading_sessions(signal_date, count=5)
+    earnings = fetch_earnings_for_sessions(earnings_sessions)
+    entry_tickers = set(day.index[day.entry_signal])
+    excluded = {ticker: earnings[ticker] for ticker in sorted(entry_tickers & set(earnings))}
     orders = select_orders(day, positions, float(equity.iloc[-1].cash), execution,
                            config.TRANSACTION_COST_BPS / 10000, config.MAX_HOLD_DAYS, excluded_entries=excluded)
     payload = dict(signal_date=str(signal_date.date()), execution_date=str(execution.date()),
                    generated_at=pd.Timestamp.now(tz="UTC").isoformat(), orders=orders,
                    evaluated_tickers=len(rows), excluded_stale_tickers=stale)
     if excluded:
-        payload["entry_filter_note"] = ("November 3 buy candidates: NTAP and DELL. "
-            "AMD and DDOG excluded from new entries for earnings within November 3–9. "
-            "This session-only selection does not change historical backtest results.")
+        details = ", ".join(f"{ticker} ({date})" for ticker, date in excluded.items())
+        window = f"{earnings_sessions[0]:%Y-%m-%d} through {earnings_sessions[-1]:%Y-%m-%d}"
+        payload["entry_filter_note"] = (
+            f"Excluded from new entries for earnings during the next five NYSE sessions "
+            f"({window}): {details}. This alert filter does not change historical backtest results.")
         payload["excluded_earnings_tickers"] = excluded
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, allow_nan=False) + '\n', encoding="utf-8")
