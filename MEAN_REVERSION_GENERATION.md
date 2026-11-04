@@ -58,13 +58,14 @@ The member page uses the same source with `--audience member`. It adds the lates
 MOO orders, current open positions, and latest 20 trades. Both versions use the
 same summary, equity curve, benchmark, monthly-return table, and FAQ definitions.
 
-Before selecting new MOO buy alerts, `mean_reversion_next_orders.py` retrieves
-Nasdaq earnings calendars for the next five NYSE sessions. A ticker with an
-earnings event in that window is removed from new-entry alerts and listed with
-its earnings date on the member page. Exit orders are never suppressed. The
-alert run fails instead of publishing unverified entries if any required daily
-earnings calendar cannot be retrieved or parsed. This prospective alert filter
-does not alter the historical backtest.
+Before selecting the latest session's positions, the backtest retrieves Nasdaq
+earnings calendars for the next five NYSE sessions. A ticker with an earnings
+event in that window is removed from both portfolio entries and new-entry
+alerts, allowing the next-ranked eligible ticker to take its place. Both paths
+use the same five-session Nasdaq earnings rule. Exit orders are never
+suppressed. The run fails instead of publishing unverified entries if the
+calendar is unavailable. Historical sessions before the latest execution date
+are not changed.
 
 The generator also synchronizes the Mean Reversion statistics on
 `strategies.html` and `members.html`.
