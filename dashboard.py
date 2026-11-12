@@ -1,18 +1,18 @@
 import argparse
 import json
 import os
-import requests
 import pandas as pd
 from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
 
 from strategy_chart import build_equity_drawdown_chart
+from request_retry import get_with_retries
 
 Path("data").mkdir(exist_ok=True)
 API_KEY = os.environ["C2_API_KEY"]
 STRATEGY_ID = 13202557
-REQUEST_TIMEOUT_SECONDS = 30
+REQUEST_TIMEOUT = (10, 90)
 MARKET_TIMEZONE = "America/New_York"
 
 parser = argparse.ArgumentParser(
@@ -41,11 +41,11 @@ params = {
     "CommissionPlan": 0
 }
 
-r = requests.get(
+r = get_with_retries(
     url,
     headers=headers,
     params=params,
-    timeout=REQUEST_TIMEOUT_SECONDS,
+    timeout=REQUEST_TIMEOUT,
 )
 r.raise_for_status()
 
@@ -67,11 +67,11 @@ def download_spy_equity(start_date, end_date, starting_equity):
     """Download daily SPY closes without requiring another paid API key."""
     period1 = int(pd.Timestamp(start_date, tz="UTC").timestamp())
     period2 = int((pd.Timestamp(end_date, tz="UTC") + pd.Timedelta(days=2)).timestamp())
-    response = requests.get(
+    response = get_with_retries(
         "https://query1.finance.yahoo.com/v8/finance/chart/SPY",
         params={"period1": period1, "period2": period2, "interval": "1d", "events": "history"},
         headers={"User-Agent": "Mozilla/5.0 ExtremeTradingDashboard/1.0"},
-        timeout=REQUEST_TIMEOUT_SECONDS,
+        timeout=REQUEST_TIMEOUT,
     )
     response.raise_for_status()
     result = response.json().get("chart", {}).get("result")
@@ -132,11 +132,11 @@ monthly_params = {
     "StrategyId": 13202557,
     "CommissionPlan": 0
 }
-monthly_r = requests.get(
+monthly_r = get_with_retries(
     monthly_url,
     headers=headers,
     params=monthly_params,
-    timeout=REQUEST_TIMEOUT_SECONDS,
+    timeout=REQUEST_TIMEOUT,
 )
 monthly_r.raise_for_status()
 monthly_data = monthly_r.json()
@@ -260,11 +260,11 @@ def download_closed_trades():
         "CommissionPlan": 0
     }
     
-    r = requests.get(
+    r = get_with_retries(
         url,
         headers=headers,
         params=params,
-        timeout=REQUEST_TIMEOUT_SECONDS,
+        timeout=REQUEST_TIMEOUT,
     )
     
     r.raise_for_status()
@@ -318,11 +318,11 @@ def download_open_positions():
     params = {
         "StrategyIds": STRATEGY_ID
     }
-    r = requests.get(
+    r = get_with_retries(
         url,
         headers=headers,
         params=params,
-        timeout=REQUEST_TIMEOUT_SECONDS,
+        timeout=REQUEST_TIMEOUT,
     )
     r.raise_for_status()
     data = r.json()
@@ -382,11 +382,11 @@ def download_orders():
         "StartDate": start_date,
         "EndDate": end_date
     }
-    r = requests.get(
+    r = get_with_retries(
         url,
         headers=headers,
         params=params,
-        timeout=REQUEST_TIMEOUT_SECONDS,
+        timeout=REQUEST_TIMEOUT,
     )
     r.raise_for_status()
     data = r.json()

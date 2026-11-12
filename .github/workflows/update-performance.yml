@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Verify HTTP retry behavior
+        run: python -m unittest test_request_retry
+
       - name: Fetch Collective2 performance and delayed-trade source data
         env:
           C2_API_KEY: ${{ secrets.C2_API_KEY }}
