@@ -143,6 +143,13 @@ This file records automation failures so they are not repeated. A calculation is
 - Fix: Stage and inject all newly generated member pages before running the MOO and chart-endpoint verifier. Verification failures now report the full page path so public and protected files are distinguishable.
 - Prevention: Every release guard must inspect the exact staged artifacts that will be committed, never a mixture of newly generated and previously published files.
 
+## 2026-11-12 — Collective2 timeout aborted the full daily batch twice
+
+- Impact: The scheduled run and its immediate manual retry both stopped at the first stage, so none of the local strategies reached publication.
+- Cause: The closed-trades endpoint exceeded a single 30-second read timeout. The downloader had no request-level retry, and the sequential runner correctly treated the failed GitHub Action as terminal.
+- Fix: All dashboard HTTP GETs now use a 90-second read timeout and up to four bounded attempts with exponential backoff for timeouts, connection failures, rate limits, and server errors. Authentication and other permanent client errors still fail immediately.
+- Prevention: Keep the retry unit test in the Collective2 workflow and distinguish transient transport errors from permanent API or credential failures before aborting the shared batch.
+
 ## Required release checklist
 
 1. Test with the exact Task Scheduler user, environment, executable, and PowerShell version.
