@@ -50,8 +50,8 @@ not market predictions.
 Momentum ETF2 is refreshed automatically on weekdays as part of the Momentum
 strategy update batch.
 
-The documented scheduled task runs Monday through Friday at 4:00 PM Pacific
-time. If no new completed market or macro data is available, the dashboard may
+The documented scheduled task is triggered Monday through Friday at 1:33 PM
+Pacific time. If no new completed market or macro data is available, the dashboard may
 not materially change.
 
 ## What data does the update use?

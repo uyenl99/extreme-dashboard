@@ -32,15 +32,14 @@ C:\junk\stocks\Web\scripts\update_all_strategies_sequentially.ps1
 
 ## Current Schedule
 
-The active sequential strategy task runs Monday through Friday beginning at
-3:00 PM Pacific time.
+The **Extreme Dashboard - Card - Momentum Stocks** task is triggered Monday
+through Friday at 1:34 PM Pacific time.
 
-The batch updates Collective2 and Mean Reversion first. It then runs MoMoEtf1,
-MoMoEtf2, and MoMo Stocks in sequence. MoMo Stocks therefore starts after the
-earlier stages finish rather than at an exact independent time.
+If an earlier card is still publishing, MoMo Stocks waits for the shared
+publication lock and then continues independently.
 
-All stages must complete before the shared daily pull request is opened and
-merged.
+Only the MoMo Stocks calculation and checks must pass before its card-specific
+pull request is opened and merged.
 
 ## Generation Flow
 
@@ -301,19 +300,19 @@ internal realized-volatility and VIX-moving-average diagnostics are not shown.
 
 ## Publication Behavior
 
-The sequential coordinator starts from the latest GitHub `main`, runs every
-strategy, and stages the approved public and protected strategy pages.
+The independent MoMo Stocks task starts from the latest GitHub `main` and
+stages only its approved public and protected strategy pages.
 
-After all strategies finish, it:
+After the MoMo Stocks refresh finishes, it:
 
-1. commits the combined result set to the shared preview branch;
-2. opens one shared daily pull request;
+1. commits the MoMo Stocks result set to its independent preview branch;
+2. opens one card-specific pull request;
 3. runs the publication guard and Vercel checks;
 4. squash-merges only after the checks pass; and
 5. verifies the published production commit.
 
-If MoMo Stocks or any earlier stage fails, the combined production update is
-not merged.
+If MoMo Stocks fails, its production card is not changed; the other independent
+card tasks continue.
 
 ## Safety Behavior
 

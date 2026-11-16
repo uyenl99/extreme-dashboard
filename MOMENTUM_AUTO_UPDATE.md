@@ -1,26 +1,29 @@
 # Momentum ETF automatic updates
 
-The Windows scheduled task **Extreme Dashboard - Momentum Weekday Update** runs every Monday through Friday at **4:00 PM Pacific** (the computer's local time).
+Three independent Windows tasks refresh Momentum ETF1, Momentum ETF2 and
+Momentum Stocks every Monday through Friday at **1:32, 1:33 and 1:34 PM
+Pacific**. The legacy **Extreme Dashboard - Momentum Weekday Update** task is
+disabled.
 
 ## What runs
 
-`scripts/update_momentum_weekdays.ps1` performs these steps in order:
+`scripts/update_momentum_card.ps1` performs the selected card's refresh:
 
-1. Runs `C:\junk\stocks\DualMom\update_momo5_daily.ps1` to refresh Momentum ETF1, regenerate `momentum.html`, commit changed results, and push `main`.
+1. Refreshes only the requested Momentum model and its data.
 2. Installs the pinned runtime requirements for `C:\junk\stocks\inflationcompass` when needed.
 3. Runs `inflation_compass.py` to refresh Momentum ETF2 from Yahoo and FRED.
 4. Regenerates the public and protected member pages, including the current partial month, latest alert, and every recent monthly allocation.
 5. Copies public summary, wealth chart, and monthly P&L assets into `inflation-compass/`.
-6. Commits the changed strategy pages and assets and pushes `main`, triggering Vercel production deployment.
+6. Publishes that card through its own preview PR after the site and Vercel checks pass.
 
-Logs are written to `%LOCALAPPDATA%\ExtremeDashboardAutomation\logs\momentum-weekday-YYYY-MM-DD.log`.
+Logs are written beneath `%LOCALAPPDATA%\ExtremeDashboardAutomation\logs\cards`.
 
 ## Install or repair the task
 
 Open PowerShell and run:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\junk\stocks\Web\scripts\register_momentum_weekday_task.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\junk\stocks\Web\scripts\register_independent_card_tasks.ps1
 ```
 
 The installer is idempotent: running it again replaces the existing task with the documented schedule. `StartWhenAvailable` is enabled, so Windows starts a missed run when the signed-in computer becomes available.
@@ -28,19 +31,19 @@ The installer is idempotent: running it again replaces the existing task with th
 ## Run manually
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\junk\stocks\Web\scripts\update_momentum_weekdays.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\junk\stocks\Web\scripts\update_momentum_card.ps1 -Card momentum-etf1
 ```
 
 Or start the registered task:
 
 ```powershell
-Start-ScheduledTask -TaskName "Extreme Dashboard - Momentum Weekday Update"
+Start-ScheduledTask -TaskName "Extreme Dashboard - Card - Momentum ETF1"
 ```
 
 ## Verify
 
 ```powershell
-Get-ScheduledTask -TaskName "Extreme Dashboard - Momentum Weekday Update" |
+Get-ScheduledTask -TaskName "Extreme Dashboard - Card - Momentum ETF1" |
   Get-ScheduledTaskInfo
 ```
 
