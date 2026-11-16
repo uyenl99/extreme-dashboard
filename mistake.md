@@ -164,6 +164,13 @@ This file records automation failures so they are not repeated. A calculation is
 - Fix: Each card now has its own clean checkout, scheduled task, status file, branch, preview PR, deployment checks, and persistent failure alert. A named publication lock prevents shared-page merge conflicts while allowing the next card to proceed after a failure. Combined Portfolio publishes only when all six source cards succeeded on the same date. The former sequential task is exported and kept installed but disabled as a rollback backup.
 - Prevention: A strategy card failure must never suppress execution of unrelated strategy cards. Validate and publish each card independently, serialize only the shared Git publication step, and retain the prior proven scheduler until the replacement has passed an unattended run.
 
+## 2026-11-16 — Independent calculations succeeded but every publication failed
+
+- Impact: All six independent source tasks ran, but none published. Five branches reached GitHub and then failed before PR creation; HAA stopped at its branch push. Combined Portfolio retained the prior valid version.
+- Cause: The runner invoked Git by absolute path, but GitHub CLI internally invoked `git` by command name and Task Scheduler did not include the bundled Git directory in `PATH`. HAA also retained a local remote-tracking ref after its prior merged PR deleted the server branch, so `--force-with-lease` rejected recreating the branch as stale.
+- Fix: Prepend the bundled Git directory to the runner process `PATH` before any GitHub CLI call. When `ls-remote --exit-code` confirms a card branch no longer exists, delete its stale local remote-tracking ref before the new push.
+- Prevention: Unattended preflight must validate both directly invoked executables and executables launched indirectly by those tools. Branch-lease logic must explicitly handle all three remote states: present, absent, and query failure.
+
 ## Required release checklist
 
 1. Test with the exact Task Scheduler user, environment, executable, and PowerShell version.

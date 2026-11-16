@@ -53,5 +53,8 @@ if ($waitPosition -lt 0 -or $mutexPosition -lt 0 -or $waitPosition -gt $mutexPos
 if ($runner -notmatch 'Wait-ForVercelProduction' -or $runner -notmatch 'Resolve-CardFailureAlertIfPresent' -or $runner -notmatch 'Show-CardSuccessNotification') {
     throw "Each card must verify Vercel production, resolve only its own failure alert, and report success."
 }
+if ($runner -notmatch '\$env:PATH = "\$gitDirectory\$pathSeparator\$env:PATH"' -or $runner -notmatch 'update-ref -d "refs/remotes/origin/\$previewBranch"') {
+    throw "Scheduled publication must expose Git to GitHub CLI and clear deleted preview-branch leases."
+}
 
 Write-Host "Independent card automation contract checks passed."

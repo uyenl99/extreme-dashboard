@@ -10,6 +10,14 @@ $repo = "uyenl99/extreme-dashboard"
 $gh = "C:\Program Files\GitHub CLI\gh.exe"
 $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
 $python = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
+$gitDirectory = Split-Path -Parent $git
+$pathSeparator = [IO.Path]::PathSeparator
+$pathEntries = @($env:PATH -split [regex]::Escape("$pathSeparator"))
+if ($gitDirectory -notin $pathEntries) {
+    # GitHub CLI shells out to `git` even though this runner invokes the
+    # bundled executable by absolute path for every direct Git operation.
+    $env:PATH = "$gitDirectory$pathSeparator$env:PATH"
+}
 $webRoot = Split-Path -Parent $PSScriptRoot
 $automationRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
 $statusRoot = Join-Path $automationRoot "cards\$Card"
@@ -247,6 +255,16 @@ function Reset-LocalCardBranch {
     if ($remoteCardBranch.ExitCode -eq 0) {
         & $git -C $webRoot fetch origin "+refs/heads/$previewBranch`:refs/remotes/origin/$previewBranch"
         if ($LASTEXITCODE -ne 0) { throw "Could not fetch the existing $cardName preview branch." }
+    }
+    elseif ($remoteCardBranch.ExitCode -eq 2) {
+        # A prior merged PR may have deleted the server branch while leaving a
+        # stale local remote-tracking ref. Remove it so --force-with-lease can
+        # create a fresh branch instead of rejecting the push as stale.
+        & $git -C $webRoot update-ref -d "refs/remotes/origin/$previewBranch"
+        if ($LASTEXITCODE -ne 0) { throw "Could not clear the deleted $cardName preview-branch lease." }
+    }
+    else {
+        throw "Could not query the existing $cardName preview branch."
     }
     & $git -C $webRoot checkout -f -B $previewBranch origin/main
     if ($LASTEXITCODE -ne 0) { throw "Could not reset $previewBranch from main." }
