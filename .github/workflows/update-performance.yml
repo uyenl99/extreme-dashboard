@@ -2,6 +2,11 @@ name: Update Collective2 Performance
 
 on:
   workflow_dispatch:
+    inputs:
+      preview_branch:
+        description: Branch that receives the generated Extreme OS card
+        required: false
+        default: automation/daily-strategies-preview
 
 permissions:
   contents: write
@@ -41,7 +46,7 @@ jobs:
 
       - name: Push daily preview branch
         env:
-          PREVIEW_BRANCH: automation/daily-strategies-preview
+          PREVIEW_BRANCH: ${{ inputs.preview_branch || 'automation/daily-strategies-preview' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

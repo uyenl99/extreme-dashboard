@@ -129,6 +129,7 @@ Action required: inspect and rerun the failed update before relying on the next-
 function Resolve-StrategyFailureAlert {
     param(
         [string]$SuccessMessage,
+        [string]$ResolutionLabel = "",
         [string]$DesktopDirectory = [Environment]::GetFolderPath("Desktop")
     )
 
@@ -139,10 +140,11 @@ function Resolve-StrategyFailureAlert {
         if (-not (Test-Path -LiteralPath $desktopAlertPath)) { return $null }
 
         $resolvedAt = Get-Date -Format "yyyy-MM-dd hh:mm:ss tt"
+        $resolutionHeading = if ($ResolutionLabel) { "RESOLVED: $ResolutionLabel" } else { "RESOLVED" }
         Add-Content -LiteralPath $desktopAlertPath -Value @"
 
 
-RESOLVED at $resolvedAt
+$resolutionHeading at $resolvedAt
 $SuccessMessage
 "@ -Encoding UTF8
         return $desktopAlertPath
