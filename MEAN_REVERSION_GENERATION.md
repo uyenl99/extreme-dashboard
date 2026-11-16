@@ -72,10 +72,10 @@ The generator also synchronizes the Mean Reversion statistics on
 
 ## Daily automation
 
-`scripts/update_mean_reversion_daily.ps1` runs this exact version. It is called
-by `scripts/update_all_strategies_sequentially.ps1` in the weekday batch that
-starts at 3:00 PM Pacific. Mean Reversion is combined with the other completed
-strategy refreshes in the shared daily pull request.
+`scripts/update_mean_reversion_daily.ps1` runs this exact version. The
+**Extreme Dashboard - Card - Mean Reversion** task is triggered at 1:31 PM
+Pacific on weekdays. It publishes through its own preview PR and production
+checks; a Mean Reversion failure does not stop the other card tasks.
 
 The automation must not publish a different output directory or silently add
 short positions or clustering. `scripts/verify_moo_backtests.py` checks that:

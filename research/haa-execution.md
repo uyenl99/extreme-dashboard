@@ -1,6 +1,6 @@
 # HAA scheduled model
 
-The shared weekday batch runs `scripts/update_haa_weekdays.ps1`, which refreshes `research/haa_backtest.py` and renders the public and protected HAA pages. The cash ETF is BIL before SGOV is available, then SGOV, in both the defensive IEF comparison and holdings. Signals use 1/3/6/12-month total-return momentum at month-end; fills use the next trading session open. Costs remain 5bp per dollar bought or sold.
+The independent weekday HAA task, triggered at 1:35 PM Pacific, runs `scripts/update_haa_weekdays.ps1`, which refreshes `research/haa_backtest.py` and renders the public and protected HAA pages. The cash ETF is BIL before SGOV is available, then SGOV, in both the defensive IEF comparison and holdings. Signals use 1/3/6/12-month total-return momentum at month-end; fills use the next trading session open. Costs remain 5bp per dollar bought or sold.
 
 Adjusted opens use raw open multiplied by adjusted close / raw close. Old holdings earn the overnight gap before the rebalance; new targets earn open-to-close returns. These historical opens are auction-fill proxies. Benchmarks use opening execution too. The separate MOC comparison retains same-close fills. Metrics end at the last complete month; no next-month fill or forced liquidation is included at the endpoint.
 

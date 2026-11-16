@@ -15,18 +15,18 @@ the same source and `--audience member`.
 
 ### Automatic Mean Reversion updates
 
-`scripts/update_mean_reversion_daily.ps1` refreshes the RevMurphy backtest,
-regenerates the public/member pages and strategy-card metrics, and contributes
-the results to the shared daily pull request so Vercel provides a preview
-before production is changed. The sequential weekday batch starts at 3:00 PM
-Pacific.
+`scripts/update_mean_reversion_daily.ps1` refreshes the RevMurphy backtest and
+regenerates the public/member pages and strategy-card metrics. Its independent
+weekday task is triggered at 1:31 PM Pacific, after the 1:30 PM Extreme OS
+task. Each card uses its own preview PR, Vercel checks and production check, so
+a failure does not block the other cards.
 The PC must be on and online, and `POLYGON_API_KEY` must be available as a user
 environment variable.
 
 ### Automatic Momentum ETF updates
 
-`scripts/update_momentum_weekdays.ps1` refreshes and publishes Momentum ETF1 and
-Momentum ETF2 every weekday at 4:00 PM Pacific. Installation, logging,
+The independent card tasks refresh Momentum ETF1, Momentum ETF2 and Momentum
+Stocks at 1:32, 1:33 and 1:34 PM Pacific on weekdays. Installation, logging,
 verification, and manual-run instructions are documented in
 [`MOMENTUM_AUTO_UPDATE.md`](MOMENTUM_AUTO_UPDATE.md).
 
@@ -68,4 +68,4 @@ changed, which triggers the normal Vercel production deployment.
 
 ### HAA weekday updates
 
-Hybrid Asset Allocation now joins the shared weekday batch at 3:00 PM Pacific. See [HAA_GENERATION.md](HAA_GENERATION.md) for calendar handling, verification and manual refresh instructions.
+Hybrid Asset Allocation runs independently at 1:35 PM Pacific on weekdays. See [HAA_GENERATION.md](HAA_GENERATION.md) for calendar handling, verification and manual refresh instructions.

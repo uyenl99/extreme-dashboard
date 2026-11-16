@@ -23,6 +23,13 @@ foreach ($card in $cards) {
     if ($runner -notmatch [regex]::Escape("`"$card`"")) { throw "Independent runner is missing card: $card" }
     if ($registration -notmatch [regex]::Escape("Slug = `"$card`"")) { throw "Registration is missing card: $card" }
 }
+$expectedTimes = @("1:30 PM", "1:31 PM", "1:32 PM", "1:33 PM", "1:34 PM", "1:35 PM", "5:30 PM")
+foreach ($time in $expectedTimes) {
+    if ($registration -notmatch [regex]::Escape("Time = `"$time`"")) { throw "Registration is missing schedule time: $time" }
+}
+if ($registration -match 'Time = "3:0[0-5] PM"' -or $registration -match 'Time = "7:00 PM"') {
+    throw "Registration still contains the retired 3 PM schedule."
+}
 
 $branches = [regex]::Matches($runner, 'Branch = "(automation/card-[^"]+)"') | ForEach-Object { $_.Groups[1].Value }
 if ($branches.Count -ne $cards.Count) { throw "Expected one publication branch per card; found $($branches.Count)." }

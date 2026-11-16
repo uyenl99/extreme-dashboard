@@ -7,13 +7,13 @@ $independentRoot = Join-Path $automationRoot "independent"
 $backupRoot = Join-Path $automationRoot "backup"
 $sequentialTask = "Extreme Dashboard - Sequential Strategy Updates"
 $cards = @(
-    @{ Slug = "extreme-os";       Name = "Extreme OS";       Task = "Extreme Dashboard - Card - Extreme OS";       Time = "3:00 PM" },
-    @{ Slug = "mean-reversion";   Name = "Mean Reversion";   Task = "Extreme Dashboard - Card - Mean Reversion";   Time = "3:01 PM" },
-    @{ Slug = "momentum-etf1";    Name = "Momentum ETF1";    Task = "Extreme Dashboard - Card - Momentum ETF1";    Time = "3:02 PM" },
-    @{ Slug = "momentum-etf2";    Name = "Momentum ETF2";    Task = "Extreme Dashboard - Card - Momentum ETF2";    Time = "3:03 PM" },
-    @{ Slug = "momentum-stocks";  Name = "Momentum Stocks";  Task = "Extreme Dashboard - Card - Momentum Stocks";  Time = "3:04 PM" },
-    @{ Slug = "haa";              Name = "HAA";              Task = "Extreme Dashboard - Card - HAA";              Time = "3:05 PM" },
-    @{ Slug = "combined";         Name = "Combined Portfolio";Task = "Extreme Dashboard - Card - Combined Portfolio";Time = "7:00 PM" }
+    @{ Slug = "extreme-os";       Name = "Extreme OS";       Task = "Extreme Dashboard - Card - Extreme OS";       Time = "1:30 PM" },
+    @{ Slug = "mean-reversion";   Name = "Mean Reversion";   Task = "Extreme Dashboard - Card - Mean Reversion";   Time = "1:31 PM" },
+    @{ Slug = "momentum-etf1";    Name = "Momentum ETF1";    Task = "Extreme Dashboard - Card - Momentum ETF1";    Time = "1:32 PM" },
+    @{ Slug = "momentum-etf2";    Name = "Momentum ETF2";    Task = "Extreme Dashboard - Card - Momentum ETF2";    Time = "1:33 PM" },
+    @{ Slug = "momentum-stocks";  Name = "Momentum Stocks";  Task = "Extreme Dashboard - Card - Momentum Stocks";  Time = "1:34 PM" },
+    @{ Slug = "haa";              Name = "HAA";              Task = "Extreme Dashboard - Card - HAA";              Time = "1:35 PM" },
+    @{ Slug = "combined";         Name = "Combined Portfolio";Task = "Extreme Dashboard - Card - Combined Portfolio";Time = "5:30 PM" }
 )
 
 New-Item -ItemType Directory -Force -Path $independentRoot, $backupRoot | Out-Null

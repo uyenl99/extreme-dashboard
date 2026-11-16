@@ -24,25 +24,23 @@ That updater is called by the complete sequential dashboard batch:
 C:\junk\stocks\Web\scripts\update_all_strategies_sequentially.ps1
 ```
 
-The sequential batch updates Collective2 and Mean Reversion first. It then
-runs MoMoEtf1, MoMoEtf2, and MoMo Stocks before opening one shared website
-pull request.
+Each strategy card has an independent task and preview PR. A named publication
+lock prevents shared-page conflicts without making one card's calculation
+failure block the remaining cards.
 
 ## Current Schedule
 
 The active Windows scheduled task is:
 
 ```text
-Extreme Dashboard - Sequential Strategy Updates
+Extreme Dashboard - Card - Momentum ETF2
 ```
 
-It runs Monday through Friday at 3:00 PM Pacific time. MoMoEtf2 starts after
-the earlier stages finish, so its exact start time depends on how long
-Collective2, Mean Reversion, and MoMoEtf1 take that day.
+It is triggered Monday through Friday at 1:33 PM Pacific time. If an earlier
+card is still publishing, MoMoEtf2 waits for the publication lock.
 
-The website is not published from a partially completed batch. All strategy
-stages must finish before the shared pull request is created, checked, and
-merged.
+MoMoEtf2 publishes only its owned files after its calculation, site guard,
+Vercel preview and production checks succeed.
 
 ## Generation Flow
 
@@ -62,7 +60,7 @@ The MoMoEtf2 portion of the daily batch is:
    `C:\junk\stocks\inflationcompass\output`.
 10. Generate separate public and member versions of `momentum2.html`.
 11. Copy only approved public assets into the Web repository.
-12. Include the completed MoMoEtf2 changes in the shared daily pull request.
+12. Include the completed MoMoEtf2 changes in its card-specific pull request.
 13. Run the Vercel preview and publication guards before automatic merging.
 
 ## Main Scripts
@@ -306,18 +304,18 @@ all public and protected pages, and stages only approved strategy-result paths.
 
 After every strategy finishes, it:
 
-1. commits the combined daily result set to the shared preview branch;
-2. opens the daily strategy pull request;
+1. commits the MoMoEtf2 result set to its independent preview branch;
+2. opens the MoMoEtf2 pull request;
 3. waits for the Vercel preview and publication guards;
 4. merges the pull request only after the checks pass; and
 5. verifies the resulting production publication.
 
-If any strategy or preview check fails, production is not changed.
+If the MoMoEtf2 calculation or preview check fails, its production card is not changed; other card tasks continue.
 
 ## Safety Behavior
 
-The sequential updater stops if its automation checkout contains unexpected
-tracked changes or if an earlier shared daily pull request is still open.
+The independent updater stops if its isolated automation checkout contains
+unexpected tracked changes or an unowned file change.
 
 The publication guard limits the paths that a daily result update may change.
 It also verifies the member navigation, protected strategy pages, colored
