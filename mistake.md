@@ -157,6 +157,13 @@ This file records automation failures so they are not repeated. A calculation is
 - Fix: Failed runs now write a timestamped JSON record, create or append to a clearly named Desktop failure file, and send a Windows session message that remains until acknowledged. A successful same-day retry appends a resolution marker instead of erasing the failure record.
 - Prevention: A failed scheduled run must leave both a machine-readable terminal status and a persistent user-visible alert stating that production was not updated. Notification failures remain nonfatal so they cannot replace the strategy job's real exit result.
 
+## 2026-11-15 — One failed card blocked every unrelated daily update
+
+- Impact: A Collective2 or Mean Reversion failure prevented Momentum ETF1, Momentum ETF2, Momentum Stocks, and HAA from calculating or publishing even when their own data and code were healthy. This made one stale card turn into an entirely stale dashboard.
+- Cause: The daily scheduler used one all-or-nothing sequential process, one shared preview branch, and one common PR. Failure at any stage terminated the process before later strategies ran.
+- Fix: Each card now has its own clean checkout, scheduled task, status file, branch, preview PR, deployment checks, and persistent failure alert. A named publication lock prevents shared-page merge conflicts while allowing the next card to proceed after a failure. Combined Portfolio publishes only when all six source cards succeeded on the same date. The former sequential task is exported and kept installed but disabled as a rollback backup.
+- Prevention: A strategy card failure must never suppress execution of unrelated strategy cards. Validate and publish each card independently, serialize only the shared Git publication step, and retain the prior proven scheduler until the replacement has passed an unattended run.
+
 ## Required release checklist
 
 1. Test with the exact Task Scheduler user, environment, executable, and PowerShell version.

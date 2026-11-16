@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 import re
@@ -163,32 +164,43 @@ def verify_mean_reversion() -> int:
     return len(trades)
 
 
-def verify_current_chart_dates() -> int:
+def verify_current_chart_dates(strategy: str | None = None) -> int:
     """Ensure partial-month chart endpoints match the latest available marks."""
-    etf2_prices = pd.read_csv(
-        ETF2 / "output" / "adjusted_close_prices.csv", index_col=0, parse_dates=True
-    )
-    etf2_date = f"{pd.Timestamp(etf2_prices.index.max()):%Y-%m-%d}"
-    stock_signal = json.loads(
-        (MOMO_SP / "output_pit_v2a_live" / "latest_signal.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    current = stock_signal.get("current_allocation")
-    if not current or not current.get("latest_price_date"):
-        raise AssertionError("Momentum Stocks alert is missing current_allocation")
-    stock_date = str(current["latest_price_date"])
+    if strategy in ("momentum-etf1", "mean-reversion"):
+        return 0
 
-    pages = (
-        (WEB / "momentum2.html", "momoetf2-equity-chart", etf2_date),
-        (WEB / "api" / "_member-content" / "momentum2.html", "momoetf2-equity-chart", etf2_date),
-        (WEB / "momentum-stocks.html", "momentum-stocks-equity-chart", stock_date),
-        (
-            WEB / "api" / "_member-content" / "momentum-stocks.html",
-            "momentum-stocks-equity-chart",
-            stock_date,
-        ),
-    )
+    pages = []
+    if strategy in (None, "momentum-etf2"):
+        etf2_prices = pd.read_csv(
+            ETF2 / "output" / "adjusted_close_prices.csv", index_col=0, parse_dates=True
+        )
+        etf2_date = f"{pd.Timestamp(etf2_prices.index.max()):%Y-%m-%d}"
+        pages.extend(
+            [
+                (WEB / "momentum2.html", "momoetf2-equity-chart", etf2_date),
+                (WEB / "api" / "_member-content" / "momentum2.html", "momoetf2-equity-chart", etf2_date),
+            ]
+        )
+    if strategy in (None, "momentum-stocks"):
+        stock_signal = json.loads(
+            (MOMO_SP / "output_pit_v2a_live" / "latest_signal.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        current = stock_signal.get("current_allocation")
+        if not current or not current.get("latest_price_date"):
+            raise AssertionError("Momentum Stocks alert is missing current_allocation")
+        stock_date = str(current["latest_price_date"])
+        pages.extend(
+            [
+                (WEB / "momentum-stocks.html", "momentum-stocks-equity-chart", stock_date),
+                (
+                    WEB / "api" / "_member-content" / "momentum-stocks.html",
+                    "momentum-stocks-equity-chart",
+                    stock_date,
+                ),
+            ]
+        )
     for page, chart_id, endpoint in pages:
         text = page.read_text(encoding="utf-8")
         chart = re.search(
@@ -202,16 +214,32 @@ def verify_current_chart_dates() -> int:
 
 
 def main() -> None:
-    checks = {
-        "Momentum ETF1 monthly periods": verify_etf1(),
-        "Momentum ETF2 monthly periods": verify_etf2(),
-        "Momentum Stocks monthly periods": verify_momo_sp(),
-        "Mean Reversion trades": verify_mean_reversion(),
-        "Current public/member chart endpoints": verify_current_chart_dates(),
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--strategy",
+        choices=("momentum-etf1", "momentum-etf2", "momentum-stocks", "mean-reversion"),
+        help="Verify only one independently published strategy card.",
+    )
+    args = parser.parse_args()
+    available = {
+        "momentum-etf1": ("Momentum ETF1 monthly periods", verify_etf1),
+        "momentum-etf2": ("Momentum ETF2 monthly periods", verify_etf2),
+        "momentum-stocks": ("Momentum Stocks monthly periods", verify_momo_sp),
+        "mean-reversion": ("Mean Reversion trades", verify_mean_reversion),
     }
+    if args.strategy:
+        label, check = available[args.strategy]
+        checks = {label: check()}
+        chart_count = verify_current_chart_dates(args.strategy)
+        if chart_count:
+            checks["Current public/member chart endpoints"] = chart_count
+    else:
+        checks = {label: check() for label, check in available.values()}
+        checks["Current public/member chart endpoints"] = verify_current_chart_dates()
     for label, count in checks.items():
         print(f"PASS {label}: {count:,}")
-    print("PASS all published backtests reconcile to documented MOO execution prices")
+    scope = args.strategy or "all published backtests"
+    print(f"PASS {scope} reconciles to documented MOO execution prices")
 
 
 if __name__ == "__main__":
