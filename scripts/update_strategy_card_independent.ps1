@@ -269,13 +269,42 @@ function Test-CombinedInputsCurrent {
     foreach ($dependency in @("extreme-os", "mean-reversion", "momentum-etf1", "momentum-etf2", "momentum-stocks", "haa")) {
         $path = Join-Path $automationRoot "cards\$dependency\last-run-status.json"
         if (-not (Test-Path -LiteralPath $path)) { $missing += "$dependency (no status)"; continue }
-        $status = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
-        $updated = [datetime]$status.updated_at
+        try {
+            $status = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+            $updated = [datetime]$status.updated_at
+        }
+        catch {
+            $missing += "$dependency (unreadable status)"
+            continue
+        }
         if ($status.status -ne "Succeeded" -or $updated.Date -ne (Get-Date).Date) {
             $missing += "$dependency ($($status.status), $($updated.ToString('yyyy-MM-dd')))"
         }
     }
     return $missing
+}
+
+function Wait-ForCombinedInputsCurrent {
+    param(
+        [TimeSpan]$Timeout = ([TimeSpan]::FromHours(5)),
+        [int]$PollSeconds = 30
+    )
+    $deadline = (Get-Date).Add($Timeout)
+    $attempt = 0
+    do {
+        $attempt++
+        $incomplete = @(Test-CombinedInputsCurrent)
+        if (-not $incomplete.Count) { return @() }
+
+        $terminalFailure = @($incomplete | Where-Object { $_ -match '\((Failed|Skipped),' })
+        if ($terminalFailure.Count) { return $incomplete }
+
+        if ($attempt -eq 1 -or $attempt % 20 -eq 0) {
+            Write-Host "Combined Portfolio is waiting for same-day card success: $($incomplete -join ', ')."
+        }
+        if ((Get-Date) -lt $deadline) { Start-Sleep -Seconds $PollSeconds }
+    } while ((Get-Date) -lt $deadline)
+    return @(Test-CombinedInputsCurrent)
 }
 
 function Invoke-CardGeneration {
@@ -331,13 +360,9 @@ try {
         if (-not (Test-Path -LiteralPath $path)) { throw "Required independent-update dependency not found: $path" }
     }
 
-    Set-CardStage "Waiting for publication slot" "Other card calculations may continue independently; Git publication is serialized."
-    $mutex = New-Object System.Threading.Mutex($false, "Local\ExtremeDashboardIndependentCardPublisher")
-    $hasMutex = $mutex.WaitOne([TimeSpan]::FromHours(7))
-    if (-not $hasMutex) { throw "Timed out waiting for the independent card publication slot." }
-
     if ($Card -eq "combined") {
-        $incomplete = @(Test-CombinedInputsCurrent)
+        Set-CardStage "Waiting for source cards" "Combined Portfolio will publish as soon as all six source cards succeed today."
+        $incomplete = @(Wait-ForCombinedInputsCurrent)
         if ($incomplete.Count) {
             $message = "Combined Portfolio retained its previous valid version because these card updates are incomplete: $($incomplete -join ', ')."
             Write-CardStatus -Status "Skipped" -Stage "Input freshness check" -Message $message -PullRequestUrl $null
@@ -345,6 +370,11 @@ try {
             return
         }
     }
+
+    Set-CardStage "Waiting for publication slot" "Other card calculations may continue independently; Git publication is serialized."
+    $mutex = New-Object System.Threading.Mutex($false, "Local\ExtremeDashboardIndependentCardPublisher")
+    $hasMutex = $mutex.WaitOne([TimeSpan]::FromHours(7))
+    if (-not $hasMutex) { throw "Timed out waiting for the independent card publication slot." }
 
     Set-CardStage "Prepare isolated branch"
     Close-PriorCardPr
