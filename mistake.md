@@ -150,6 +150,13 @@ This file records automation failures so they are not repeated. A calculation is
 - Fix: All dashboard HTTP GETs now use a 90-second read timeout and up to four bounded attempts with exponential backoff for timeouts, connection failures, rate limits, and server errors. Authentication and other permanent client errors still fail immediately.
 - Prevention: Keep the retry unit test in the Collective2 workflow and distinguish transient transport errors from permanent API or credential failures before aborting the shared batch.
 
+## 2026-11-11 — Failed Mean Reversion run did not leave a persistent alert
+
+- Impact: The November 11 close generated an RMD exit and ZS entry for the November 12 market open, but the failed batch never published those orders. The website remained on November 9 data, and the missed ZS alert was discovered manually.
+- Cause: The Nasdaq earnings-calendar request was rejected with HTTP 403. The runner recorded the failure and displayed a ten-second Windows balloon, but that notification could disappear before it was seen and left no obvious Desktop reminder.
+- Fix: Failed runs now write a timestamped JSON record, create or append to a clearly named Desktop failure file, and send a Windows session message that remains until acknowledged. A successful same-day retry appends a resolution marker instead of erasing the failure record.
+- Prevention: A failed scheduled run must leave both a machine-readable terminal status and a persistent user-visible alert stating that production was not updated. Notification failures remain nonfatal so they cannot replace the strategy job's real exit result.
+
 ## Required release checklist
 
 1. Test with the exact Task Scheduler user, environment, executable, and PowerShell version.
@@ -160,4 +167,4 @@ This file records automation failures so they are not repeated. A calculation is
 6. Verify expected output files and timestamps after every stage.
 7. Verify pushed commit, open PR, Vercel checks, production deployment, and final task exit code separately.
 8. Never report success merely because calculation finished.
-9. Verify that every scheduled run wrote a terminal status and emitted a success/failure notification.
+9. Verify that every scheduled run wrote a terminal status and that failures produced both a persistent Desktop alert and a timestamped local alert record.

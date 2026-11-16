@@ -2,7 +2,8 @@ $ErrorActionPreference = "Stop"
 
 $taskName = "Extreme Dashboard - Sequential Strategy Updates"
 $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
-$automationCheckout = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\sequential-dashboard"
+$automationRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
+$automationCheckout = Join-Path $automationRoot "sequential-dashboard"
 $updateScript = Join-Path $automationCheckout "scripts\update_all_strategies_sequentially.ps1"
 $retiredTasks = @(
     "Extreme Dashboard - Mean Reversion 5x5 Backtest",
@@ -21,7 +22,28 @@ if ($LASTEXITCODE -ne 0) { throw "Could not synchronize the sequential automatio
 if (-not (Test-Path -LiteralPath $updateScript)) { throw "Update script not found: $updateScript" }
 
 $bootstrap = @"
-`$ErrorActionPreference='Stop'; & '$git' -C '$automationCheckout' fetch origin main; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & '$git' -C '$automationCheckout' checkout -f -B main origin/main; if (`$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }; & powershell.exe -NoProfile -ExecutionPolicy Bypass -File '$updateScript'; exit `$LASTEXITCODE
+`$ErrorActionPreference='Stop'
+`$bootstrapStarted=Get-Date
+try {
+    & '$git' -C '$automationCheckout' fetch origin main
+    if (`$LASTEXITCODE -ne 0) { throw 'Could not fetch main before the scheduled dashboard update.' }
+    & '$git' -C '$automationCheckout' checkout -f -B main origin/main
+    if (`$LASTEXITCODE -ne 0) { throw 'Could not synchronize the automation checkout before the scheduled dashboard update.' }
+}
+catch {
+    `$failureMessage=`$_.Exception.Message
+    `$helper=Join-Path '$automationCheckout' 'scripts\strategy_failure_alert.ps1'
+    if (Test-Path -LiteralPath `$helper) {
+        try {
+            . `$helper
+            Publish-StrategyFailureAlert -Stage 'Automation bootstrap' -FailureMessage `$failureMessage -LogPath '' -PullRequestUrl '' -RunStarted `$bootstrapStarted -StatusRoot '$automationRoot' | Out-Null
+        }
+        catch { Write-Warning "Could not publish the bootstrap failure alert: `$(`$_.Exception.Message)" }
+    }
+    exit 1
+}
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File '$updateScript'
+exit `$LASTEXITCODE
 "@.Trim()
 $encodedBootstrap = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($bootstrap))
 $action = New-ScheduledTaskAction -Execute "powershell.exe" `
