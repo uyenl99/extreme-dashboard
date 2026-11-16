@@ -13,7 +13,7 @@ $cards = @(
     @{ Slug = "momentum-etf2";    Name = "Momentum ETF2";    Task = "Extreme Dashboard - Card - Momentum ETF2";    Time = "1:33 PM" },
     @{ Slug = "momentum-stocks";  Name = "Momentum Stocks";  Task = "Extreme Dashboard - Card - Momentum Stocks";  Time = "1:34 PM" },
     @{ Slug = "haa";              Name = "HAA";              Task = "Extreme Dashboard - Card - HAA";              Time = "1:35 PM" },
-    @{ Slug = "combined";         Name = "Combined Portfolio";Task = "Extreme Dashboard - Card - Combined Portfolio";Time = "5:30 PM" }
+    @{ Slug = "combined";         Name = "Combined Portfolio";Task = "Extreme Dashboard - Card - Combined Portfolio";Time = "1:36 PM" }
 )
 
 New-Item -ItemType Directory -Force -Path $independentRoot, $backupRoot | Out-Null

@@ -69,3 +69,8 @@ changed, which triggers the normal Vercel production deployment.
 ### HAA weekday updates
 
 Hybrid Asset Allocation runs independently at 1:35 PM Pacific on weekdays. See [HAA_GENERATION.md](HAA_GENERATION.md) for calendar handling, verification and manual refresh instructions.
+
+Combined Portfolio is triggered at 1:36 PM Pacific. It waits without holding
+the publication lock and publishes immediately after all six source cards have
+reported same-day success. If a source card fails, the prior valid Combined
+Portfolio page remains in production.
