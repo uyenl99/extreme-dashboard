@@ -15,6 +15,7 @@ $haaUpdate = Join-Path $webRoot "scripts\update_haa_weekdays.ps1"
 $mooVerifier = Join-Path $webRoot "scripts\verify_moo_backtests.py"
 $memberMappingTests = Join-Path $webRoot "test_member_update_mappings.py"
 $publicationGuard = Join-Path $webRoot "scripts\test_daily_site_guard.ps1"
+$failureAlertHelper = Join-Path $webRoot "scripts\strategy_failure_alert.ps1"
 $logRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\logs"
 $statusRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
 $statusFile = Join-Path $statusRoot "last-run-status.json"
@@ -24,23 +25,19 @@ $productionUrl = "https://uyenl99.github.io/extreme-dashboard/index.html"
 $runStarted = Get-Date
 $currentStage = "Initialization"
 $prUrl = $null
+$failureAlertPath = $null
+$failureAlertHelperLoaded = $false
+$transcriptStarted = $false
 
 New-Item -ItemType Directory -Force $logRoot, $statusRoot | Out-Null
 
-foreach ($requiredPath in @(
-    $gh,
-    $git,
-    $python,
-    $meanReversionUpdate,
-    $momentumUpdate,
-    $haaUpdate,
-    $mooVerifier,
-    $memberMappingTests,
-    $publicationGuard,
-    (Join-Path $webRoot "inject_position_calculator.py")
-)) {
-    if (-not (Test-Path -LiteralPath $requiredPath)) {
-        throw "Required sequential-update dependency not found: $requiredPath"
+if (Test-Path -LiteralPath $failureAlertHelper) {
+    try {
+        . $failureAlertHelper
+        $failureAlertHelperLoaded = $true
+    }
+    catch {
+        Write-Warning "Could not load the persistent failure-alert helper: $($_.Exception.Message)"
     }
 }
 
@@ -62,6 +59,7 @@ function Write-RunStatus {
             log_path = $log
             pull_request_url = $PullRequestUrl
             production_url = $productionUrl
+            failure_alert_path = $script:failureAlertPath
         }
         $temporaryStatusFile = "$statusFile.tmp"
         $payload | ConvertTo-Json | Set-Content -LiteralPath $temporaryStatusFile -Encoding UTF8
@@ -172,8 +170,31 @@ function Wait-ForVercelCheckRegistration([string]$PullRequestUrl) {
 }
 
 Write-RunStatus -Status "Running" -Stage $currentStage -Message "Daily strategy batch started." -PullRequestUrl $null
-Start-Transcript -Path $log -Append
 try {
+    Start-Transcript -Path $log -Append
+    $transcriptStarted = $true
+
+    foreach ($requiredPath in @(
+        $gh,
+        $git,
+        $python,
+        $meanReversionUpdate,
+        $momentumUpdate,
+        $haaUpdate,
+        $mooVerifier,
+        $memberMappingTests,
+        $publicationGuard,
+        $failureAlertHelper,
+        (Join-Path $webRoot "inject_position_calculator.py")
+    )) {
+        if (-not (Test-Path -LiteralPath $requiredPath)) {
+            throw "Required sequential-update dependency not found: $requiredPath"
+        }
+    }
+    if (-not $failureAlertHelperLoaded) {
+        throw "Persistent failure-alert helper could not be loaded: $failureAlertHelper"
+    }
+
     $openPr = & $gh pr list --repo $repo --head $previewBranch --state open --json url | ConvertFrom-Json | Select-Object -First 1
     if ($openPr) { throw "Shared daily PR is still open: $($openPr.url). Merge or close it before the next batch." }
 
@@ -317,12 +338,33 @@ try {
     $successMessage = "All six updates published successfully. PR: $prUrl Production: $productionUrl"
     Write-Host "$successMessage ($mergeSha)."
     Write-RunStatus -Status "Succeeded" -Stage "Complete" -Message $successMessage -PullRequestUrl $prUrl
+    Resolve-StrategyFailureAlert -SuccessMessage $successMessage | Out-Null
     Show-RunNotification -Title "Extreme Dashboard update succeeded" -Message $successMessage -Level Info
 }
 catch {
     $failureMessage = $_.Exception.Message
+    if ($failureAlertHelperLoaded) {
+        try {
+            $alertResult = Publish-StrategyFailureAlert `
+                -Stage $currentStage `
+                -FailureMessage $failureMessage `
+                -LogPath $log `
+                -PullRequestUrl $prUrl `
+                -RunStarted $runStarted `
+                -StatusRoot $statusRoot
+            $failureAlertPath = $alertResult.desktop_alert_path
+            if (-not $failureAlertPath) { $failureAlertPath = $alertResult.record_path }
+        }
+        catch {
+            Write-Warning "Could not publish the persistent failure alert: $($_.Exception.Message)"
+        }
+    }
     Write-RunStatus -Status "Failed" -Stage $currentStage -Message $failureMessage -PullRequestUrl $prUrl
-    Show-RunNotification -Title "Extreme Dashboard update failed" -Message "$currentStage`: $failureMessage Log: $log" -Level Error
+    if (-not $failureAlertPath) {
+        Show-RunNotification -Title "Extreme Dashboard update failed" -Message "$currentStage`: $failureMessage Log: $log" -Level Error
+    }
     throw
 }
-finally { Stop-Transcript }
+finally {
+    if ($transcriptStarted) { Stop-Transcript }
+}
