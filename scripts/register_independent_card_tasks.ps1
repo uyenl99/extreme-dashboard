@@ -2,9 +2,12 @@ $ErrorActionPreference = "Stop"
 
 $repoUrl = "https://github.com/uyenl99/extreme-dashboard.git"
 $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
-$automationRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
-$independentRoot = Join-Path $automationRoot "independent"
-$backupRoot = Join-Path $automationRoot "backup"
+. (Join-Path $PSScriptRoot "automation_paths.ps1")
+$workspaceRoot = Get-ExtremeDashboardAutomationWorkspaceRoot
+$stateRoot = Get-ExtremeDashboardAutomationStateRoot
+$independentRoot = Join-Path $workspaceRoot "independent"
+$backupRoot = Join-Path $stateRoot "backup"
+$escapedStateRoot = $stateRoot.Replace("'", "''")
 $sequentialTask = "Extreme Dashboard - Sequential Strategy Updates"
 $cards = @(
     @{ Slug = "extreme-os";       Name = "Extreme OS";       Task = "Extreme Dashboard - Card - Extreme OS";       Time = "1:30 PM" },
@@ -16,7 +19,7 @@ $cards = @(
     @{ Slug = "combined";         Name = "Combined Portfolio";Task = "Extreme Dashboard - Card - Combined Portfolio";Time = "1:36 PM" }
 )
 
-New-Item -ItemType Directory -Force -Path $independentRoot, $backupRoot | Out-Null
+New-Item -ItemType Directory -Force -Path $independentRoot, $stateRoot, $backupRoot | Out-Null
 
 foreach ($card in $cards) {
     $checkout = Join-Path $independentRoot "$($card.Slug)\dashboard"
@@ -34,9 +37,10 @@ foreach ($card in $cards) {
     if (-not (Test-Path -LiteralPath $runner)) { throw "Independent runner not found: $runner" }
     if (-not (Test-Path -LiteralPath $helper)) { throw "Failure-alert helper not found: $helper" }
 
-    $cardStatusRoot = Join-Path $automationRoot "cards\$($card.Slug)"
+    $cardStatusRoot = Join-Path $stateRoot "cards\$($card.Slug)"
     $bootstrap = @"
 `$ErrorActionPreference='Stop'
+`$env:EXTREME_DASHBOARD_STATE_ROOT='$escapedStateRoot'
 `$bootstrapStarted=Get-Date
 try {
     & '$git' -C '$checkout' fetch origin main

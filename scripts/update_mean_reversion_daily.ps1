@@ -8,9 +8,11 @@ $ErrorActionPreference = "Stop"
 $revMurphyRoot = "C:\junk\stocks\RevMurphy"
 $backtestOutput = Join-Path $revMurphyRoot "output_long_only_5x0_100_no_cluster_next_open"
 $dailyPriceRoot = Join-Path (Split-Path -Parent $revMurphyRoot) "shared_data\daily"
-$automationRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
-$checkout = if ($TargetCheckout) { $TargetCheckout } else { Join-Path $automationRoot "extreme-dashboard" }
-$logDirectory = Join-Path $automationRoot "logs"
+. (Join-Path $PSScriptRoot "automation_paths.ps1")
+$workspaceRoot = Get-ExtremeDashboardAutomationWorkspaceRoot
+$stateRoot = Get-ExtremeDashboardAutomationStateRoot
+$checkout = if ($TargetCheckout) { $TargetCheckout } else { Join-Path $workspaceRoot "extreme-dashboard" }
+$logDirectory = Join-Path $stateRoot "logs"
 $python = Join-Path $revMurphyRoot ".venv\Scripts\python.exe"
 $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
 $gh = "C:\Program Files\GitHub CLI\gh.exe"
@@ -20,10 +22,10 @@ $modeTag = "long-only-5x0-no-cluster-moo-backtest"
 $Publish = -not $NoPublish
 $log = Join-Path $logDirectory "mean-reversion-$modeTag-$today.log"
 $commandLog = Join-Path $logDirectory "mean-reversion-$modeTag-$today-commands.log"
-$privateMemberRoot = Join-Path $automationRoot "member-pages"
+$privateMemberRoot = Join-Path $stateRoot "member-pages"
 $privateMeanReversionPage = Join-Path $privateMemberRoot "mean-reversion-members.html"
 
-New-Item -ItemType Directory -Force -Path $automationRoot, $logDirectory, $privateMemberRoot | Out-Null
+New-Item -ItemType Directory -Force -Path $stateRoot, $logDirectory, $privateMemberRoot | Out-Null
 Start-Transcript -Path $log -Append
 
 try {

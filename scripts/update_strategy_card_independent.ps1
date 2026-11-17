@@ -19,7 +19,8 @@ if ($gitDirectory -notin $pathEntries) {
     $env:PATH = "$gitDirectory$pathSeparator$env:PATH"
 }
 $webRoot = Split-Path -Parent $PSScriptRoot
-$automationRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
+. (Join-Path $PSScriptRoot "automation_paths.ps1")
+$automationRoot = Get-ExtremeDashboardAutomationStateRoot
 $statusRoot = Join-Path $automationRoot "cards\$Card"
 $statusFile = Join-Path $statusRoot "last-run-status.json"
 $logRoot = Join-Path $automationRoot "logs\cards"
