@@ -1,6 +1,8 @@
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $files = @(
+    "scripts\automation_paths.ps1",
+    "scripts\migrate_automation_state.ps1",
     "scripts\update_strategy_card_independent.ps1",
     "scripts\update_momentum_card.ps1",
     "scripts\register_independent_card_tasks.ps1",
@@ -18,6 +20,7 @@ foreach ($relative in $files) {
 $runner = Get-Content -LiteralPath (Join-Path $root "scripts\update_strategy_card_independent.ps1") -Raw
 $registration = Get-Content -LiteralPath (Join-Path $root "scripts\register_independent_card_tasks.ps1") -Raw
 $restore = Get-Content -LiteralPath (Join-Path $root "scripts\restore_sequential_strategy_task.ps1") -Raw
+$paths = Get-Content -LiteralPath (Join-Path $root "scripts\automation_paths.ps1") -Raw
 $cards = @("extreme-os", "mean-reversion", "momentum-etf1", "momentum-etf2", "momentum-stocks", "haa", "combined")
 foreach ($card in $cards) {
     if ($runner -notmatch [regex]::Escape("`"$card`"")) { throw "Independent runner is missing card: $card" }
@@ -41,6 +44,15 @@ if ($registration -notmatch 'Disable-ScheduledTask -TaskName \$card.Task' -or $r
     throw "New tasks must stay disabled until every independent task is ready."
 }
 if ($registration -match 'Unregister-ScheduledTask') { throw "Registration must not delete the sequential backup task." }
+if ($registration -notmatch 'EXTREME_DASHBOARD_STATE_ROOT' -or $registration -notmatch 'Get-ExtremeDashboardAutomationStateRoot') {
+    throw "Registration must pin durable task state to the protected repository path."
+}
+if ($runner -notmatch 'Get-ExtremeDashboardAutomationStateRoot') {
+    throw "The independent runner must use the durable automation state root."
+}
+if ($paths -notmatch '\.automation-state' -or $paths -notmatch 'Get-ExtremeDashboardAutomationWorkspaceRoot') {
+    throw "Automation paths must separate protected state from disposable checkouts."
+}
 if ($restore -notmatch 'Enable-ScheduledTask -TaskName \$sequentialTask') { throw "Rollback script must re-enable the sequential task." }
 if ($runner -notmatch 'System\.Threading\.Mutex' -or $runner -notmatch 'Test-CombinedInputsCurrent' -or $runner -notmatch 'Wait-ForCombinedInputsCurrent') {
     throw "Independent publishing must be serialized and Combined Portfolio must require fresh card inputs."

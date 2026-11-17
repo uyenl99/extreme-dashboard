@@ -2,8 +2,11 @@ $ErrorActionPreference = "Stop"
 
 $taskName = "Extreme Dashboard - Sequential Strategy Updates"
 $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
-$automationRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
-$automationCheckout = Join-Path $automationRoot "sequential-dashboard"
+. (Join-Path $PSScriptRoot "automation_paths.ps1")
+$workspaceRoot = Get-ExtremeDashboardAutomationWorkspaceRoot
+$stateRoot = Get-ExtremeDashboardAutomationStateRoot
+$escapedStateRoot = $stateRoot.Replace("'", "''")
+$automationCheckout = Join-Path $workspaceRoot "sequential-dashboard"
 $updateScript = Join-Path $automationCheckout "scripts\update_all_strategies_sequentially.ps1"
 $retiredTasks = @(
     "Extreme Dashboard - Mean Reversion 5x5 Backtest",
@@ -23,6 +26,7 @@ if (-not (Test-Path -LiteralPath $updateScript)) { throw "Update script not foun
 
 $bootstrap = @"
 `$ErrorActionPreference='Stop'
+`$env:EXTREME_DASHBOARD_STATE_ROOT='$escapedStateRoot'
 `$bootstrapStarted=Get-Date
 try {
     & '$git' -C '$automationCheckout' fetch origin main
@@ -36,7 +40,7 @@ catch {
     if (Test-Path -LiteralPath `$helper) {
         try {
             . `$helper
-            Publish-StrategyFailureAlert -Stage 'Automation bootstrap' -FailureMessage `$failureMessage -LogPath '' -PullRequestUrl '' -RunStarted `$bootstrapStarted -StatusRoot '$automationRoot' | Out-Null
+            Publish-StrategyFailureAlert -Stage 'Automation bootstrap' -FailureMessage `$failureMessage -LogPath '' -PullRequestUrl '' -RunStarted `$bootstrapStarted -StatusRoot '$escapedStateRoot' | Out-Null
         }
         catch { Write-Warning "Could not publish the bootstrap failure alert: `$(`$_.Exception.Message)" }
     }

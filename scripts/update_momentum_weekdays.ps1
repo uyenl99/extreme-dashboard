@@ -17,8 +17,10 @@ $momoSpGenerator = Join-Path $webRoot "generate_momentum_stocks_page.py"
 $momentumEtf2Generator = Join-Path $webRoot "generate_momentum_etf2_page.py"
 $python = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
 $git = "C:\Users\uyenl\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
-$logRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\logs"
-$privateMemberRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\member-pages"
+. (Join-Path $PSScriptRoot "automation_paths.ps1")
+$stateRoot = Get-ExtremeDashboardAutomationStateRoot
+$logRoot = Join-Path $stateRoot "logs"
+$privateMemberRoot = Join-Path $stateRoot "member-pages"
 $privateMomentumPage = Join-Path $privateMemberRoot "momentum-members.html"
 $privateMomentumEtf2Page = Join-Path $privateMemberRoot "momentum2-members.html"
 $privateMomentumStocksPage = Join-Path $privateMemberRoot "momentum-stocks-members.html"

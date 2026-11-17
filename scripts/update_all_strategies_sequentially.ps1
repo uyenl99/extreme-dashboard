@@ -16,8 +16,9 @@ $mooVerifier = Join-Path $webRoot "scripts\verify_moo_backtests.py"
 $memberMappingTests = Join-Path $webRoot "test_member_update_mappings.py"
 $publicationGuard = Join-Path $webRoot "scripts\test_daily_site_guard.ps1"
 $failureAlertHelper = Join-Path $webRoot "scripts\strategy_failure_alert.ps1"
-$logRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\logs"
-$statusRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation"
+. (Join-Path $PSScriptRoot "automation_paths.ps1")
+$statusRoot = Get-ExtremeDashboardAutomationStateRoot
+$logRoot = Join-Path $statusRoot "logs"
 $statusFile = Join-Path $statusRoot "last-run-status.json"
 $today = Get-Date -Format "yyyy-MM-dd"
 $log = Join-Path $logRoot "all-strategies-sequential-$today.log"
@@ -237,7 +238,7 @@ try {
         & $python -c $combinedCode
     }
     Set-RunStage -Name "Prepare generated site files"
-    $generatedMemberRoot = Join-Path $env:LOCALAPPDATA "ExtremeDashboardAutomation\member-pages"
+    $generatedMemberRoot = Join-Path $statusRoot "member-pages"
     $memberContentRoot = Join-Path $webRoot "api\_member-content"
     New-Item -ItemType Directory -Force $memberContentRoot | Out-Null
     $memberPages = @{
