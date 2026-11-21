@@ -6,3 +6,6 @@ requirements.txt
 .agents/
 .codex/
 requirements-haa.txt
+FLAT_MONITOR_SETUP.md
+flat-monitor-setup.sql
+test-flat-monitor.cjs
